@@ -43,6 +43,59 @@ jobs:
     needs: build-mac
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate release notes
+        id: notes
+        run: |
+          # 이전 태그 찾기 (현재 태그 제외)
+          PREV_TAG=$(git tag --sort=-v:refname | grep -v "^${GITHUB_REF_NAME}$" | head -1)
+          if [ -z "$PREV_TAG" ]; then
+            RANGE="HEAD"
+          else
+            RANGE="${PREV_TAG}..HEAD"
+          fi
+
+          # 커밋 메시지에서 릴리즈 노트 생성
+          BODY=""
+          while IFS= read -r line; do
+            # 커밋 제목만 추출 (Co-Authored-By 등 제외)
+            SUBJECT=$(echo "$line" | sed 's/^[a-f0-9]* //')
+            # 빈 줄, merge 커밋 스킵
+            if echo "$SUBJECT" | grep -qiE '^Merge|^$'; then continue; fi
+            # bullet point에서 변경사항 추출
+            if echo "$SUBJECT" | grep -q '^fix:\|^feat:\|^docs:\|^chore:'; then
+              # conventional commit: 타입 제거하고 설명만
+              DESC=$(echo "$SUBJECT" | sed 's/^[a-z]*: //')
+              BODY="${BODY}- ${DESC}"$'\n'
+            else
+              BODY="${BODY}- ${SUBJECT}"$'\n'
+            fi
+          done < <(git log --oneline $RANGE)
+
+          # 커밋 본문에서 bullet point 항목 추출
+          DETAILS=""
+          while IFS= read -r line; do
+            line=$(echo "$line" | sed 's/^[[:space:]]*//')
+            if echo "$line" | grep -q '^- '; then
+              DETAILS="${DETAILS}${line}"$'\n'
+            fi
+          done < <(git log --format="%b" $RANGE)
+
+          # 상세 항목이 있으면 그걸 사용, 없으면 커밋 제목 사용
+          if [ -n "$DETAILS" ]; then
+            NOTES="## What's Changed"$'\n\n'"${DETAILS}"
+          else
+            NOTES="## What's Changed"$'\n\n'"${BODY}"
+          fi
+
+          # multiline output
+          echo "notes<<EOFNOTES" >> $GITHUB_OUTPUT
+          echo "$NOTES" >> $GITHUB_OUTPUT
+          echo "EOFNOTES" >> $GITHUB_OUTPUT
+
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
@@ -52,6 +105,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: artifacts/*.dmg
-          generate_release_notes: true
+          body: ${{ steps.notes.outputs.notes }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
