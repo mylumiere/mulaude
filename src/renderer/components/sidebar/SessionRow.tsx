@@ -7,6 +7,7 @@
  */
 
 import { memo, useRef, useState, useCallback, useEffect } from 'react'
+import { X } from 'lucide-react'
 import type { SessionInfo, SessionStatus } from '../../../shared/types'
 import type { Locale } from '../../i18n'
 import { t } from '../../i18n'
@@ -154,7 +155,7 @@ export default memo(function SessionRow({
           }}
           title={t(locale, 'session.close')}
         >
-          ×
+          <X size={12} />
         </button>
       </div>
     </div>

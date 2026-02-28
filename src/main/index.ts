@@ -20,6 +20,7 @@ import { setupSessionDataForwarding, watchUsageData } from './session-forwarder'
 import { setupPanePolling, setupChildPaneForwarding } from './pane-poller'
 import { setupCloseHandler, dt, setLocale, getCloseAction, resetCloseAction } from './close-handler'
 import { logger } from './logger'
+import { SCREEN_VISIBILITY_MARGIN, WINDOW_SAVE_DEBOUNCE } from '../shared/constants'
 
 // 로거 초기화 (파일 로그 시작)
 logger.init()
@@ -77,8 +78,8 @@ function isVisibleOnScreen(state: WindowState): boolean {
   const displays = screen.getAllDisplays()
   return displays.some(d => {
     const { x, y, width, height } = d.workArea
-    return state.x! >= x - 100 && state.x! <= x + width &&
-           state.y! >= y - 100 && state.y! <= y + height
+    return state.x! >= x - SCREEN_VISIBILITY_MARGIN && state.x! <= x + width &&
+           state.y! >= y - SCREEN_VISIBILITY_MARGIN && state.y! <= y + height
   })
 }
 
@@ -112,7 +113,7 @@ function createWindow(): BrowserWindow {
   let saveTimeout: ReturnType<typeof setTimeout> | null = null
   const debouncedSave = (): void => {
     if (saveTimeout) clearTimeout(saveTimeout)
-    saveTimeout = setTimeout(() => saveWindowState(mainWindow), 500)
+    saveTimeout = setTimeout(() => saveWindowState(mainWindow), WINDOW_SAVE_DEBOUNCE)
   }
   mainWindow.on('resize', debouncedSave)
   mainWindow.on('move', debouncedSave)

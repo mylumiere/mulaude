@@ -17,8 +17,9 @@
 
 import * as pty from 'node-pty'
 import { basename } from 'path'
-import { execSync, execFileSync } from 'child_process'
 import type { SessionInfo, TmuxPaneInfo } from '../shared/types'
+import { DEFAULT_COLS, DEFAULT_ROWS, LEGACY_SHELL_INIT_DELAY, PANE_CAPTURE_LINES } from '../shared/constants'
+import { getShellEnv, findClaudePath } from './env-resolver'
 import { SessionStore, type PersistedSession } from './session-store'
 import {
   findTmuxPath,
@@ -53,73 +54,6 @@ interface ManagedSession {
 
 type DataCallback = (id: string, data: string) => void
 type ExitCallback = (id: string, exitCode: number) => void
-
-/**
- * 로그인 셸의 환경변수(PATH 등)를 가져옵니다.
- * Electron 앱이 Finder에서 실행될 때 셸 PATH를 상속받지 못하는 문제를 해결합니다.
- */
-function getShellEnv(): Record<string, string> {
-  try {
-    const shell = process.env.SHELL || '/bin/zsh'
-    const output = execSync(`${shell} -ilc 'env'`, {
-      encoding: 'utf-8',
-      timeout: 10000
-    })
-    const env: Record<string, string> = {}
-    for (const line of output.split('\n')) {
-      const idx = line.indexOf('=')
-      if (idx > 0) {
-        env[line.substring(0, idx)] = line.substring(idx + 1)
-      }
-    }
-    return env
-  } catch {
-    return process.env as Record<string, string>
-  }
-}
-
-/**
- * claude CLI의 전체 경로를 탐색합니다.
- *
- * 1차: 로그인 셸에서 `which claude`
- * 2차: 일반적인 설치 경로에서 직접 탐색
- *   - install.sh: ~/.claude/local/bin/claude
- *   - npm global: /usr/local/bin/claude, /opt/homebrew/bin/claude
- *   - npx cache 등
- */
-function findClaudePath(env: Record<string, string>): string {
-  try {
-    const shell = process.env.SHELL || '/bin/zsh'
-    const result = execSync(`${shell} -ilc 'which claude'`, {
-      encoding: 'utf-8',
-      timeout: 10000,
-      env
-    }).trim()
-    if (result) return result
-  } catch {
-    // fallback
-  }
-
-  // 일반적인 설치 경로 시도
-  const home = env['HOME'] || process.env.HOME || ''
-  const commonPaths = [
-    `${home}/.claude/local/bin/claude`,
-    '/usr/local/bin/claude',
-    '/opt/homebrew/bin/claude',
-    `${home}/.npm-global/bin/claude`,
-    '/usr/bin/claude'
-  ]
-  for (const p of commonPaths) {
-    try {
-      execFileSync(p, ['--version'], { encoding: 'utf-8', timeout: 5000 })
-      return p
-    } catch {
-      // 다음 경로 시도
-    }
-  }
-
-  return 'claude'
-}
 
 /**
  * SessionManager - node-pty + tmux 기반 Claude CLI 세션 관리자
@@ -254,7 +188,7 @@ export class SessionManager {
     }
 
     try {
-      createTmuxSession(tmuxPath, tmuxName, workingDir, 120, 30, envVars)
+      createTmuxSession(tmuxPath, tmuxName, workingDir, DEFAULT_COLS, DEFAULT_ROWS, envVars)
     } catch (err) {
       console.error(`[SessionManager] tmux session creation failed:`, err)
       throw err
@@ -282,8 +216,8 @@ export class SessionManager {
     try {
       ptyProcess = pty.spawn(tmuxPath, ['-u', 'attach-session', '-t', tmuxName], {
         name: 'xterm-256color',
-        cols: 120,
-        rows: 30,
+        cols: DEFAULT_COLS,
+        rows: DEFAULT_ROWS,
         cwd: workingDir,
         env: { ...cleanEnv, TERM: 'xterm-256color', COLORTERM: 'truecolor' }
       })
@@ -326,8 +260,8 @@ export class SessionManager {
     try {
       ptyProcess = pty.spawn(shell, ['-l'], {
         name: 'xterm-256color',
-        cols: 120,
-        rows: 30,
+        cols: DEFAULT_COLS,
+        rows: DEFAULT_ROWS,
         cwd: workingDir,
         env: {
           ...cleanEnv,
@@ -341,7 +275,7 @@ export class SessionManager {
       // 셸 초기화 후 claude 실행 (전체 경로 사용)
       setTimeout(() => {
         ptyProcess.write(this.claudePath + '\r')
-      }, 300)
+      }, LEGACY_SHELL_INIT_DELAY)
     } catch (err) {
       console.error(`[SessionManager] PTY spawn failed:`, err)
       throw err
@@ -404,8 +338,8 @@ export class SessionManager {
     try {
       ptyProcess = pty.spawn(tmuxPath, ['-u', 'attach-session', '-t', persisted.tmuxSessionName], {
         name: 'xterm-256color',
-        cols: 120,
-        rows: 30,
+        cols: DEFAULT_COLS,
+        rows: DEFAULT_ROWS,
         cwd: persisted.workingDir,
         env: { ...cleanEnv, TERM: 'xterm-256color', COLORTERM: 'truecolor' }
       })
@@ -563,7 +497,7 @@ export class SessionManager {
     const result: TmuxPaneInfo[] = []
     for (const pane of panes) {
       if (pane.index === 0) continue // 메인 pane 스킵
-      const content = captureTmuxPane(this.tmuxPath, session.tmuxSessionName, pane.index, 8)
+      const content = captureTmuxPane(this.tmuxPath, session.tmuxSessionName, pane.index, PANE_CAPTURE_LINES)
       result.push({ index: pane.index, title: pane.title, content })
     }
     return result

@@ -10,6 +10,9 @@
  */
 
 import { execSync, execFileSync } from 'child_process'
+import { TMUX_EXEC_TIMEOUT, SHELL_ENV_TIMEOUT, TMUX_VERSION_TIMEOUT, TMUX_SESSION_CREATE_TIMEOUT, TMUX_HISTORY_LIMIT, TMUX_SEND_KEYS_TIMEOUT } from '../shared/constants'
+
+/* ═══════ 기본 실행 ═══════ */
 
 /**
  * tmux 명령을 실행하고 결과를 반환하는 공통 래퍼입니다.
@@ -22,7 +25,7 @@ import { execSync, execFileSync } from 'child_process'
  * @param timeout - 실행 타임아웃 (ms, 기본 5000)
  * @returns 실행 결과 문자열 (trimmed) 또는 null (에러 시)
  */
-export function execTmux(tmuxPath: string, args: string[], timeout = 5000): string | null {
+export function execTmux(tmuxPath: string, args: string[], timeout = TMUX_EXEC_TIMEOUT): string | null {
   try {
     return execFileSync(tmuxPath, ['-u', ...args], { encoding: 'utf-8', timeout }).trim()
   } catch {
@@ -41,7 +44,7 @@ export function findTmuxPath(env: Record<string, string>): string | null {
     const shell = process.env.SHELL || '/bin/zsh'
     const result = execSync(`${shell} -ilc 'which tmux'`, {
       encoding: 'utf-8',
-      timeout: 10000,
+      timeout: SHELL_ENV_TIMEOUT,
       env
     }).trim()
     if (result) return result
@@ -51,7 +54,7 @@ export function findTmuxPath(env: Record<string, string>): string | null {
   // 일반적인 설치 경로 시도
   const commonPaths = ['/opt/homebrew/bin/tmux', '/usr/local/bin/tmux', '/usr/bin/tmux']
   for (const p of commonPaths) {
-    if (execTmux(p, ['-V'], 3000) !== null) return p
+    if (execTmux(p, ['-V'], TMUX_VERSION_TIMEOUT) !== null) return p
   }
   return null
 }
@@ -62,7 +65,7 @@ export function findTmuxPath(env: Record<string, string>): string | null {
  * @returns 버전 문자열 (예: "tmux 3.4") 또는 null
  */
 export function getTmuxVersion(tmuxPath: string): string | null {
-  return execTmux(tmuxPath, ['-V'], 3000)
+  return execTmux(tmuxPath, ['-V'], TMUX_VERSION_TIMEOUT)
 }
 
 /**
@@ -93,6 +96,8 @@ export function listMulaudeTmuxSessions(tmuxPath: string): string[] {
   return output.split('\n').filter((name) => name.startsWith('mulaude-'))
 }
 
+/* ═══════ 세션 관리 ═══════ */
+
 /**
  * 백그라운드 tmux 세션을 생성합니다.
  *
@@ -120,7 +125,7 @@ export function createTmuxSession(
   execFileSync(tmuxPath, ['-u', 'new-session', '-d', '-s', name, '-x', String(cols), '-y', String(rows)], {
     cwd,
     encoding: 'utf-8',
-    timeout: 10000
+    timeout: TMUX_SESSION_CREATE_TIMEOUT
   })
 
   // 2) 환경변수 주입 (개별 실패 무시)
@@ -131,7 +136,7 @@ export function createTmuxSession(
   }
 
   // 3) 스크롤백 버퍼 확장
-  if (execTmux(tmuxPath, ['set-option', '-t', name, 'history-limit', '50000']) === null) {
+  if (execTmux(tmuxPath, ['set-option', '-t', name, 'history-limit', String(TMUX_HISTORY_LIMIT)]) === null) {
     console.warn('[tmux-utils] set history-limit failed')
   }
 
@@ -157,6 +162,8 @@ export function killTmuxSession(tmuxPath: string, name: string): void {
   execTmux(tmuxPath, ['kill-session', '-t', name])
 }
 
+/* ═══════ 키 입력 / 환경변수 ═══════ */
+
 /**
  * tmux 세션 내에서 키 입력을 전송합니다.
  *
@@ -169,9 +176,11 @@ export function killTmuxSession(tmuxPath: string, name: string): void {
 export function sendKeysToTmux(tmuxPath: string, name: string, command: string): void {
   execFileSync(tmuxPath, ['-u', 'send-keys', '-t', name, command, 'Enter'], {
     encoding: 'utf-8',
-    timeout: 5000
+    timeout: TMUX_SEND_KEYS_TIMEOUT
   })
 }
+
+/* ═══════ 윈도우 / Pane 크기 ═══════ */
 
 /**
  * tmux 세션의 윈도우 크기를 변경합니다.
@@ -230,6 +239,8 @@ export function updateTmuxEnvironment(
     }
   }
 }
+
+/* ═══════ Pane 조회 / 캡처 ═══════ */
 
 /**
  * tmux 세션의 pane 목록을 조회합니다.
@@ -331,6 +342,8 @@ export function setAutoBreakPaneHook(tmuxPath: string, sessionName: string): voi
   }
 }
 
+/* ═══════ Pane 스트리밍 ═══════ */
+
 /**
  * pipe-pane 시작: pane 출력을 파일로 스트리밍합니다.
  * pane ID(%XX)로 타겟팅하여 break-pane 후 별도 window에 있어도 동작합니다.
@@ -396,6 +409,8 @@ export function getPaneTty(
 ): string | null {
   return execTmux(tmuxPath, ['display-message', '-t', paneId, '-p', '#{pane_tty}']) || null
 }
+
+/* ═══════ 프로세스 감지 ═══════ */
 
 /**
  * tmux 세션의 메인 pane(window 0, pane 0)에서 실행 중인 프로세스명을 반환합니다.

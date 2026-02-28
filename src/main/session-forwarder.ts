@@ -11,7 +11,7 @@ import { join } from 'path'
 import { homedir } from 'os'
 import type { SessionManager } from './session-manager'
 import { readUsageData } from './ipc-handlers'
-import { IPC_BATCH_INTERVAL } from '../shared/constants'
+import { IPC_BATCH_INTERVAL, USAGE_WATCH_INTERVAL } from '../shared/constants'
 
 /**
  * 16ms 배치 처리 유틸리티를 생성합니다.
@@ -79,7 +79,7 @@ export function setupSessionDataForwarding(
 export function watchUsageData(mainWindow: BrowserWindow): () => void {
   const usageCachePath = join(homedir(), '.claude', 'plugins', 'claude-hud', '.usage-cache.json')
   try {
-    watchFile(usageCachePath, { interval: 5000 }, () => {
+    watchFile(usageCachePath, { interval: USAGE_WATCH_INTERVAL }, () => {
       if (!mainWindow.isDestroyed()) {
         mainWindow.webContents.send('usage:updated', readUsageData())
       }

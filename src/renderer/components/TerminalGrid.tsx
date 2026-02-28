@@ -14,6 +14,7 @@
  */
 
 import { useCallback, useState } from 'react'
+import { X } from 'lucide-react'
 import TerminalView from './TerminalView'
 import AgentPanel from './AgentPanel'
 import type { SessionInfo, AgentInfo, SessionStatus } from '../../shared/types'
@@ -216,7 +217,7 @@ export default function TerminalGrid({
               }}
               title={t(locale, 'grid.closePane')}
             >
-              x
+              <X size={10} />
             </button>
           </div>
         )}

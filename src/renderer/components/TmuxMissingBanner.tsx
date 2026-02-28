@@ -9,6 +9,7 @@
  *   - 앱 재시작 시 이전 세션 자동 복원
  */
 
+import { AlertTriangle } from 'lucide-react'
 import { t, type Locale } from '../i18n'
 import './TmuxMissingBanner.css'
 
@@ -21,7 +22,7 @@ export default function TmuxMissingBanner({ locale, onDismiss }: TmuxMissingBann
   return (
     <div className="tmux-banner-overlay">
       <div className="tmux-banner">
-        <div className="tmux-banner-icon">⚠</div>
+        <div className="tmux-banner-icon"><AlertTriangle size={32} /></div>
         <h2 className="tmux-banner-title">{t(locale, 'tmux.missing.title')}</h2>
         <p className="tmux-banner-body">{t(locale, 'tmux.missing.body')}</p>
         <div className="tmux-banner-install">

@@ -6,6 +6,7 @@
  */
 
 import { memo } from 'react'
+import { ChevronRight, Plus, X } from 'lucide-react'
 import type { Locale } from '../../i18n'
 import { t } from '../../i18n'
 
@@ -36,7 +37,7 @@ export default memo(function ProjectHeader({
     <div className="project-header">
       <button className="project-toggle" onClick={onToggleCollapse}>
         <span className={`project-arrow ${isCollapsed ? '' : 'project-arrow--open'}`}>
-          ›
+          <ChevronRight size={12} />
         </span>
       </button>
       <div
@@ -53,14 +54,14 @@ export default memo(function ProjectHeader({
         onClick={onAddSession}
         title={t(locale, 'project.addSession')}
       >
-        +
+        <Plus size={12} />
       </button>
       <button
         className="project-action-btn project-action-btn--danger"
         onClick={onRemoveProject}
         title={t(locale, 'project.remove')}
       >
-        ×
+        <X size={12} />
       </button>
     </div>
   )

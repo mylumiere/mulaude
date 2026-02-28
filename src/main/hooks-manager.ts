@@ -19,6 +19,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, watch, rmSync, unli
 import { join } from 'path'
 import { homedir, tmpdir } from 'os'
 import type { HookEvent } from '../shared/types'
+import { HOOK_DEDUP_EXPIRY, HOOK_FILE_READ_DELAY } from '../shared/constants'
 
 type HookEventCallback = (mulaudeSessionId: string, event: HookEvent) => void
 
@@ -176,7 +177,7 @@ export class HooksManager {
       // fs.watch 중복 fire 방지: macOS FSEvents는 같은 파일 생성에 여러 번 콜백 호출 가능
       if (this.processedFiles.has(filename)) return
       this.processedFiles.add(filename)
-      setTimeout(() => this.processedFiles.delete(filename), 5000)
+      setTimeout(() => this.processedFiles.delete(filename), HOOK_DEDUP_EXPIRY)
 
       // 세션 ID 추출: "session-1_12345_6789.json" → "session-1"
       // 하위 호환: "session-1.json" 도 지원
@@ -203,7 +204,7 @@ export class HooksManager {
         } catch {
           // JSON 파싱 실패 무시
         }
-      }, 10)
+      }, HOOK_FILE_READ_DELAY)
     })
 
     console.log('[HooksManager] watching IPC dir:', this.ipcDir)

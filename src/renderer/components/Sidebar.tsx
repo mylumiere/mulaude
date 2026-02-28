@@ -10,6 +10,7 @@
  */
 
 import { useState, useEffect } from 'react'
+import { Settings, Plus, BookOpen, Route, Keyboard, MessageSquareWarning } from 'lucide-react'
 import type { ProjectGroup, SessionStatus, UsageData, AgentInfo } from '../../shared/types'
 import { type Locale, t } from '../i18n'
 import ProjectHeader from './sidebar/ProjectHeader'
@@ -108,19 +109,14 @@ export default function Sidebar({
         <div className="sidebar-header-actions">
           {onRestartTutorial && (
             <button className="sidebar-icon-btn sidebar-tutorial-btn" onClick={onRestartTutorial} title={t(locale, 'tutorial.restart')}>
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                <path d="M3 1.5C2.45 1.5 2 1.95 2 2.5v11c0 .55.45 1 1 1h7c.55 0 1-.45 1-1v-11c0-.55-.45-1-1-1H3z" stroke="currentColor" strokeWidth="1.2" fill="none"/>
-                <path d="M4 1.5V5l1.5-1L7 5V1.5" stroke="currentColor" strokeWidth="1" fill="currentColor" opacity="0.3"/>
-                <path d="M4.5 8h4M4.5 10h3" stroke="currentColor" strokeWidth="0.9" strokeLinecap="round" opacity="0.5"/>
-                <path d="M12 4.5v9c0 .55-.45 1-1 1" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" opacity="0.3"/>
-              </svg>
+              <BookOpen size={14} />
             </button>
           )}
           <button className="sidebar-icon-btn sidebar-settings-btn" onClick={onOpenSettings} title={t(locale, 'settings.title')}>
-            ⚙
+            <Settings size={14} />
           </button>
           <button className="sidebar-add-btn" onClick={onCreateProject} title={`${t(locale, 'sidebar.addProject')} (⌘N)`}>
-            +
+            <Plus size={14} />
           </button>
         </div>
       </div>
@@ -190,30 +186,18 @@ export default function Sidebar({
       <div className="sidebar-footer">
         <div className="sidebar-footer-buttons">
           <button className="sidebar-footer-btn" onClick={() => setShowRoadmap(true)}>
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-              <path d="M1 3.5A1.5 1.5 0 012.5 2h2A1.5 1.5 0 016 3.5v1A1.5 1.5 0 014.5 6h-2A1.5 1.5 0 011 4.5v-1z" fill="currentColor" opacity="0.4"/>
-              <path d="M6 7.5A1.5 1.5 0 017.5 6h2A1.5 1.5 0 0111 7.5v1A1.5 1.5 0 019.5 10h-2A1.5 1.5 0 016 8.5v-1z" fill="currentColor" opacity="0.6"/>
-              <path d="M10 11.5a1.5 1.5 0 011.5-1.5h2a1.5 1.5 0 011.5 1.5v1a1.5 1.5 0 01-1.5 1.5h-2a1.5 1.5 0 01-1.5-1.5v-1z" fill="currentColor" opacity="0.8"/>
-              <path d="M4.5 6L7.5 6M9.5 10L11.5 10" stroke="currentColor" strokeWidth="1" strokeDasharray="2 1" opacity="0.3"/>
-            </svg>
+            <Route size={14} />
             {t(locale, 'footer.roadmap')}
           </button>
           <button className="sidebar-footer-btn" onClick={() => setShowShortcuts(true)}>
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-              <rect x="1" y="4" width="14" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.2" fill="none" opacity="0.6"/>
-              <rect x="3" y="6.5" width="2" height="1.5" rx="0.3" fill="currentColor" opacity="0.5"/>
-              <rect x="6" y="6.5" width="2" height="1.5" rx="0.3" fill="currentColor" opacity="0.5"/>
-              <rect x="9" y="6.5" width="2" height="1.5" rx="0.3" fill="currentColor" opacity="0.5"/>
-              <rect x="12" y="6.5" width="1.5" height="1.5" rx="0.3" fill="currentColor" opacity="0.5"/>
-              <rect x="4" y="9.5" width="8" height="1.5" rx="0.3" fill="currentColor" opacity="0.4"/>
-            </svg>
+            <Keyboard size={14} />
             {t(locale, 'footer.shortcuts')}
           </button>
         </div>
-        <div className="sidebar-contact">
-          <a href="https://github.com/mylumiere/mulaude/issues" className="sidebar-contact-link" target="_blank" rel="noreferrer">{t(locale, 'footer.feedback')}</a>
-          <div className="sidebar-contact-hint">{t(locale, 'footer.feedbackHint')}</div>
-        </div>
+        <a href="https://github.com/mylumiere/mulaude/issues" className="sidebar-footer-btn sidebar-feedback-btn" target="_blank" rel="noreferrer">
+          <MessageSquareWarning size={14} />
+          {t(locale, 'footer.feedback')}
+        </a>
       </div>
 
       {showRoadmap && <RoadmapModal onClose={() => setShowRoadmap(false)} />}

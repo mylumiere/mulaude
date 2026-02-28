@@ -30,6 +30,7 @@ import {
   sendKeysToPane,
   resizeTmuxPane
 } from './tmux-utils'
+import { CHILD_PANE_DEFAULT_COLS, CHILD_PANE_DEFAULT_ROWS, PIPE_POLL_INTERVAL, PANE_RECAPTURE_DELAY, STTY_TIMEOUT } from '../shared/constants'
 
 /** team config에서 확정된 에이전트 pane 정보 */
 export interface AgentPaneInfo {
@@ -118,7 +119,7 @@ export class ChildPaneStreamer {
     // 0) 기본 크기로 리사이즈 (break-pane 직후 부모 크기 상속 방지)
     //    리사이즈 후 짧은 대기로 프로세스가 새 크기에 맞춰 다시 렌더링하도록 함
     try {
-      resizeTmuxPane(this.tmuxPath, paneId, 80, 24)
+      resizeTmuxPane(this.tmuxPath, paneId, CHILD_PANE_DEFAULT_COLS, CHILD_PANE_DEFAULT_ROWS)
     } catch { /* pane이 아직 준비 안 됐을 수 있음 */ }
 
     // 1) 초기 화면 캡처 — 리사이즈 직후이므로 약간의 지연 후 캡처
@@ -170,7 +171,7 @@ export class ChildPaneStreamer {
 
     stream.pollTimer = setInterval(() => {
       this.pollPipeFile(sessionId, stream)
-    }, 50)
+    }, PIPE_POLL_INTERVAL)
 
     // streams에 등록
     if (!this.streams.has(sessionId)) {
@@ -193,7 +194,7 @@ export class ChildPaneStreamer {
           }
         }
       } catch { /* pane이 사라졌을 수 있음 */ }
-    }, 200)
+    }, PANE_RECAPTURE_DELAY)
   }
 
   /**
@@ -297,7 +298,7 @@ export class ChildPaneStreamer {
           try {
             execFileSync('stty', ['-f', stream.ttyPath, 'cols', String(cols), 'rows', String(rows)], {
               encoding: 'utf-8',
-              timeout: 3000
+              timeout: STTY_TIMEOUT
             })
           } catch {
             // pane이 이미 사라졌을 수 있음

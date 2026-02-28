@@ -38,3 +38,75 @@ export const TERMINAL_FONT_FAMILY = '"Menlo", "SF Mono", "Fira Code", "DM Mono",
 
 /** 터미널 줄 높이 */
 export const TERMINAL_LINE_HEIGHT = 1.2
+
+/* ═══════ 환경 감지 ═══════ */
+
+/** 로그인 셸 환경변수 수집 타임아웃 (ms) */
+export const SHELL_ENV_TIMEOUT = 10000
+/** claude CLI 경로 탐색 타임아웃 (ms) */
+export const CLAUDE_PATH_TIMEOUT = 5000
+/** tmux 버전 확인 타임아웃 (ms) */
+export const TMUX_VERSION_TIMEOUT = 3000
+/** tmux 세션 생성 타임아웃 (ms) */
+export const TMUX_SESSION_CREATE_TIMEOUT = 10000
+/** tmux 명령 실행 기본 타임아웃 (ms) */
+export const TMUX_EXEC_TIMEOUT = 5000
+/** tmux send-keys 타임아웃 (ms) */
+export const TMUX_SEND_KEYS_TIMEOUT = 5000
+/** legacy 모드 셸 초기화 대기 (ms) */
+export const LEGACY_SHELL_INIT_DELAY = 300
+
+/* ═══════ 자식 pane ═══════ */
+
+/** pipe-pane 파일 폴링 간격 (ms) */
+export const PIPE_POLL_INTERVAL = 50
+/** pane 재캡처 지연 (ms) */
+export const PANE_RECAPTURE_DELAY = 200
+/** 자식 pane 기본 컬럼 수 */
+export const CHILD_PANE_DEFAULT_COLS = 80
+/** 자식 pane 기본 행 수 */
+export const CHILD_PANE_DEFAULT_ROWS = 24
+/** stty 명령 타임아웃 (ms) */
+export const STTY_TIMEOUT = 3000
+
+/* ═══════ Hooks ═══════ */
+
+/** hook 중복 fire 방지 만료 시간 (ms) */
+export const HOOK_DEDUP_EXPIRY = 5000
+/** hook 파일 쓰기 완료 대기 (ms) */
+export const HOOK_FILE_READ_DELAY = 10
+
+/* ═══════ 윈도우 ═══════ */
+
+/** 윈도우 상태 저장 디바운스 (ms) */
+export const WINDOW_SAVE_DEBOUNCE = 500
+/** 화면 가시성 판정 마진 (px) */
+export const SCREEN_VISIBILITY_MARGIN = 100
+
+/* ═══════ Usage ═══════ */
+
+/** usage 캐시 감시 간격 (ms) */
+export const USAGE_WATCH_INTERVAL = 5000
+
+/* ═══════ tmux ═══════ */
+
+/** tmux 스크롤백 버퍼 줄 수 */
+export const TMUX_HISTORY_LIMIT = 50000
+/** pane 캡처 줄 수 */
+export const PANE_CAPTURE_LINES = 8
+
+/* ═══════ 에이전트 ═══════ */
+
+/** 에이전트 부재 grace 카운터 임계값 */
+export const AGENT_GRACE_THRESHOLD = 2
+/** 셸 프로세스 감지 목록 */
+export const SHELL_COMMANDS = ['zsh', 'bash', 'sh', 'fish'] as const
+
+/* ═══════ 터미널 레이아웃 ═══════ */
+
+/** 최대 동시 패인 수 */
+export const MAX_PANES = 6
+/** 패인 최소 비율 */
+export const MIN_PANE_RATIO = 0.1
+/** 중복 세션 알림 표시 시간 (ms) */
+export const DUPLICATE_ALERT_TIMEOUT = 2000

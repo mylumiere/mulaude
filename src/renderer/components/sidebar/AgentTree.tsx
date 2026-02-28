@@ -6,6 +6,7 @@
  */
 
 import { memo } from 'react'
+import { ChevronRight } from 'lucide-react'
 import type { AgentInfo } from '../../../shared/types'
 
 interface AgentTreeProps {
@@ -29,7 +30,7 @@ export default memo(function AgentTree({
         }}
       >
         <span className={`session-agents-arrow ${isCollapsed ? '' : 'session-agents-arrow--open'}`}>
-          ›
+          <ChevronRight size={10} />
         </span>
         <span className="session-agents-count">
           {agents.filter(a => a.status === 'running').length}/{agents.length} agents

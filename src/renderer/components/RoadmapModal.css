@@ -51,8 +51,8 @@
 }
 
 .roadmap-header-icon {
-  font-size: 1rem;
   opacity: 0.7;
+  flex-shrink: 0;
 }
 
 .roadmap-close-btn {
@@ -89,7 +89,7 @@
 /* 트랙 (배경 선) */
 .roadmap-timeline-track {
   position: absolute;
-  top: 33px;
+  top: 29px;
   left: 48px;
   right: 48px;
   height: 3px;

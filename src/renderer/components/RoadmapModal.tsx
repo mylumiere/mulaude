@@ -6,6 +6,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
+import { Route, X } from 'lucide-react'
 import { ROADMAP, type FeatureStatus } from '../roadmap'
 import './RoadmapModal.css'
 
@@ -66,6 +67,12 @@ export default function RoadmapModal({ onClose }: RoadmapModalProps): JSX.Elemen
     const body = bodyRef.current
     if (!body) return
     const handleScroll = (): void => {
+      // 스크롤 바닥이면 마지막 마일스톤 활성화
+      if (Math.abs(body.scrollHeight - body.scrollTop - body.clientHeight) < 4) {
+        const children = body.querySelectorAll('[data-version]')
+        const last = children[children.length - 1]
+        if (last) { setActiveVersion(last.getAttribute('data-version') || ''); return }
+      }
       const children = body.querySelectorAll('[data-version]')
       for (const child of children) {
         const rect = child.getBoundingClientRect()
@@ -85,10 +92,10 @@ export default function RoadmapModal({ onClose }: RoadmapModalProps): JSX.Elemen
       <div className="roadmap-modal">
         <div className="roadmap-header">
           <h3>
-            <span className="roadmap-header-icon">✦</span>
+            <Route className="roadmap-header-icon" size={18} />
             Roadmap
           </h3>
-          <button className="roadmap-close-btn" onClick={onClose}>×</button>
+          <button className="roadmap-close-btn" onClick={onClose}><X size={14} /></button>
         </div>
 
         {/* ── 수평 타임라인 ── */}

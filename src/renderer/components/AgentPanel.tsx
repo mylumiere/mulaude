@@ -6,6 +6,7 @@
  */
 
 import { useRef, useState, useEffect, useCallback } from 'react'
+import { ChevronUp, ChevronDown } from 'lucide-react'
 import type { AgentInfo } from '../../shared/types'
 import AgentTerminal from './AgentTerminal'
 import './AgentPanel.css'
@@ -77,12 +78,12 @@ export default function AgentPanel({
               className={`agent-panel-scroll-btn ${scrollInfo.canUp ? '' : 'agent-panel-scroll-btn--disabled'}`}
               onClick={() => scrollBy(-200)}
               title="Scroll up"
-            >^</button>
+            ><ChevronUp size={12} /></button>
             <button
               className={`agent-panel-scroll-btn ${scrollInfo.canDown ? '' : 'agent-panel-scroll-btn--disabled'}`}
               onClick={() => scrollBy(200)}
               title="Scroll down"
-            >v</button>
+            ><ChevronDown size={12} /></button>
           </div>
         )}
       </div>

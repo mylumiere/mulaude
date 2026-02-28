@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect } from 'react'
+import { X } from 'lucide-react'
 import { type Locale, LOCALES, t } from '../i18n'
 import { THEMES } from '../themes'
 import {
@@ -102,7 +103,7 @@ export default function SettingsModal({
       <div className="settings-modal" onClick={(e) => e.stopPropagation()}>
         <div className="settings-header">
           <h3>{t(locale, 'settings.title')}</h3>
-          <button className="settings-close-btn" onClick={onClose}>×</button>
+          <button className="settings-close-btn" onClick={onClose}><X size={14} /></button>
         </div>
 
         {/* 탭 바 */}

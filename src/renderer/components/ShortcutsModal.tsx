@@ -4,6 +4,7 @@
  * 사이드바 하단 버튼 클릭 시 전체 단축키 목록을 카테고리별로 표시합니다.
  */
 
+import { Keyboard, X } from 'lucide-react'
 import { type Locale, t } from '../i18n'
 import './ShortcutsModal.css'
 
@@ -73,10 +74,10 @@ export default function ShortcutsModal({ onClose, locale }: ShortcutsModalProps)
       <div className="shortcuts-modal">
         <div className="shortcuts-header">
           <h3>
-            <span className="shortcuts-header-icon">⌨</span>
+            <Keyboard className="shortcuts-header-icon" size={18} />
             {t(locale, 'shortcuts.title')}
           </h3>
-          <button className="shortcuts-close-btn" onClick={onClose}>×</button>
+          <button className="shortcuts-close-btn" onClick={onClose}><X size={14} /></button>
         </div>
 
         <div className="shortcuts-body">
