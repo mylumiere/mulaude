@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.5] - 2026-03-01
+
+### 버그 수정
+- **HUD 숨기기 시 토큰 사용량 미갱신 수정**: claude-hud 플러그인을 비활성화하지 않고 statusLine만 제거하여 usage-cache.json 갱신 유지
+- **터미널 텍스트 선택 불가 수정**: Claude Code의 마우스 트래킹 시퀀스(`\x1b[?1000h` 등) 차단으로 드래그 텍스트 선택 정상 동작
+- **드래그 시 터미널 스크롤 초기화 수정**: `focusPane` 중복 state 갱신 방지 + `isActive` effect에서 `isFocused` 의존성 제거
+
 ## [1.1.3] - 2026-03-01
 
 ### 성능 최적화

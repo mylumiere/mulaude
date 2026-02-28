@@ -85,6 +85,17 @@ export function useXtermTerminal({
     terminal.loadAddon(fitAddon)
     terminal.open(containerRef.current)
 
+    // 마우스 트래킹 차단 — Claude Code가 보내는 mouse tracking enable 시퀀스를 무시
+    // 이를 통해 터미널에서 텍스트 드래그 선택 + 복사가 정상 동작
+    // Claude Code 프롬프트는 키보드(↑↓ + Enter)로 조작 가능
+    terminal.parser.registerCsiHandler({ prefix: '?', final: 'h' }, (params) => {
+      const mouseParams = [1000, 1002, 1003, 1004, 1006, 1015, 1016]
+      for (let i = 0; i < params.length; i++) {
+        if (mouseParams.includes(params[i] as number)) return true // 차단
+      }
+      return false // 나머지 DEC Private Mode는 통과
+    })
+
     // 키 이벤트 핸들러: 앱 단축키는 window로 전달, 나머지는 xterm 처리
     terminal.attachCustomKeyEventHandler((event: KeyboardEvent) => {
       if (event.type !== 'keydown') return true
@@ -164,7 +175,7 @@ export function useXtermTerminal({
     }
   }, [themeId])
 
-  // 활성 탭 전환 시 fit + focus
+  // 활성 탭 전환 시 fit + focus (isFocused 변경은 아래 effect에서 처리)
   useEffect(() => {
     if (isActive && fitAddonRef.current && xtermRef.current) {
       requestAnimationFrame(() => {
@@ -177,7 +188,7 @@ export function useXtermTerminal({
         }
       })
     }
-  }, [isActive, isFocused]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isActive]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // 포커스 변경 시 (그리드 패인 이동 / 분할 모드 전환)
   useEffect(() => {

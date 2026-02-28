@@ -185,28 +185,24 @@ export function registerIpcHandlers(
       const settings = JSON.parse(raw)
 
       if (hide) {
-        // statusLine 백업 후 제거
+        // statusLine 백업 후 제거 (터미널 내 시각적 표시만 숨김)
         if (settings.statusLine) {
           settings._mulaudeStatusLineBackup = settings.statusLine
           delete settings.statusLine
         }
-        // enabledPlugins에서 claude-hud 비활성화
-        if (settings.enabledPlugins?.['claude-hud@claude-hud']) {
-          settings._mulaudeHudPluginBackup = true
-          settings.enabledPlugins['claude-hud@claude-hud'] = false
+        // claude-hud 플러그인은 활성 유지 (usage-cache.json 갱신 필요)
+        // 이전 버전에서 비활성화된 경우 복원
+        if (settings._mulaudeHudPluginBackup) {
+          if (settings.enabledPlugins) {
+            settings.enabledPlugins['claude-hud@claude-hud'] = true
+          }
+          delete settings._mulaudeHudPluginBackup
         }
       } else {
         // statusLine 복원
         if (settings._mulaudeStatusLineBackup) {
           settings.statusLine = settings._mulaudeStatusLineBackup
           delete settings._mulaudeStatusLineBackup
-        }
-        // claude-hud 플러그인 복원
-        if (settings._mulaudeHudPluginBackup) {
-          if (settings.enabledPlugins) {
-            settings.enabledPlugins['claude-hud@claude-hud'] = true
-          }
-          delete settings._mulaudeHudPluginBackup
         }
       }
 

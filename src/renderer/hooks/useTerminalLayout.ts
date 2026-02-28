@@ -227,7 +227,10 @@ export function useTerminalLayout({
 
   /* ──── 포커스 이동 ──── */
   const focusPane = useCallback((paneId: string) => {
-    setTree((prev) => ({ ...prev, focusedPaneId: paneId }))
+    setTree((prev) => {
+      if (prev.focusedPaneId === paneId) return prev // 이미 포커스 → 스킵
+      return { ...prev, focusedPaneId: paneId }
+    })
   }, [])
 
   /* ──── 방향 기반 포커스 이동 ──── */
