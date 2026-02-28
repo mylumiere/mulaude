@@ -27,6 +27,7 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
     titleKey: 'shortcuts.group.general',
     items: [
       { keys: '⌘ ,', labelKey: 'shortcuts.openSettings' },
+      { keys: '⌘ /', labelKey: 'shortcuts.openShortcuts' },
     ]
   },
   {

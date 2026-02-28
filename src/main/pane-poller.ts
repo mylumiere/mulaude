@@ -12,7 +12,7 @@ import { readFileSync, readdirSync, statSync } from 'fs'
 import { join } from 'path'
 import { homedir } from 'os'
 import type { SessionManager } from './session-manager'
-import { listTmuxPanesWithIds, getPaneCurrentCommand } from './tmux-utils'
+import { listTmuxPanesWithIds, getPaneCurrentCommand, getPaneCommand } from './tmux-utils'
 import { createBatchForwarder } from './session-forwarder'
 import type { AgentPaneInfo } from './child-pane-streamer'
 import type { AgentInfo } from '../shared/types'
@@ -149,10 +149,19 @@ export function setupPanePolling(
           if (!member.tmuxPaneId) continue
           const paneIndex = childPaneMap.get(member.tmuxPaneId)
           if (paneIndex === undefined) continue
+          // pane 프로세스 확인: 쉘이면 에이전트 종료 (비정상 종료 감지)
+          let status: 'running' | 'completed' | 'exited' = member.isActive !== false ? 'running' : 'completed'
+          if (status === 'running') {
+            const cmd = getPaneCommand(tmuxPath, member.tmuxPaneId)
+            const SHELLS = ['zsh', 'bash', 'sh', 'fish']
+            if (cmd && SHELLS.includes(cmd)) {
+              status = 'exited'
+            }
+          }
           agents.push({
             name: member.name,
             type: member.agentType,
-            status: member.isActive !== false ? 'running' : 'completed',
+            status,
             paneIndex
           })
           agentPanes.push({ paneId: member.tmuxPaneId, paneIndex })

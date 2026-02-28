@@ -120,8 +120,10 @@ export function saveSessionThemes(themes: Record<string, string>): void {
 
 export function getSavedHideHud(): boolean {
   try {
-    return localStorage.getItem('mulaude-hide-hud') === 'true'
-  } catch { return false }
+    const saved = localStorage.getItem('mulaude-hide-hud')
+    if (saved === null) return true  // 기본값: HUD 숨김
+    return saved === 'true'
+  } catch { return true }
 }
 
 export function saveHideHud(hide: boolean): void {

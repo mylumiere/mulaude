@@ -5,7 +5,7 @@
  * 이 파일은 hooks 호출과 JSX 렌더링만 담당합니다.
  */
 
-import { useRef, useCallback, useMemo } from 'react'
+import { useRef, useCallback, useMemo, useState } from 'react'
 import Sidebar from './components/Sidebar'
 import TerminalGrid from './components/TerminalGrid'
 import SettingsModal from './components/SettingsModal'
@@ -54,6 +54,7 @@ export default function App(): JSX.Element {
 
   const { attentionSessions, clearAttention } = useNotifications({
     sessionStatuses,
+    sessionAgents,
     sessions: sessionManager.sessions,
     activeSessionId: sessionManager.activeSessionId,
     notifSettings: settings.notifSettings,
@@ -76,7 +77,8 @@ export default function App(): JSX.Element {
     clearAttention(id)
   }, [sessionManager.selectSession, clearAttention, terminalLayout])
 
-  const tutorial = useTutorial(sessionManager.sessions.length)
+  const tutorial = useTutorial(sessionManager.sessions.length, sessionManager.createProject)
+  const [shortcutsOpen, setShortcutsOpen] = useState(false)
 
   useKeyboardShortcuts({
     projects: sessionManager.projects,
@@ -95,7 +97,8 @@ export default function App(): JSX.Element {
     focusDirection: terminalLayout.focusDirection,
     isGridMode: terminalLayout.isGridMode,
     getFocusedSessionId: terminalLayout.getFocusedSessionId,
-    openSettings: () => settings.setShowSettings(true)
+    openSettings: () => settings.setShowSettings(true),
+    openShortcuts: () => setShortcutsOpen(true)
   })
 
   // 그리드에 열린 세션 ID 셋 (사이드바 표시용)
@@ -139,6 +142,9 @@ export default function App(): JSX.Element {
           contextPercents={contextPercents}
           sessionAgents={sessionAgents}
           gridSessionIds={gridSessionIds}
+          onRestartTutorial={tutorial.restart}
+          shortcutsOpen={shortcutsOpen}
+          onShortcutsClose={() => setShortcutsOpen(false)}
         />
         <div className="resize-handle" onMouseDown={settings.handleResizeStart} />
         <div className="terminal-area">

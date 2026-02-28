@@ -4,8 +4,64 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Mulaude</title>
+    <style>
+      body { margin: 0; background: #1a1a2e; }
+      #splash {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: #1a1a2e;
+        transition: opacity 0.4s ease-out;
+      }
+      #splash.fade-out { opacity: 0; pointer-events: none; }
+      #splash-logo {
+        width: 72px; height: 72px;
+        border-radius: 18px;
+        animation: splash-pulse 1.8s ease-in-out infinite;
+      }
+      #splash-title {
+        margin-top: 16px;
+        font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+        font-size: 22px;
+        font-weight: 600;
+        color: #e0e0e0;
+        letter-spacing: 1px;
+      }
+      #splash-sub {
+        margin-top: 8px;
+        font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+        font-size: 12px;
+        color: #666;
+        letter-spacing: 0.5px;
+      }
+      #splash-spinner {
+        margin-top: 28px;
+        width: 24px; height: 24px;
+        border: 2.5px solid #333;
+        border-top-color: #8ab4f8;
+        border-radius: 50%;
+        animation: splash-spin 0.8s linear infinite;
+      }
+      @keyframes splash-spin {
+        to { transform: rotate(360deg); }
+      }
+      @keyframes splash-pulse {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.05); opacity: 0.85; }
+      }
+    </style>
   </head>
   <body>
+    <div id="splash">
+      <img id="splash-logo" src="../../resources/icon.png" alt="" />
+      <div id="splash-title">Mulaude</div>
+      <div id="splash-sub">Multi-session Claude Code Terminal</div>
+      <div id="splash-spinner"></div>
+    </div>
     <div id="root"></div>
     <script type="module" src="./main.tsx"></script>
   </body>

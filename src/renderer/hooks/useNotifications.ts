@@ -6,13 +6,14 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import type { SessionInfo, SessionStatus } from '../../shared/types'
+import type { SessionInfo, SessionStatus, AgentInfo } from '../../shared/types'
 import type { Locale } from '../i18n'
 import { t } from '../i18n'
 import { type NotifSettings, type NotifEvent, isNotifEnabled, sendNotification } from '../settings'
 
 interface UseNotificationsParams {
   sessionStatuses: Record<string, SessionStatus>
+  sessionAgents: Record<string, AgentInfo[]>
   sessions: SessionInfo[]
   activeSessionId: string | null
   notifSettings: NotifSettings
@@ -26,6 +27,7 @@ interface UseNotificationsReturn {
 
 export function useNotifications({
   sessionStatuses,
+  sessionAgents,
   sessions,
   activeSessionId,
   notifSettings,
@@ -33,6 +35,8 @@ export function useNotifications({
 }: UseNotificationsParams): UseNotificationsReturn {
   const [attentionSessions, setAttentionSessions] = useState<Set<string>>(new Set())
   const prevStatuses = useRef<Record<string, SessionStatus>>({})
+  /** 에이전트 크래시 감지용: sessionId → Set<에이전트명> (이미 exited 알림 보낸 것) */
+  const notifiedCrashes = useRef<Map<string, Set<string>>>(new Map())
 
   const clearAttention = useCallback((id: string) => {
     setAttentionSessions((prev) => {
@@ -86,6 +90,54 @@ export function useNotifications({
     }
     prevStatuses.current = { ...sessionStatuses }
   }, [sessionStatuses, notifSettings, sessions, locale, activeSessionId])
+
+  // ── 에이전트 크래시 감지 → 알림 + attention ──
+  useEffect(() => {
+    for (const [sessionId, agents] of Object.entries(sessionAgents)) {
+      const notified = notifiedCrashes.current.get(sessionId) || new Set()
+
+      for (const agent of agents) {
+        if (agent.status !== 'exited') continue
+        if (notified.has(agent.name)) continue
+
+        // 크래시 알림 발송
+        notified.add(agent.name)
+        const sessionName = sessions.find((s) => s.id === sessionId)?.name || sessionId
+
+        // attention 마크 (비활성 세션이든 활성이든 항상)
+        setAttentionSessions((s) => { const n = new Set(s); n.add(sessionId); return n })
+
+        // 데스크톱 알림
+        if (isNotifEnabled(notifSettings, sessionId, 'onAgent')) {
+          const agentLabel = agent.name || 'Agent'
+          sendNotification(
+            sessionName,
+            `${agentLabel}: ${t(locale, 'notif.onAgentCrash')}`
+          )
+        }
+      }
+
+      if (notified.size > 0) {
+        notifiedCrashes.current.set(sessionId, notified)
+      }
+
+      // 에이전트가 사라지거나 다시 running이 되면 notified 초기화
+      const activeNames = new Set(agents.filter((a) => a.status === 'exited').map((a) => a.name))
+      if (notified.size > 0 && activeNames.size === 0) {
+        notifiedCrashes.current.delete(sessionId)
+      } else if (notified.size > 0) {
+        // exited가 아닌 에이전트는 notified에서 제거 (재실행 대비)
+        for (const name of notified) {
+          if (!activeNames.has(name)) notified.delete(name)
+        }
+      }
+    }
+
+    // 삭제된 세션 정리
+    for (const key of notifiedCrashes.current.keys()) {
+      if (!sessionAgents[key]) notifiedCrashes.current.delete(key)
+    }
+  }, [sessionAgents, sessions, notifSettings, locale])
 
   return { attentionSessions, clearAttention }
 }

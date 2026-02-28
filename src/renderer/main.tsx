@@ -8,3 +8,13 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <App />
   </React.StrictMode>
 )
+
+// 스플래시 fade-out
+requestAnimationFrame(() => {
+  const splash = document.getElementById('splash')
+  if (splash) {
+    splash.classList.add('fade-out')
+    setTimeout(() => splash.remove(), 400)
+  }
+})
+

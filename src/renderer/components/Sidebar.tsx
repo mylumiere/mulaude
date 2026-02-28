@@ -9,7 +9,7 @@
  *   - StatusLegend: 상태 범례
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { ProjectGroup, SessionStatus, UsageData, AgentInfo } from '../../shared/types'
 import { type Locale, t } from '../i18n'
 import ProjectHeader from './sidebar/ProjectHeader'
@@ -40,6 +40,11 @@ interface SidebarProps {
   sessionAgents: Record<string, AgentInfo[]>
   /** 그리드에 현재 열려있는 세션 ID 셋 */
   gridSessionIds?: Set<string>
+  /** 튜토리얼 다시보기 */
+  onRestartTutorial?: () => void
+  /** 외부에서 단축키 모달 열기 (⌘/) */
+  shortcutsOpen?: boolean
+  onShortcutsClose?: () => void
 }
 
 export default function Sidebar({
@@ -61,12 +66,20 @@ export default function Sidebar({
   sessionAgents,
   sidebarFocused,
   sidebarCursorId,
-  gridSessionIds
+  gridSessionIds,
+  onRestartTutorial,
+  shortcutsOpen,
+  onShortcutsClose
 }: SidebarProps): JSX.Element {
   const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(new Set())
   const [collapsedAgents, setCollapsedAgents] = useState<Set<string>>(new Set())
   const [showRoadmap, setShowRoadmap] = useState(false)
   const [showShortcuts, setShowShortcuts] = useState(false)
+
+  // 외부에서 ⌘/ 로 단축키 모달 열기
+  useEffect(() => {
+    if (shortcutsOpen) setShowShortcuts(true)
+  }, [shortcutsOpen])
 
   const toggleProjectCollapse = (workingDir: string): void => {
     setCollapsedProjects((prev) => {
@@ -93,6 +106,11 @@ export default function Sidebar({
       <div className="sidebar-header">
         <span className="sidebar-title">{t(locale, 'sidebar.title')}</span>
         <div className="sidebar-header-actions">
+          {onRestartTutorial && (
+            <button className="sidebar-icon-btn" onClick={onRestartTutorial} title={t(locale, 'tutorial.restart')}>
+              ?
+            </button>
+          )}
           <button className="sidebar-icon-btn" onClick={onOpenSettings} title={t(locale, 'settings.title')}>
             ⚙
           </button>
@@ -194,7 +212,7 @@ export default function Sidebar({
       </div>
 
       {showRoadmap && <RoadmapModal onClose={() => setShowRoadmap(false)} />}
-      {showShortcuts && <ShortcutsModal onClose={() => setShowShortcuts(false)} locale={locale} />}
+      {showShortcuts && <ShortcutsModal onClose={() => { setShowShortcuts(false); onShortcutsClose?.() }} locale={locale} />}
     </div>
   )
 }

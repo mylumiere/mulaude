@@ -7,18 +7,78 @@
   pointer-events: none;
 }
 
+/* 튜토리얼 진행 중 — 전체 클릭 차단 */
+.tutorial-overlay-blocking {
+  pointer-events: all;
+}
+
+.tutorial-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+}
+
 .tutorial-spotlight {
   position: fixed;
   inset: 0;
   width: 100%;
   height: 100%;
-  pointer-events: all;
 }
+
+/* ── 웰컴 다이얼로그 ── */
+
+.tutorial-welcome {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 201;
+  background: var(--bg-elevated);
+  border: 1.5px solid var(--accent-primary);
+  border-radius: 16px;
+  padding: 32px 36px;
+  width: 340px;
+  text-align: center;
+  box-shadow: 0 0 32px rgba(var(--accent-primary-rgb, 138, 180, 248), 0.2),
+              0 12px 40px rgba(0, 0, 0, 0.5);
+  animation: tutorial-welcome-in 0.3s ease-out;
+}
+
+@keyframes tutorial-welcome-in {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.92); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+.tutorial-welcome-icon {
+  font-size: 36px;
+  margin-bottom: 12px;
+}
+
+.tutorial-welcome-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.tutorial-welcome-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
+.tutorial-welcome-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+/* ── 스텝 툴팁 ── */
 
 .tutorial-tooltip {
   position: fixed;
   z-index: 201;
-  pointer-events: all;
   background: var(--bg-elevated);
   border: 1.5px solid var(--accent-primary);
   border-radius: 12px;
@@ -33,15 +93,12 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+  animation-name: tutorial-fade-in-center;
 }
 
 @keyframes tutorial-fade-in {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
-}
-
-.tutorial-tooltip.center {
-  animation-name: tutorial-fade-in-center;
 }
 
 @keyframes tutorial-fade-in-center {
@@ -111,8 +168,9 @@
   justify-content: flex-end;
 }
 
-.tutorial-actions button {
-  padding: 5px 14px;
+.tutorial-actions button,
+.tutorial-welcome-actions button {
+  padding: 6px 16px;
   border-radius: 6px;
   border: none;
   font-size: 12px;

@@ -27,7 +27,8 @@ import {
   stopPipePane,
   getPaneTty,
   captureTmuxPaneWithAnsi,
-  sendKeysToPane
+  sendKeysToPane,
+  resizeTmuxPane
 } from './tmux-utils'
 
 /** team config에서 확정된 에이전트 pane 정보 */
@@ -114,8 +115,19 @@ export class ChildPaneStreamer {
     paneId: string,
     paneIndex: number
   ): void {
-    // 1) 초기 화면 캡처 (paneId로 직접 타겟)
-    const initialContent = captureTmuxPaneWithAnsi(this.tmuxPath, paneId)
+    // 0) 기본 크기로 리사이즈 (break-pane 직후 부모 크기 상속 방지)
+    //    리사이즈 후 짧은 대기로 프로세스가 새 크기에 맞춰 다시 렌더링하도록 함
+    try {
+      resizeTmuxPane(this.tmuxPath, paneId, 80, 24)
+    } catch { /* pane이 아직 준비 안 됐을 수 있음 */ }
+
+    // 1) 초기 화면 캡처 — 리사이즈 직후이므로 약간의 지연 후 캡처
+    //    (프로세스가 SIGWINCH 처리 후 화면을 다시 그릴 시간 확보)
+    let initialContent = ''
+    try {
+      // 즉시 캡처 시도 (대부분 괜찮음)
+      initialContent = captureTmuxPaneWithAnsi(this.tmuxPath, paneId)
+    } catch { /* ignore */ }
 
     // 2) pipe-pane 출력 파일 준비
     const safePaneId = paneId.replace(/[^a-zA-Z0-9]/g, '')
@@ -170,6 +182,18 @@ export class ChildPaneStreamer {
     for (const cb of this.paneDiscoveredCallbacks) {
       cb(sessionId, paneIndex, initialContent)
     }
+
+    // 200ms 후 재캡처 — 프로세스가 새 크기로 화면을 다시 그린 후의 깨끗한 화면
+    setTimeout(() => {
+      try {
+        const refreshed = captureTmuxPaneWithAnsi(this.tmuxPath, paneId)
+        if (refreshed) {
+          for (const cb of this.paneDiscoveredCallbacks) {
+            cb(sessionId, paneIndex, '\x1b[2J\x1b[H' + refreshed)
+          }
+        }
+      } catch { /* pane이 사라졌을 수 있음 */ }
+    }, 200)
   }
 
   /**
@@ -261,14 +285,23 @@ export class ChildPaneStreamer {
     if (!sessionStreams) return
 
     for (const stream of sessionStreams.values()) {
-      if (stream.paneIndex === paneIndex && stream.ttyPath) {
+      if (stream.paneIndex === paneIndex) {
+        // 1) tmux pane(window) 리사이즈 — tmux가 인식하는 크기 변경
         try {
-          execFileSync('stty', ['-f', stream.ttyPath, 'cols', String(cols), 'rows', String(rows)], {
-            encoding: 'utf-8',
-            timeout: 3000
-          })
+          resizeTmuxPane(this.tmuxPath, stream.paneId, cols, rows)
         } catch {
           // pane이 이미 사라졌을 수 있음
+        }
+        // 2) TTY 리사이즈 — 프로세스에 SIGWINCH 전달
+        if (stream.ttyPath) {
+          try {
+            execFileSync('stty', ['-f', stream.ttyPath, 'cols', String(cols), 'rows', String(rows)], {
+              encoding: 'utf-8',
+              timeout: 3000
+            })
+          } catch {
+            // pane이 이미 사라졌을 수 있음
+          }
         }
         return
       }

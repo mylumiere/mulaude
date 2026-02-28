@@ -723,6 +723,12 @@
   animation: none;
 }
 
+.session-agent-indicator--exited {
+  background: var(--status-error);
+  box-shadow: 0 0 4px var(--status-error-glow);
+  animation: none;
+}
+
 .session-agent-name {
   font-family: var(--font-ui);
   font-size: 0.7rem;

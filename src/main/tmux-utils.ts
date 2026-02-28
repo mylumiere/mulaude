@@ -191,6 +191,26 @@ export function resizeTmuxWindow(
 }
 
 /**
+ * tmux pane의 크기를 변경합니다 (break-pane으로 분리된 pane 포함).
+ * paneId(%XX)로 타겟팅하여 해당 pane이 속한 window도 함께 리사이즈합니다.
+ *
+ * @param tmuxPath - tmux 실행 파일 경로
+ * @param paneId - 대상 tmux pane ID (%XX 형식)
+ * @param cols - 새 컬럼 수
+ * @param rows - 새 행 수
+ */
+export function resizeTmuxPane(
+  tmuxPath: string,
+  paneId: string,
+  cols: number,
+  rows: number
+): void {
+  // resize-window로 pane이 속한 window 전체를 리사이즈
+  // (break-pane 후 단일 pane window이므로 window = pane)
+  execTmux(tmuxPath, ['resize-window', '-t', paneId, '-x', String(cols), '-y', String(rows)])
+}
+
+/**
  * tmux 세션의 환경변수를 갱신합니다.
  *
  * 앱 재시작 시 MULAUDE_IPC_DIR 등을 새 값으로 업데이트할 때 사용합니다.
@@ -392,6 +412,18 @@ export function getPaneCurrentCommand(
   sessionName: string
 ): string | null {
   return execTmux(tmuxPath, ['display-message', '-t', `${sessionName}:0.0`, '-p', '#{pane_current_command}'])
+}
+
+/**
+ * tmux pane ID로 현재 실행 중인 프로세스명을 반환합니다.
+ * 에이전트 pane의 프로세스 종료 감지에 사용합니다.
+ *
+ * @param tmuxPath - tmux 실행 파일 경로
+ * @param paneId - tmux pane ID (%XX 형식)
+ * @returns 현재 프로세스명 (예: "claude", "zsh") 또는 null (pane 없음)
+ */
+export function getPaneCommand(tmuxPath: string, paneId: string): string | null {
+  return execTmux(tmuxPath, ['display-message', '-t', paneId, '-p', '#{pane_current_command}'])
 }
 
 /**

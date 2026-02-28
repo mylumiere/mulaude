@@ -40,6 +40,8 @@ interface UseKeyboardShortcutsParams {
   getFocusedSessionId?: () => string | null
   /** 설정 열기 */
   openSettings?: () => void
+  /** 단축키 모달 열기 */
+  openShortcuts?: () => void
 }
 
 export function useKeyboardShortcuts({
@@ -57,7 +59,8 @@ export function useKeyboardShortcuts({
   focusDirection,
   isGridMode,
   getFocusedSessionId,
-  openSettings
+  openSettings,
+  openShortcuts
 }: UseKeyboardShortcutsParams): void {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
@@ -69,6 +72,10 @@ export function useKeyboardShortcuts({
 
       if (e.key === ',' && !e.altKey && !e.shiftKey) {
         e.preventDefault(); openSettings?.(); return
+      }
+
+      if (e.key === '/' && !e.altKey && !e.shiftKey) {
+        e.preventDefault(); openShortcuts?.(); return
       }
 
       if (e.key === 'w' && !e.altKey && !e.shiftKey && isGridMode) {
@@ -168,5 +175,5 @@ export function useKeyboardShortcuts({
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [projects, activeSessionId, sessions, createProject, selectSession, focusedPane, setFocusedPane, getChildPaneIndices, sessionsWithPanes, closePane, toggleZoom, focusDirection, isGridMode, getFocusedSessionId, openSettings])
+  }, [projects, activeSessionId, sessions, createProject, selectSession, focusedPane, setFocusedPane, getChildPaneIndices, sessionsWithPanes, closePane, toggleZoom, focusDirection, isGridMode, getFocusedSessionId, openSettings, openShortcuts])
 }
