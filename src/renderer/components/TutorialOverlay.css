@@ -1,4 +1,9 @@
-/* TutorialOverlay - 인터랙티브 튜토리얼 스포트라이트 + 툴팁 */
+/* ========================================
+ * TutorialOverlay — Ethereal Observatory Design
+ *
+ * 인터랙티브 튜토리얼 스포트라이트 + 툴팁
+ * glassmorphism + animated gradient border
+ * ======================================== */
 
 .tutorial-overlay {
   position: fixed;
@@ -7,7 +12,7 @@
   pointer-events: none;
 }
 
-/* 튜토리얼 진행 중 — 전체 클릭 차단 */
+/* 튜토리얼 진행 중 — 전체 클릭 차단 (drag 스텝 제외) */
 .tutorial-overlay-blocking {
   pointer-events: all;
 }
@@ -15,7 +20,7 @@
 .tutorial-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.65);
 }
 
 .tutorial-spotlight {
@@ -25,7 +30,9 @@
   height: 100%;
 }
 
-/* ── 웰컴 다이얼로그 ── */
+/* ══════════════════════════════════════════
+   웰컴 다이얼로그 — Ethereal Portal
+   ══════════════════════════════════════════ */
 
 .tutorial-welcome {
   position: fixed;
@@ -33,99 +40,383 @@
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 201;
-  background: var(--bg-elevated);
-  border: 1.5px solid var(--accent-primary);
-  border-radius: 16px;
-  padding: 32px 36px;
-  width: 340px;
+  width: 400px;
+  padding: 48px 44px 40px;
   text-align: center;
-  box-shadow: 0 0 32px rgba(var(--accent-primary-rgb, 138, 180, 248), 0.2),
-              0 12px 40px rgba(0, 0, 0, 0.5);
-  animation: tutorial-welcome-in 0.3s ease-out;
+  background: linear-gradient(
+    168deg,
+    rgba(22, 22, 52, 0.97) 0%,
+    rgba(14, 14, 36, 0.98) 40%,
+    rgba(10, 10, 26, 0.99) 100%
+  );
+  border-radius: 24px;
+  box-shadow:
+    0 0 0 1px rgba(124, 92, 252, 0.2),
+    0 0 80px rgba(124, 92, 252, 0.1),
+    0 32px 64px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  animation: welcome-entrance 0.4s ease-out;
+  overflow: hidden;
 }
 
-@keyframes tutorial-welcome-in {
-  from { opacity: 0; transform: translate(-50%, -50%) scale(0.92); }
-  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+/* 그라디언트 보더 (정적) */
+.tutorial-welcome::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 24px;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    rgba(124, 92, 252, 0.5),
+    rgba(6, 214, 160, 0.2),
+    rgba(124, 92, 252, 0.1),
+    rgba(247, 160, 70, 0.2),
+    rgba(124, 92, 252, 0.5)
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+@keyframes welcome-entrance {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -48%) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
 }
 
 .tutorial-welcome-icon {
-  font-size: 36px;
-  margin-bottom: 12px;
-}
-
-.tutorial-welcome-title {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: 8px;
-}
-
-.tutorial-welcome-desc {
-  font-size: 13px;
-  color: var(--text-secondary);
-  line-height: 1.6;
-  margin-bottom: 24px;
-}
-
-.tutorial-welcome-actions {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 28px;
   display: flex;
-  gap: 10px;
+  align-items: center;
   justify-content: center;
 }
 
-/* ── 스텝 툴팁 ── */
+.tutorial-welcome-img {
+  width: 160px;
+  height: 160px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 24px rgba(124, 92, 252, 0.3));
+  border-radius: 12px;
+}
+
+.tutorial-welcome-title {
+  position: relative;
+  z-index: 1;
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+  letter-spacing: -0.03em;
+}
+
+.tutorial-welcome-desc {
+  position: relative;
+  z-index: 1;
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin-bottom: 32px;
+}
+
+.tutorial-welcome-actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  align-items: center;
+}
+
+/* ══════════════════════════════════════════
+   셋업 다이얼로그 — Language & Theme
+   ══════════════════════════════════════════ */
+
+.tutorial-setup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 201;
+  width: 440px;
+  padding: 44px 40px 36px;
+  text-align: center;
+  background: linear-gradient(
+    168deg,
+    rgba(22, 22, 52, 0.97) 0%,
+    rgba(14, 14, 36, 0.98) 40%,
+    rgba(10, 10, 26, 0.99) 100%
+  );
+  border-radius: 24px;
+  box-shadow:
+    0 0 0 1px rgba(124, 92, 252, 0.2),
+    0 0 80px rgba(124, 92, 252, 0.1),
+    0 32px 64px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  animation: welcome-entrance 0.4s ease-out;
+  overflow: hidden;
+}
+
+.tutorial-setup::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 24px;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    rgba(124, 92, 252, 0.5),
+    rgba(6, 214, 160, 0.2),
+    rgba(124, 92, 252, 0.1),
+    rgba(247, 160, 70, 0.2),
+    rgba(124, 92, 252, 0.5)
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.tutorial-setup-icon {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tutorial-setup-icon .tutorial-welcome-img {
+  width: 120px;
+  height: 120px;
+}
+
+.tutorial-setup-title {
+  position: relative;
+  z-index: 1;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  letter-spacing: -0.03em;
+}
+
+.tutorial-setup-desc {
+  position: relative;
+  z-index: 1;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 28px;
+}
+
+.tutorial-setup-section {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.tutorial-setup-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+/* ── 언어 선택 그리드 ── */
+
+.tutorial-setup-locale-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.tutorial-setup-locale-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 4px;
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  transition: all 0.2s var(--ease-out-expo);
+  font-family: var(--font-ui);
+}
+
+.tutorial-setup-locale-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--border-default);
+}
+
+.tutorial-setup-locale-btn.active {
+  background: var(--accent-primary-soft);
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 12px var(--accent-primary-glow);
+}
+
+.tutorial-setup-locale-native {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* ── 테마 선택 그리드 ── */
+
+.tutorial-setup-theme-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+}
+
+.tutorial-setup-theme-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 4px;
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  transition: all 0.2s var(--ease-out-expo);
+  font-family: var(--font-ui);
+}
+
+.tutorial-setup-theme-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--border-default);
+}
+
+.tutorial-setup-theme-btn.active {
+  background: var(--accent-primary-soft);
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 12px var(--accent-primary-glow);
+}
+
+.tutorial-setup-theme-swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  transition: transform 0.2s var(--ease-out-expo);
+}
+
+.tutorial-setup-theme-btn:hover .tutorial-setup-theme-swatch {
+  transform: scale(1.15);
+}
+
+.tutorial-setup-theme-btn.active .tutorial-setup-theme-swatch {
+  box-shadow: 0 0 12px currentColor;
+  transform: scale(1.1);
+}
+
+.tutorial-setup-theme-name {
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+}
+
+.tutorial-setup-theme-btn.active .tutorial-setup-theme-name {
+  color: var(--text-secondary);
+}
+
+.tutorial-setup-actions {
+  position: relative;
+  z-index: 1;
+  margin-top: 28px;
+  display: flex;
+  justify-content: center;
+}
+
+/* ══════════════════════════════════════════
+   스텝 툴팁
+   ══════════════════════════════════════════ */
 
 .tutorial-tooltip {
   position: fixed;
   z-index: 201;
-  background: var(--bg-elevated);
-  border: 1.5px solid var(--accent-primary);
-  border-radius: 12px;
-  padding: 18px 20px;
+  pointer-events: all;
+  background: linear-gradient(
+    165deg,
+    rgba(22, 22, 52, 0.97),
+    rgba(14, 14, 36, 0.98)
+  );
+  border: 1px solid rgba(124, 92, 252, 0.25);
+  border-radius: 16px;
+  padding: 20px 22px 16px;
   width: 300px;
-  box-shadow: 0 0 24px rgba(var(--accent-primary-rgb, 138, 180, 248), 0.25),
-              0 8px 32px rgba(0, 0, 0, 0.4);
-  animation: tutorial-fade-in 0.25s ease-out;
+  box-shadow:
+    0 0 40px rgba(124, 92, 252, 0.12),
+    0 16px 48px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  animation: tooltip-entrance 0.3s ease-out;
 }
 
 .tutorial-tooltip.center {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  animation-name: tutorial-fade-in-center;
+  animation-name: tooltip-entrance-center;
 }
 
-@keyframes tutorial-fade-in {
-  from { opacity: 0; transform: translateY(6px); }
+@keyframes tooltip-entrance {
+  from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes tutorial-fade-in-center {
-  from { opacity: 0; transform: translate(-50%, -50%) scale(0.96); }
+@keyframes tooltip-entrance-center {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.95); }
   to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
 
+.tutorial-step-badge {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--accent-primary);
+  opacity: 0.7;
+  margin-bottom: 8px;
+  letter-spacing: 0.05em;
+}
+
 .tutorial-tooltip-title {
-  font-size: 15px;
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
   color: var(--text-primary);
-  margin-bottom: 6px;
+  margin-bottom: 8px;
+  letter-spacing: -0.02em;
 }
 
 .tutorial-tooltip-desc {
   font-size: 13px;
   color: var(--text-secondary);
-  line-height: 1.5;
-  margin-bottom: 14px;
+  line-height: 1.6;
+  margin-bottom: 16px;
 }
+
+/* 화살표 */
 
 .tutorial-tooltip-arrow {
   position: absolute;
   width: 10px;
   height: 10px;
-  background: var(--bg-elevated);
-  border: 1.5px solid var(--accent-primary);
+  background: rgba(22, 22, 52, 0.97);
+  border: 1px solid rgba(124, 92, 252, 0.25);
   transform: rotate(45deg);
 }
 
@@ -143,65 +434,179 @@
   border-bottom: none;
 }
 
+/* ── 도트 인디케이터 ── */
+
 .tutorial-dots {
   display: flex;
   gap: 6px;
   justify-content: center;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .tutorial-dot {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  background: var(--text-tertiary);
-  transition: background 0.2s;
+  background: var(--text-ghost);
+  transition: all 0.3s var(--ease-out-expo);
 }
 
 .tutorial-dot.active {
   background: var(--accent-primary);
+  box-shadow: 0 0 8px var(--accent-primary-glow);
+  transform: scale(1.4);
 }
+
+/* ── 버튼 스타일 ── */
 
 .tutorial-actions {
   display: flex;
   gap: 8px;
   justify-content: flex-end;
+  align-items: center;
 }
 
 .tutorial-actions button,
 .tutorial-welcome-actions button {
-  padding: 6px 16px;
-  border-radius: 6px;
+  padding: 8px 18px;
+  border-radius: 8px;
   border: none;
-  font-size: 12px;
+  font-size: 13px;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: all 0.2s var(--ease-out-expo);
+  font-family: var(--font-ui);
 }
 
-.tutorial-btn-skip {
+.tutorial-btn-skip,
+.tutorial-btn-later {
   background: transparent;
-  color: var(--text-tertiary);
+  color: var(--text-muted);
+  font-size: 13px;
 }
 
-.tutorial-btn-skip:hover {
+.tutorial-btn-skip:hover,
+.tutorial-btn-later:hover {
   color: var(--text-secondary);
 }
 
 .tutorial-btn-prev {
-  background: var(--bg-secondary);
+  background: rgba(124, 92, 252, 0.08);
   color: var(--text-secondary);
+  border: 1px solid rgba(124, 92, 252, 0.12) !important;
 }
 
 .tutorial-btn-prev:hover {
-  background: var(--bg-tertiary);
+  background: rgba(124, 92, 252, 0.15);
+  color: var(--text-primary);
 }
 
-.tutorial-btn-next {
-  background: var(--accent-primary);
-  color: var(--bg-primary);
+.tutorial-btn-next,
+.tutorial-btn-start {
+  background: linear-gradient(135deg, var(--accent-primary), #9a7cff);
+  color: white;
   font-weight: 600;
+  box-shadow: 0 4px 16px var(--accent-primary-glow);
+  padding: 8px 24px;
 }
 
-.tutorial-btn-next:hover {
-  filter: brightness(1.1);
+.tutorial-btn-start {
+  padding: 10px 28px;
+  font-size: 14px;
+  border-radius: 10px;
+}
+
+.tutorial-btn-next:hover,
+.tutorial-btn-start:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px var(--accent-primary-glow);
+  filter: brightness(1.08);
+}
+
+/* ══════════════════════════════════════════
+   클릭 프록시 (action='click')
+   ══════════════════════════════════════════ */
+
+.tutorial-click-proxy {
+  position: fixed;
+  z-index: 201;
+  cursor: pointer;
+  border-radius: 10px;
+  background: transparent;
+  border: 2px solid var(--accent-primary);
+  animation: action-pulse 2.5s ease-in-out infinite;
+  will-change: box-shadow;
+}
+
+@keyframes action-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 3px rgba(124, 92, 252, 0.15), 0 0 16px rgba(124, 92, 252, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(124, 92, 252, 0.08), 0 0 32px rgba(124, 92, 252, 0.35);
+  }
+}
+
+/* ══════════════════════════════════════════
+   액션 힌트 (click / drag / shortcut)
+   ══════════════════════════════════════════ */
+
+.tutorial-action-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--accent-primary);
+  opacity: 0.85;
+  margin-bottom: 14px;
+  animation: hint-fade 2.5s ease-in-out infinite;
+}
+
+.tutorial-action-hint svg {
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+@keyframes hint-fade {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* 드래그 힌트 */
+.tutorial-action-hint--drag {
+  color: var(--accent-secondary);
+}
+
+/* 단축키 힌트 */
+.tutorial-action-hint--shortcut {
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tutorial-shortcut-keys {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tutorial-shortcut-keys kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-primary);
+  background: rgba(124, 92, 252, 0.12);
+  border: 1px solid rgba(124, 92, 252, 0.25);
+  border-radius: 5px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.tutorial-shortcut-or {
+  color: var(--text-muted);
+  font-size: 11px;
+  margin: 0 2px;
 }

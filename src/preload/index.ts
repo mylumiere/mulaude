@@ -160,7 +160,15 @@ const api = {
     }
     ipcRenderer.on('session:team-agents', handler)
     return () => ipcRenderer.removeListener('session:team-agents', handler)
-  }
+  },
+
+  /** 로그 파일 경로 가져오기 */
+  getLogPath: (): Promise<string> =>
+    ipcRenderer.invoke('app:getLogPath'),
+
+  /** 로그 파일이 있는 폴더를 Finder에서 열기 */
+  openLogFolder: (): void =>
+    ipcRenderer.send('app:openLogFolder')
 }
 
 contextBridge.exposeInMainWorld('api', api)

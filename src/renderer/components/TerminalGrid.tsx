@@ -56,6 +56,8 @@ interface TerminalGridProps {
 
   /** 중복 세션 알림 메시지 */
   duplicateAlert?: string | null
+  /** 튜토리얼 드래그 스텝 — center 드롭 차단 */
+  blockCenterDrop?: boolean
 }
 
 /** 트리에서 모든 리프의 sessionId 수집 */
@@ -88,7 +90,8 @@ export default function TerminalGrid({
   onResize,
   onDropSession,
   onMovePane,
-  duplicateAlert
+  duplicateAlert,
+  blockCenterDrop
 }: TerminalGridProps): JSX.Element {
   const [dropTarget, setDropTarget] = useState<{
     paneId: string; position: DropPosition
@@ -114,8 +117,9 @@ export default function TerminalGrid({
     else if (y < edge) position = 'top'
     else if (y > 1 - edge) position = 'bottom'
 
+    if (blockCenterDrop && position === 'center') position = 'right'
     setDropTarget({ paneId, position })
-  }, [])
+  }, [blockCenterDrop])
 
   const handleDragLeave = useCallback(() => {
     setDropTarget(null)
@@ -140,7 +144,8 @@ export default function TerminalGrid({
     e.preventDefault()
     setDropTarget(null)
 
-    const position = calcDropPosition(e)
+    let position = calcDropPosition(e)
+    if (blockCenterDrop && position === 'center') position = 'right'
 
     // 패인 드래그 (그리드 내 재배치)
     const sourcePaneId = e.dataTransfer.getData('text/pane-id')
@@ -154,7 +159,7 @@ export default function TerminalGrid({
     if (!sessionId) return
 
     onDropSession(sessionId, targetPaneId, position)
-  }, [onDropSession, onMovePane])
+  }, [onDropSession, onMovePane, blockCenterDrop])
 
   /** 리프 렌더링 */
   const renderLeaf = (leaf: PaneLeaf): JSX.Element => {

@@ -13,6 +13,7 @@
 
 import { useEffect } from 'react'
 import type { SessionInfo, ProjectGroup } from '../../shared/types'
+import type { TutorialStep, TutorialPhase } from './useTutorial'
 
 interface UseKeyboardShortcutsParams {
   projects: ProjectGroup[]
@@ -42,6 +43,9 @@ interface UseKeyboardShortcutsParams {
   openSettings?: () => void
   /** 단축키 모달 열기 */
   openShortcuts?: () => void
+  /** 튜토리얼 상태 (활성 시 허용된 키만 통과) */
+  tutorialPhase?: TutorialPhase
+  tutorialStep?: TutorialStep | null
 }
 
 export function useKeyboardShortcuts({
@@ -60,11 +64,31 @@ export function useKeyboardShortcuts({
   isGridMode,
   getFocusedSessionId,
   openSettings,
-  openShortcuts
+  openShortcuts,
+  tutorialPhase,
+  tutorialStep
 }: UseKeyboardShortcutsParams): void {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
       if (!e.metaKey) return
+
+      // ⌘Q (종료)는 항상 허용
+      if (e.key === 'q') return
+
+      // 튜토리얼 진행 중: 현재 스텝에서 허용된 단축키만 통과
+      if (tutorialPhase === 'steps') {
+        if (tutorialStep?.action === 'shortcut' && tutorialStep.shortcutKeys) {
+          if (!tutorialStep.shortcutKeys.includes(e.key)) {
+            e.preventDefault()
+            return
+          }
+          // 허용된 키 — 아래로 계속 진행
+        } else {
+          // shortcut 스텝이 아닌 경우 모든 단축키 차단
+          e.preventDefault()
+          return
+        }
+      }
 
       if (e.key === 'n' && !e.altKey && !e.shiftKey) {
         e.preventDefault(); createProject(); return
@@ -175,5 +199,5 @@ export function useKeyboardShortcuts({
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [projects, activeSessionId, sessions, createProject, selectSession, focusedPane, setFocusedPane, getChildPaneIndices, sessionsWithPanes, closePane, toggleZoom, focusDirection, isGridMode, getFocusedSessionId, openSettings, openShortcuts])
+  }, [projects, activeSessionId, sessions, createProject, selectSession, focusedPane, setFocusedPane, getChildPaneIndices, sessionsWithPanes, closePane, toggleZoom, focusDirection, isGridMode, getFocusedSessionId, openSettings, openShortcuts, tutorialPhase, tutorialStep])
 }

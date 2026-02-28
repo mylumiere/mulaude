@@ -32,62 +32,64 @@ export const ROADMAP: Milestone[] = [
       { title: 'Session Persistence', desc: '앱 재시작 시 세션 자동 복원 (~/.mulaude/sessions.json)', status: 'done' },
       { title: 'Terminal Grid Split', desc: '이진 트리 기반 수평/수직 자유 분할 (최대 6패인)', status: 'done' },
       { title: 'Grid Drag & Drop', desc: '패인 드래그로 위치 교환 및 재배치', status: 'done' },
-      { title: 'Grid Persistence', desc: '그리드 레이아웃 상태 새로고침 시 유지', status: 'done' },
       { title: 'Pane Zoom', desc: '포커스된 패인 전체 확대/복원 (⌘⇧↵)', status: 'done' },
       { title: 'Agent Pane Detection', desc: 'Claude Code 에이전트 자동 감지 + 전용 패널 표시', status: 'done' },
-      { title: 'Session Status', desc: 'PTY + Hook 기반 세션 상태 실시간 감지 (idle/busy/error)', status: 'done' },
-      { title: 'Desktop Notifications', desc: '세션 상태 변경 시 데스크톱 알림 (이벤트별 토글)', status: 'done' },
-      { title: '6 Themes', desc: 'Void, Ocean, Ember, Forest, Arctic, Rosé 테마', status: 'done' },
-      { title: '4 Languages', desc: 'English, 한국어, 日本語, 中文 다국어 지원', status: 'done' },
-      { title: 'Keyboard Shortcuts', desc: '세션/프로젝트/그리드/에이전트 패인 단축키 체계', status: 'done' },
-      { title: 'Usage Gauge', desc: 'Claude API 사용량 실시간 게이지 표시', status: 'done' },
-      { title: 'Settings Modal', desc: '테마, 글씨 크기, 알림, 언어, HUD 설정 (⌘,)', status: 'done' },
+      { title: 'Session Status', desc: 'PTY + Hook 기반 세션 상태 실시간 감지', status: 'done' },
+      { title: 'Desktop Notifications', desc: '세션 상태 변경 시 데스크톱 알림', status: 'done' },
+      { title: '6 Themes', desc: 'Void, Ocean, Ember, Forest, Arctic, Rosé', status: 'done' },
+      { title: '4 Languages', desc: 'English, 한국어, 日本語, 中文', status: 'done' },
+      { title: 'Keyboard Shortcuts', desc: '세션/프로젝트/그리드/에이전트 패인 단축키', status: 'done' },
+      { title: 'Usage Gauge', desc: 'Claude 플랜 사용량 실시간 게이지', status: 'done' },
+      { title: 'Settings Modal', desc: '테마, 글씨 크기, 알림, 언어, HUD 설정', status: 'done' },
     ]
   },
   {
     version: 'v1.1',
-    title: 'Quality of Life',
+    title: 'Onboarding & UX',
     features: [
-      { title: 'Pin Sessions', desc: '중요 세션을 사이드바 상단에 고정', status: 'planned' },
-      { title: 'Session Emoji', desc: '세션별 커스텀 이모지 아이콘으로 시각 구분', status: 'planned' },
-      { title: 'Smart Session Name', desc: 'Claude 대화 분석으로 의미있는 세션명 자동 생성', status: 'planned' },
-      { title: 'Auto Theme', desc: '시스템 다크/라이트 모드 연동 자동 전환', status: 'planned' },
-      { title: 'Drag to Reorder', desc: '드래그로 사이드바 세션 순서 변경', status: 'planned' },
+      { title: 'Interactive Tutorial', desc: '7단계 인터랙티브 튜토리얼 (클릭/드래그/단축키 액션)', status: 'done' },
+      { title: 'First-Launch Setup', desc: '첫 실행 시 언어/테마 선택 온보딩 화면', status: 'done' },
+      { title: 'Shortcuts Modal', desc: '키보드 단축키 목록 확인 (⌘/)', status: 'done' },
+      { title: 'HUD Overlay Toggle', desc: '터미널 내 HUD 오버레이 숨기기 옵션', status: 'done' },
+      { title: 'Roadmap Redesign', desc: '시각적 타임라인 스타일 로드맵 UI', status: 'done' },
     ]
   },
   {
     version: 'v1.2',
-    title: 'Search & Export',
+    title: 'Quality of Life',
     features: [
-      { title: 'Conversation Search', desc: '모든 세션 대화를 전문 검색 (⌘⇧F)', status: 'planned' },
-      { title: 'Export to Markdown', desc: '대화 기록을 Markdown/HTML로 내보내기', status: 'planned' },
-      { title: 'Toast Customization', desc: '알림 위치, 지속 시간, 스타일 조정', status: 'planned' },
-      { title: 'Auto Cleanup', desc: 'N일 미사용 세션 자동 아카이브 제안', status: 'planned' },
+      { title: 'Pin Sessions', desc: '중요 세션을 사이드바 상단에 고정', status: 'planned' },
+      { title: 'Smart Session Name', desc: 'Claude 대화 분석으로 의미있는 세션명 자동 생성', status: 'planned' },
+      { title: 'Drag to Reorder', desc: '드래그로 사이드바 세션 순서 변경', status: 'planned' },
+      { title: 'Session Emoji', desc: '세션별 커스텀 이모지 아이콘으로 시각 구분', status: 'planned' },
+      { title: 'Auto Theme', desc: '시스템 다크/라이트 모드 연동 자동 전환', status: 'planned' },
     ]
   },
   {
     version: 'v1.3',
-    title: 'Analytics Dashboard',
+    title: 'Search & Export',
     features: [
-      { title: 'Usage Dashboard', desc: '일별/주별 세션 수, 토큰 사용량 그래프', status: 'planned' },
-      { title: 'Tool Statistics', desc: 'Read, Edit, Bash 등 도구별 사용 빈도 통계', status: 'planned' },
-      { title: 'Token Budget', desc: '일/주별 토큰 사용 한도 설정 + 경고', status: 'planned' },
-      { title: 'Session Timeline', desc: '과거 세션을 시간축 타임라인으로 탐색', status: 'planned' },
+      { title: 'Conversation Search', desc: '모든 세션 대화를 전문 검색 (⌘⇧F)', status: 'planned' },
+      { title: 'Export to Markdown', desc: '대화 기록을 Markdown/HTML로 내보내기', status: 'planned' },
+      { title: 'Auto Cleanup', desc: 'N일 미사용 세션 자동 아카이브 제안', status: 'planned' },
     ]
   },
   {
     version: 'v1.4',
-    title: 'Advanced Layout',
+    title: 'Analytics',
     features: [
-      { title: 'Tab-based UI', desc: '사이드바 ↔ 브라우저 탭 스타일 전환', status: 'planned' },
-      { title: 'Drag Between Projects', desc: '프로젝트 그룹 간 세션 드래그&드롭 이동', status: 'planned' },
-      { title: 'Session Snapshots', desc: '세션 스크롤백 스냅샷 저장 & 복원', status: 'planned' },
+      { title: 'Usage Dashboard', desc: '일별/주별 세션 수, 토큰 사용량 그래프', status: 'planned' },
+      { title: 'Tool Statistics', desc: 'Read, Edit, Bash 등 도구별 사용 빈도 통계', status: 'planned' },
+      { title: 'Token Budget', desc: '일/주별 토큰 사용 한도 설정 + 경고', status: 'planned' },
     ]
   },
   {
     version: 'v2.0',
-    title: 'Skill System',
+    title: 'Advanced',
     features: [
+      { title: 'Tab-based UI', desc: '사이드바 ↔ 브라우저 탭 스타일 전환', status: 'planned' },
+      { title: 'Drag Between Projects', desc: '프로젝트 그룹 간 세션 드래그&드롭 이동', status: 'planned' },
+      { title: 'Session Snapshots', desc: '세션 스크롤백 스냅샷 저장 & 복원', status: 'planned' },
       { title: 'Plugin Architecture', desc: '서드파티 확장을 위한 플러그인/스킬 API', status: 'planned' },
     ]
   }

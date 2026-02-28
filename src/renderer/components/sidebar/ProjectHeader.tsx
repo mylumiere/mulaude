@@ -49,7 +49,7 @@ export default memo(function ProjectHeader({
       {shortcut && <span className="project-shortcut">{shortcut}</span>}
       <span className="project-count">{sessionCount}</span>
       <button
-        className="project-action-btn"
+        className="project-action-btn project-add-btn"
         onClick={onAddSession}
         title={t(locale, 'project.addSession')}
       >

@@ -1,13 +1,13 @@
 /* ========================================
  * RoadmapModal - 로드맵 다이얼로그 스타일
+ *
+ * 수평 타임라인 + 버전별 마일스톤
  * ======================================== */
 
-/* 모달 본체 — SettingsModal과 동일한 오버레이/모달 패턴 */
 .roadmap-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -20,14 +20,16 @@
   background: var(--bg-elevated);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
-  width: 480px;
+  width: 520px;
   max-width: 90vw;
   max-height: 80vh;
   display: flex;
   flex-direction: column;
   box-shadow: var(--shadow-md), var(--shadow-glow);
-  animation: modal-in 0.2s var(--ease-out-expo);
+  animation: modal-in 0.2s ease-out;
 }
+
+/* ─── 헤더 ─── */
 
 .roadmap-header {
   display: flex;
@@ -65,13 +67,132 @@
   font-size: 1.3rem;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 0.15s ease;
 }
 
 .roadmap-close-btn:hover {
   background: rgba(255, 255, 255, 0.05);
   color: var(--text-primary);
 }
+
+/* ══════════════════════════════════════════
+   수평 타임라인
+   ══════════════════════════════════════════ */
+
+.roadmap-timeline {
+  position: relative;
+  padding: 24px 32px 16px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+/* 트랙 (배경 선) */
+.roadmap-timeline-track {
+  position: absolute;
+  top: 33px;
+  left: 48px;
+  right: 48px;
+  height: 3px;
+  background: var(--bg-glass);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+/* 진행 채우기 */
+.roadmap-timeline-fill {
+  height: 100%;
+  background: var(--accent-primary);
+  border-radius: 2px;
+  box-shadow: 0 0 8px var(--accent-primary-glow);
+  transition: width 0.5s ease;
+}
+
+/* 점 컨테이너 */
+.roadmap-timeline-dots {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+}
+
+/* 개별 점 */
+.roadmap-timeline-dot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.roadmap-timeline-dot-inner {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--bg-elevated);
+  border: 2px solid var(--text-ghost);
+  transition: all 0.2s ease;
+}
+
+/* 완료된 점 */
+.roadmap-timeline-dot--done .roadmap-timeline-dot-inner {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 8px var(--accent-primary-glow);
+}
+
+/* 현재 진행 중인 점 */
+.roadmap-timeline-dot--current .roadmap-timeline-dot-inner {
+  background: var(--bg-elevated);
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 12px var(--accent-primary-glow);
+  animation: dot-pulse 2s ease-in-out infinite;
+}
+
+@keyframes dot-pulse {
+  0%, 100% { box-shadow: 0 0 8px var(--accent-primary-glow); }
+  50% { box-shadow: 0 0 16px var(--accent-primary-glow); }
+}
+
+/* 활성 선택된 점 */
+.roadmap-timeline-dot--active .roadmap-timeline-dot-inner {
+  transform: scale(1.3);
+}
+
+/* 점 라벨 */
+.roadmap-timeline-dot-label {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: var(--text-ghost);
+  letter-spacing: 0.3px;
+  transition: color 0.2s ease;
+}
+
+.roadmap-timeline-dot--done .roadmap-timeline-dot-label {
+  color: var(--text-muted);
+}
+
+.roadmap-timeline-dot--current .roadmap-timeline-dot-label {
+  color: var(--accent-primary);
+}
+
+.roadmap-timeline-dot--active .roadmap-timeline-dot-label {
+  color: var(--text-secondary);
+}
+
+.roadmap-timeline-dot:hover .roadmap-timeline-dot-label {
+  color: var(--text-primary);
+}
+
+.roadmap-timeline-dot:hover .roadmap-timeline-dot-inner {
+  transform: scale(1.3);
+}
+
+/* ─── 본문 ─── */
 
 .roadmap-body {
   padding: 16px 24px 24px;
@@ -80,6 +201,7 @@
 }
 
 /* ─── 마일스톤 ─── */
+
 .roadmap-milestone {
   margin-bottom: 20px;
 }
@@ -106,11 +228,19 @@
   letter-spacing: 0.5px;
 }
 
+.roadmap-milestone--done .roadmap-version {
+  opacity: 0.7;
+}
+
 .roadmap-milestone-title {
   font-family: var(--font-ui);
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--text-primary);
+}
+
+.roadmap-milestone--done .roadmap-milestone-title {
+  color: var(--text-secondary);
 }
 
 .roadmap-progress {
@@ -120,7 +250,12 @@
   color: var(--text-muted);
 }
 
+.roadmap-milestone--done .roadmap-progress {
+  color: var(--accent-secondary);
+}
+
 /* ─── 프로그레스 바 ─── */
+
 .roadmap-progress-bar {
   width: 100%;
   height: 3px;
@@ -139,6 +274,7 @@
 }
 
 /* ─── 기능 목록 ─── */
+
 .roadmap-features {
   display: flex;
   flex-direction: column;
@@ -153,7 +289,7 @@
   background: var(--bg-glass);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  transition: all var(--transition-fast);
+  transition: all 0.15s ease;
 }
 
 .roadmap-feature:hover {
@@ -221,6 +357,7 @@
 }
 
 /* ─── 푸터 ─── */
+
 .roadmap-footer {
   padding: 12px 24px 16px;
   border-top: 1px solid var(--border-subtle);

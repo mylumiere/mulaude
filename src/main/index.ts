@@ -9,7 +9,7 @@
  *   - close-handler.ts   — 닫기 다이얼로그 + 번역
  */
 
-import { app, BrowserWindow, screen } from 'electron'
+import { app, BrowserWindow, screen, ipcMain, shell } from 'electron'
 import { join } from 'path'
 import { readFileSync, writeFileSync, mkdirSync } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
@@ -19,11 +19,24 @@ import { registerIpcHandlers } from './ipc-handlers'
 import { setupSessionDataForwarding, watchUsageData } from './session-forwarder'
 import { setupPanePolling, setupChildPaneForwarding } from './pane-poller'
 import { setupCloseHandler, dt, setLocale, getCloseAction, resetCloseAction } from './close-handler'
+import { logger } from './logger'
+
+// 로거 초기화 (파일 로그 시작)
+logger.init()
+logger.info('App', `Mulaude v${app.getVersion()} starting`)
 
 // macOS GPU 프로세스 크래시 방지
 // Chromium GPU 프로세스가 예기치 않게 종료되는 문제를 우회합니다.
 app.commandLine.appendSwitch('ignore-gpu-blocklist')
 app.commandLine.appendSwitch('disable-gpu-compositing')
+
+// ─── 크래시 핸들러 (uncaught exception / unhandled rejection) ───
+process.on('uncaughtException', (error) => {
+  logger.error('CRASH', 'Uncaught exception', error)
+})
+process.on('unhandledRejection', (reason) => {
+  logger.error('CRASH', 'Unhandled rejection', reason)
+})
 
 const hooksManager = new HooksManager()
 const sessionManager = new SessionManager()
@@ -128,6 +141,12 @@ app.whenReady().then(() => {
   // IPC 핸들러 등록
   registerIpcHandlers(sessionManager, dt, setLocale)
 
+  // 로그 파일 관련 IPC
+  ipcMain.handle('app:getLogPath', () => logger.getLogPath())
+  ipcMain.on('app:openLogFolder', () => {
+    shell.showItemInFolder(logger.getLogPath())
+  })
+
   // 창 생성 + 모듈 연결
   const mainWindow = createWindow()
   setupSessionDataForwarding(mainWindow, sessionManager)
@@ -154,6 +173,7 @@ app.whenReady().then(() => {
 
   // 앱 종료 시 리소스 정리
   app.on('window-all-closed', () => {
+    logger.info('App', 'Window closed, shutting down')
     const action = getCloseAction()
     if (action === 'keep') {
       // tmux 세션 보존 — PTY만 종료
@@ -167,8 +187,6 @@ app.whenReady().then(() => {
     hooksManager.cleanup()
     cleanupUsageWatch()
 
-    if (process.platform !== 'darwin') {
-      app.quit()
-    }
+    app.quit()
   })
 })

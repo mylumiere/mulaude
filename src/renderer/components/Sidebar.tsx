@@ -107,11 +107,16 @@ export default function Sidebar({
         <span className="sidebar-title">{t(locale, 'sidebar.title')}</span>
         <div className="sidebar-header-actions">
           {onRestartTutorial && (
-            <button className="sidebar-icon-btn" onClick={onRestartTutorial} title={t(locale, 'tutorial.restart')}>
-              ?
+            <button className="sidebar-icon-btn sidebar-tutorial-btn" onClick={onRestartTutorial} title={t(locale, 'tutorial.restart')}>
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <path d="M3 1.5C2.45 1.5 2 1.95 2 2.5v11c0 .55.45 1 1 1h7c.55 0 1-.45 1-1v-11c0-.55-.45-1-1-1H3z" stroke="currentColor" strokeWidth="1.2" fill="none"/>
+                <path d="M4 1.5V5l1.5-1L7 5V1.5" stroke="currentColor" strokeWidth="1" fill="currentColor" opacity="0.3"/>
+                <path d="M4.5 8h4M4.5 10h3" stroke="currentColor" strokeWidth="0.9" strokeLinecap="round" opacity="0.5"/>
+                <path d="M12 4.5v9c0 .55-.45 1-1 1" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" opacity="0.3"/>
+              </svg>
             </button>
           )}
-          <button className="sidebar-icon-btn" onClick={onOpenSettings} title={t(locale, 'settings.title')}>
+          <button className="sidebar-icon-btn sidebar-settings-btn" onClick={onOpenSettings} title={t(locale, 'settings.title')}>
             ⚙
           </button>
           <button className="sidebar-add-btn" onClick={onCreateProject} title={`${t(locale, 'sidebar.addProject')} (⌘N)`}>

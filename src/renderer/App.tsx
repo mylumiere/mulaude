@@ -5,7 +5,7 @@
  * 이 파일은 hooks 호출과 JSX 렌더링만 담당합니다.
  */
 
-import { useRef, useCallback, useMemo, useState } from 'react'
+import { useRef, useCallback, useMemo, useState, useEffect } from 'react'
 import Sidebar from './components/Sidebar'
 import TerminalGrid from './components/TerminalGrid'
 import SettingsModal from './components/SettingsModal'
@@ -77,8 +77,15 @@ export default function App(): JSX.Element {
     clearAttention(id)
   }, [sessionManager.selectSession, clearAttention, terminalLayout])
 
-  const tutorial = useTutorial(sessionManager.sessions.length, sessionManager.createProject)
+  const tutorial = useTutorial(sessionManager.sessions.length)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
+
+  // 드래그 스텝: 그리드 모드 진입 시 자동 진행
+  useEffect(() => {
+    if (tutorial.phase === 'steps' && tutorial.steps[tutorial.currentStep]?.action === 'drag' && terminalLayout.isGridMode) {
+      tutorial.notifyAction()
+    }
+  }, [terminalLayout.isGridMode, tutorial])
 
   useKeyboardShortcuts({
     projects: sessionManager.projects,
@@ -98,14 +105,28 @@ export default function App(): JSX.Element {
     isGridMode: terminalLayout.isGridMode,
     getFocusedSessionId: terminalLayout.getFocusedSessionId,
     openSettings: () => settings.setShowSettings(true),
-    openShortcuts: () => setShortcutsOpen(true)
+    openShortcuts: () => setShortcutsOpen(true),
+    tutorialPhase: tutorial.phase,
+    tutorialStep: tutorial.phase === 'steps' ? tutorial.steps[tutorial.currentStep] ?? null : null
   })
 
-  // 그리드에 열린 세션 ID 셋 (사이드바 표시용)
+  // 그리드 포커스 변경 → activeSessionId 동기화
+  useEffect(() => {
+    if (!terminalLayout.isGridMode) return
+    const focusedId = terminalLayout.getFocusedSessionId()
+    if (focusedId && focusedId !== sessionManager.activeSessionId) {
+      sessionManager.selectSession(focusedId)
+    }
+  }, [terminalLayout.tree.focusedPaneId, terminalLayout.isGridMode]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 그리드에 열린 세션 ID 셋 (사이드바 표시용, 비-그리드 모드에서도 현재 세션 포함)
   const gridSessionIds = useMemo(() => {
-    if (!terminalLayout.isGridMode) return new Set<string>()
+    if (!terminalLayout.isGridMode) {
+      if (sessionManager.activeSessionId) return new Set([sessionManager.activeSessionId])
+      return new Set<string>()
+    }
     return new Set(getAllLeaves(terminalLayout.tree.root).map((l) => l.sessionId))
-  }, [terminalLayout.tree.root, terminalLayout.isGridMode])
+  }, [terminalLayout.tree.root, terminalLayout.isGridMode, sessionManager.activeSessionId])
 
   // 활성 세션의 프로젝트명 / 세션명
   const activeSession = sessionManager.sessions.find(s => s.id === sessionManager.activeSessionId)
@@ -170,6 +191,7 @@ export default function App(): JSX.Element {
               onDropSession={terminalLayout.dropSession}
               onMovePane={terminalLayout.movePane}
               duplicateAlert={terminalLayout.duplicateAlert}
+              blockCenterDrop={tutorial.phase === 'steps' && tutorial.steps[tutorial.currentStep]?.action === 'drag'}
             />
           ) : (
             <div className="empty-state">
@@ -189,7 +211,13 @@ export default function App(): JSX.Element {
           onDismiss={sessionManager.dismissTmuxBanner}
         />
       )}
-      <TutorialOverlay tutorial={tutorial} locale={settings.locale} />
+      <TutorialOverlay
+        tutorial={tutorial}
+        locale={settings.locale}
+        globalThemeId={settings.globalThemeId}
+        onLocaleChange={settings.handleLocaleChange}
+        onThemeChange={settings.handleThemeChange}
+      />
       {settings.showSettings && (
         <SettingsModal
           locale={settings.locale}
