@@ -1,0 +1,412 @@
+/* ========================================
+ * SettingsModal - 설정 모달 스타일
+ * ======================================== */
+
+.settings-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  animation: overlay-in 0.15s ease;
+  -webkit-app-region: no-drag;
+}
+
+@keyframes overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.settings-modal {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  width: 440px;
+  max-width: 90vw;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-md), var(--shadow-glow);
+  animation: modal-in 0.2s var(--ease-out-expo);
+}
+
+@keyframes modal-in {
+  from { opacity: 0; transform: scale(0.95) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 12px;
+  flex-shrink: 0;
+}
+
+.settings-header h3 {
+  font-family: var(--font-ui);
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.settings-close-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 1.3rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.settings-close-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+}
+
+/* ─── Tab Bar ─── */
+.settings-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 0 24px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.settings-tab {
+  padding: 6px 14px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  position: relative;
+}
+
+.settings-tab:hover {
+  color: var(--text-secondary);
+  background: var(--bg-glass-hover);
+}
+
+.settings-tab--active {
+  color: var(--text-primary);
+  background: var(--accent-primary-soft);
+}
+
+.settings-tab--active::after {
+  content: '';
+  position: absolute;
+  bottom: -16px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60%;
+  height: 2px;
+  background: var(--accent-primary);
+  border-radius: 1px;
+}
+
+.settings-body {
+  padding: 20px 24px 24px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.settings-section {
+  margin-bottom: 24px;
+}
+
+.settings-section:last-child {
+  margin-bottom: 0;
+}
+
+.settings-label {
+  display: block;
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+/* ─── Theme Cards ─── */
+.settings-theme-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.theme-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.theme-card:hover {
+  border-color: var(--border-default);
+  background: var(--bg-glass-hover);
+}
+
+.theme-card--active {
+  border-color: var(--border-active);
+  box-shadow: 0 0 12px var(--accent-primary-glow);
+}
+
+.theme-card-preview {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.theme-card-bg {
+  width: 100%;
+  height: 100%;
+  display: flex;
+}
+
+.theme-card-sidebar {
+  width: 25%;
+  height: 100%;
+}
+
+.theme-card-content {
+  flex: 1;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.theme-card-accent {
+  width: 40%;
+  height: 3px;
+  border-radius: 2px;
+}
+
+.theme-card-line {
+  width: 80%;
+  height: 2px;
+  border-radius: 1px;
+  opacity: 0.5;
+}
+
+.theme-card-line--short {
+  width: 50%;
+}
+
+.theme-card-name {
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.theme-card--active .theme-card-name {
+  color: var(--text-primary);
+}
+
+/* ─── Font Size Bar ─── */
+.font-size-bar {
+  display: flex;
+  gap: 4px;
+  background: var(--bg-glass);
+  border-radius: var(--radius-md);
+  padding: 3px;
+  border: 1px solid var(--border-subtle);
+}
+
+.font-size-btn {
+  flex: 1;
+  padding: 6px 0;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.font-size-btn:hover {
+  color: var(--text-secondary);
+  background: var(--bg-glass-hover);
+}
+
+.font-size-btn--active {
+  background: var(--accent-primary);
+  color: #fff;
+  box-shadow: 0 0 8px var(--accent-primary-glow);
+}
+
+/* ─── Notification Toggles ─── */
+.notif-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.notif-tab {
+  padding: 5px 10px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-glass);
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.notif-tab:hover {
+  border-color: var(--border-default);
+  color: var(--text-secondary);
+}
+
+.notif-tab--active {
+  background: var(--accent-primary-soft);
+  border-color: var(--border-active);
+  color: var(--text-primary);
+}
+
+.notif-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.notif-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.notif-toggle-label {
+  font-family: var(--font-ui);
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.notif-toggle {
+  width: 36px;
+  height: 20px;
+  border-radius: 10px;
+  background: var(--bg-glass);
+  cursor: pointer;
+  position: relative;
+  transition: background var(--transition-fast);
+  padding: 0;
+  border: 1px solid var(--border-subtle);
+}
+
+.notif-toggle--on {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+}
+
+.notif-toggle-knob {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: all var(--transition-fast);
+}
+
+.notif-toggle--on .notif-toggle-knob {
+  background: #fff;
+  left: 18px;
+}
+
+.notif-reset-btn {
+  margin-top: 4px;
+  padding: 4px 10px;
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  align-self: flex-end;
+}
+
+.notif-reset-btn:hover {
+  border-color: var(--accent-danger);
+  color: var(--accent-danger);
+}
+
+/* ─── Settings Hint ─── */
+.settings-hint {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+/* ─── Locale Buttons ─── */
+.settings-locale-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.settings-locale-btn {
+  padding: 10px 12px;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: center;
+}
+
+.settings-locale-btn:hover {
+  background: var(--bg-glass-hover);
+  border-color: var(--border-default);
+}
+
+.settings-locale-btn--active {
+  background: var(--accent-primary-soft);
+  border-color: var(--border-active);
+  box-shadow: 0 0 12px var(--accent-primary-glow);
+}
+
+.settings-locale-native {
+  font-family: var(--font-ui);
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.settings-locale-btn--active .settings-locale-native {
+  color: #fff;
+}

@@ -1,0 +1,981 @@
+/* ========================================
+ * Sidebar - 프로젝트 > 세션 계층 구조 패널
+ * ======================================== */
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.sidebar::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 120px;
+  background: linear-gradient(180deg, var(--glow-bg-1) 0%, transparent 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.sidebar-drag-region {
+  height: 0;
+  -webkit-app-region: drag;
+  flex-shrink: 0;
+}
+
+/* --- Header --- */
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px 14px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.sidebar-title {
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+}
+
+.sidebar-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sidebar-icon-btn {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 1rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.sidebar-icon-btn:hover {
+  background: var(--bg-glass-hover);
+  color: var(--text-secondary);
+}
+
+.sidebar-add-btn {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-default);
+  background: var(--bg-glass);
+  color: var(--text-secondary);
+  font-size: 1.15rem;
+  font-weight: 300;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.sidebar-add-btn:hover {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: white;
+  box-shadow: 0 0 12px var(--accent-primary-glow);
+}
+
+/* --- List --- */
+.sidebar-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 8px 8px;
+  position: relative;
+  z-index: 1;
+}
+
+.sidebar-empty {
+  text-align: center;
+  color: var(--text-ghost);
+  font-size: 0.85rem;
+  padding: 32px 16px;
+}
+
+/* ─── Project Group ─── */
+.project-group {
+  margin-bottom: 4px;
+}
+
+.project-header {
+  display: flex;
+  align-items: center;
+  padding: 6px 6px;
+  border-radius: var(--radius-sm);
+  gap: 2px;
+  transition: background var(--transition-fast);
+}
+
+.project-header:hover {
+  background: var(--bg-glass);
+}
+
+.project-toggle {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-size: 1rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+  transition: color var(--transition-fast);
+}
+
+.project-toggle:hover {
+  color: var(--text-secondary);
+}
+
+.project-arrow {
+  display: inline-block;
+  transition: transform 0.15s ease;
+  transform: rotate(0deg);
+}
+
+.project-arrow--open {
+  transform: rotate(90deg);
+}
+
+.project-name {
+  flex: 1;
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.project-count {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-ghost);
+  background: var(--bg-glass);
+  padding: 1px 5px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.project-action-btn {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  color: var(--text-ghost);
+  font-size: 0.9rem;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  opacity: 0;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.project-header:hover .project-action-btn {
+  opacity: 1;
+}
+
+.project-action-btn:hover {
+  color: var(--text-secondary);
+  background: var(--bg-glass-hover);
+}
+
+.project-action-btn--danger:hover {
+  color: var(--accent-danger);
+  background: rgba(255, 92, 114, 0.1);
+}
+
+.project-shortcut {
+  font-family: var(--font-mono);
+  font-size: 0.5rem;
+  color: var(--text-ghost);
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.project-header:hover .project-shortcut {
+  opacity: 1;
+}
+
+/* ─── Session Rows ─── */
+.project-sessions {
+  padding-left: 12px;
+}
+
+.session-row-wrapper {
+  position: relative;
+}
+
+.session-row {
+  display: flex;
+  align-items: center;
+  padding: 5px 8px;
+  margin: 1px 0;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border: 1px solid transparent;
+  gap: 8px;
+}
+
+.session-row:hover {
+  background: var(--bg-glass);
+  border-color: var(--border-subtle);
+}
+
+.session-row--active {
+  background: var(--accent-primary-soft);
+  border-color: var(--border-active);
+}
+
+/* 사이드바 키보드 커서 */
+.session-row--cursor {
+  outline: 1.5px solid var(--accent-secondary);
+  outline-offset: -1.5px;
+  background: rgba(6, 214, 160, 0.08);
+}
+
+/* 확인 안 한 세션 (작업 완료/permission/에러 발생) */
+.session-row--attention {
+  background: rgba(107, 138, 255, 0.08);
+  border-color: rgba(107, 138, 255, 0.25);
+  animation: attention-pulse 2s ease-in-out infinite;
+}
+
+.session-row--attention .session-row-name {
+  color: #fff;
+  font-weight: 500;
+}
+
+.session-row--attention .session-row-indicator {
+  box-shadow: 0 0 10px currentColor;
+}
+
+@keyframes attention-pulse {
+  0%, 100% { background: rgba(107, 138, 255, 0.06); }
+  50% { background: rgba(107, 138, 255, 0.14); }
+}
+
+/* permission 상태의 attention은 앰버 */
+.session-row--attention .indicator--permission {
+  box-shadow: 0 0 12px var(--status-permission-glow) !important;
+}
+
+/* error 상태의 attention은 빨간색 */
+.session-row--attention .indicator--error {
+  box-shadow: 0 0 12px rgba(255, 92, 114, 0.5) !important;
+}
+
+/* active인 세션은 attention 스타일 덮어쓰지 않음 */
+.session-row--active.session-row--attention {
+  animation: none;
+  background: var(--accent-primary-soft);
+}
+
+.session-row-indicator {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-secondary);
+  flex-shrink: 0;
+  box-shadow: 0 0 6px var(--accent-secondary-glow);
+}
+
+.session-row--active .session-row-indicator {
+  background: var(--accent-primary);
+  box-shadow: 0 0 8px var(--accent-primary-glow);
+}
+
+.session-row-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.session-row-name {
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.session-row--active .session-row-name {
+  font-weight: 500;
+  color: #fff;
+}
+
+/* 그리드에 열려있는 세션 표시 */
+.session-row-grid-badge {
+  font-size: 0.6rem;
+  color: var(--accent-secondary);
+  opacity: 0.7;
+  margin-left: 4px;
+  padding-left: 1px;
+  position: relative;
+  top: -0.5px;
+}
+
+/* ─── Inline Name Edit Input ─── */
+.session-row-name-input {
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--accent-primary);
+  border-radius: 3px;
+  padding: 0 4px;
+  outline: none;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* ─── Subtitle (자동 감지 작업명) ─── */
+.session-row-subtitle {
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.session-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.session-row-status {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.session-row-ctx {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  opacity: 0.7;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.session-row-ctx--warn {
+  color: var(--accent-warm);
+  opacity: 1;
+}
+
+/* ─── Status States (테마 무관 고정 색상) ─── */
+
+/* Thinking: 펄스 애니메이션 */
+.indicator--thinking {
+  background: var(--status-thinking) !important;
+  box-shadow: 0 0 8px var(--status-thinking-glow) !important;
+  animation: indicator-thinking 1.2s ease-in-out infinite;
+}
+
+@keyframes indicator-thinking {
+  0%, 100% { opacity: 0.5; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+.status--thinking {
+  color: var(--status-thinking);
+}
+
+/* Tool: 도구 사용 중 */
+.indicator--tool {
+  background: var(--status-tool) !important;
+  box-shadow: 0 0 8px var(--status-tool-glow) !important;
+  animation: indicator-tool 0.8s ease-in-out infinite;
+}
+
+@keyframes indicator-tool {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+.status--tool {
+  color: var(--status-tool);
+}
+
+/* Agent: 에이전트 실행 */
+.indicator--agent {
+  background: var(--status-agent) !important;
+  box-shadow: 0 0 10px var(--status-agent-glow) !important;
+  animation: indicator-agent 1.5s ease-in-out infinite;
+}
+
+@keyframes indicator-agent {
+  0%, 100% { opacity: 0.6; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+
+.status--agent {
+  color: var(--status-agent);
+}
+
+/* Idle: 입력 대기 */
+.indicator--idle {
+  background: var(--status-idle) !important;
+  box-shadow: none !important;
+  animation: none;
+  opacity: 0.6;
+}
+
+.status--idle {
+  color: var(--status-idle);
+  opacity: 0.6;
+}
+
+/* Completed: 작업 완료 (초록) */
+.indicator--completed {
+  background: var(--status-idle-completed) !important;
+  box-shadow: 0 0 6px var(--status-idle-completed-glow) !important;
+  animation: none;
+}
+
+.status--completed {
+  color: var(--status-idle-completed);
+}
+
+/* Permission: 확인 요망 (앰버) */
+.indicator--permission {
+  background: var(--status-permission) !important;
+  box-shadow: 0 0 8px var(--status-permission-glow) !important;
+  animation: indicator-permission 1s ease-in-out infinite;
+}
+
+@keyframes indicator-permission {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; box-shadow: 0 0 12px var(--status-permission-glow); }
+}
+
+.status--permission {
+  color: var(--status-permission);
+}
+
+/* Error */
+.indicator--error {
+  background: var(--status-error) !important;
+  box-shadow: 0 0 8px var(--status-error-glow) !important;
+  animation: none;
+}
+
+.status--error {
+  color: var(--status-error);
+}
+
+/* Shell: Claude 종료 후 일반 터미널 */
+.indicator--shell {
+  background: var(--status-shell) !important;
+  box-shadow: none !important;
+  animation: none;
+  opacity: 0.5;
+}
+
+.status--shell {
+  color: var(--status-shell);
+  opacity: 0.6;
+}
+
+.session-row-shell-icon {
+  font-family: var(--font-mono);
+  font-size: 0.5rem;
+  color: var(--status-shell);
+  flex-shrink: 0;
+  width: 6px;
+  text-align: center;
+  line-height: 1;
+  opacity: 0.7;
+}
+
+.session-row--active .session-row-shell-icon {
+  color: var(--status-shell);
+  opacity: 1;
+}
+
+/* Exited */
+.indicator--exited {
+  background: var(--status-exited) !important;
+  box-shadow: none !important;
+  animation: none;
+  opacity: 0.5;
+}
+
+.status--exited {
+  color: var(--status-exited);
+}
+
+.session-shortcut {
+  font-family: var(--font-mono);
+  font-size: 0.5rem;
+  color: var(--text-ghost);
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.session-row:hover .session-shortcut {
+  opacity: 1;
+}
+
+.session-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.session-row:hover .session-row-actions {
+  opacity: 1;
+}
+
+.session-theme-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  padding: 0;
+}
+
+.session-theme-dot:hover {
+  transform: scale(1.3);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.session-close-btn {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  cursor: pointer;
+  border-radius: 3px;
+  padding: 0;
+  transition: all var(--transition-fast);
+}
+
+.session-close-btn:hover {
+  color: var(--accent-danger);
+  background: rgba(255, 92, 114, 0.1);
+}
+
+/* ─── Agent Tree ─── */
+.session-agents {
+  padding-left: 22px;
+  margin-bottom: 2px;
+}
+
+.session-agents-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+  width: 100%;
+}
+
+.session-agents-toggle:hover {
+  background: var(--bg-glass);
+  color: var(--text-secondary);
+}
+
+.session-agents-arrow {
+  display: inline-block;
+  font-size: 0.7rem;
+  transition: transform 0.15s ease;
+  transform: rotate(0deg);
+}
+
+.session-agents-arrow--open {
+  transform: rotate(90deg);
+}
+
+.session-agents-count {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-muted);
+}
+
+.session-agents-list {
+  padding-left: 4px;
+  animation: agents-in 0.12s ease;
+}
+
+@keyframes agents-in {
+  from { opacity: 0; transform: translateY(-2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.session-agent-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px 6px;
+  padding: 1px 4px;
+  border-radius: var(--radius-sm);
+  min-width: 0;
+}
+
+.session-agent-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.session-agent-detail {
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-left: 11px;
+  line-height: 1.3;
+  opacity: 0.8;
+}
+
+.session-agent-indicator {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.session-agent-indicator--running {
+  background: var(--status-agent);
+  box-shadow: 0 0 6px var(--status-agent-glow);
+  animation: agent-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes agent-pulse {
+  0%, 100% { opacity: 0.6; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+
+.session-agent-indicator--completed {
+  background: var(--status-idle-completed);
+  box-shadow: 0 0 4px var(--status-idle-completed-glow);
+  animation: none;
+}
+
+.session-agent-name {
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.session-agent-row--completed .session-agent-name {
+  color: var(--text-muted);
+}
+
+.session-agent-type {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  color: var(--text-ghost);
+  background: var(--bg-glass);
+  padding: 0 4px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* ─── Inline Theme Picker ─── */
+.session-theme-picker {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px 6px 26px;
+  animation: picker-in 0.12s ease;
+}
+
+@keyframes picker-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.theme-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  padding: 0;
+}
+
+.theme-dot:hover {
+  transform: scale(1.2);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.theme-dot--active {
+  border-color: #fff;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
+}
+
+/* ─── Usage Gauge ─── */
+.sidebar-usage {
+  flex-shrink: 0;
+  padding: 8px 14px 6px;
+  border-top: 1px solid var(--border-subtle);
+  position: relative;
+  z-index: 1;
+}
+
+.sidebar-usage-header {
+  margin-bottom: 5px;
+}
+
+.sidebar-usage-plan {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sidebar-usage-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 3px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.sidebar-usage-label {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  color: var(--text-secondary);
+  width: 14px;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.sidebar-usage-bar {
+  flex: 1;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.sidebar-usage-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--status-thinking);
+  transition: width 0.3s ease;
+}
+
+.sidebar-usage-fill--warn {
+  background: var(--status-error);
+}
+
+.sidebar-usage-pct {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  color: var(--text-secondary);
+  width: 24px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.sidebar-usage-reset {
+  font-family: var(--font-mono);
+  font-size: 0.5rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  min-width: 44px;
+  text-align: right;
+}
+
+/* ─── Status Legend ─── */
+.sidebar-list--with-legend {
+  flex: 1;
+  min-height: 0;
+}
+
+.sidebar-legend {
+  flex-shrink: 0;
+  padding: 10px 14px 12px;
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  position: relative;
+  z-index: 1;
+}
+
+.sidebar-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sidebar-legend-row span {
+  font-family: var(--font-ui);
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.sidebar-legend-row .session-row-indicator {
+  width: 5px;
+  height: 5px;
+  animation: none;
+}
+
+.legend-shell-icon {
+  font-family: var(--font-mono) !important;
+  font-size: 0.55rem !important;
+  width: 12px;
+  text-align: center;
+  line-height: 1;
+}
+
+/* ─── Sidebar Footer ─── */
+.sidebar-footer {
+  flex-shrink: 0;
+  padding: 8px 14px 12px;
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+  z-index: 1;
+}
+
+.sidebar-footer-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.sidebar-footer-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex: 1;
+  padding: 6px 0;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-glass);
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.sidebar-footer-btn:hover {
+  background: var(--bg-glass-hover);
+  border-color: var(--border-default);
+  color: var(--text-secondary);
+}
+
+.sidebar-footer-btn svg {
+  opacity: 0.6;
+  transition: opacity var(--transition-fast);
+}
+
+.sidebar-footer-btn:hover svg {
+  opacity: 1;
+}
+
+.sidebar-contact {
+  text-align: center;
+}
+
+.sidebar-contact-link {
+  font-family: var(--font-ui);
+  font-size: 0.6rem;
+  color: var(--text-ghost);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+  letter-spacing: 0.3px;
+}
+
+.sidebar-contact-link:hover {
+  color: var(--text-muted);
+  text-decoration: underline;
+}
+
+.sidebar-contact-hint {
+  font-family: var(--font-ui);
+  font-size: 0.55rem;
+  color: var(--text-ghost);
+  margin-top: 3px;
+  line-height: 1.3;
+  opacity: 0.7;
+}

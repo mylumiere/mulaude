@@ -1,0 +1,47 @@
+{
+  "name": "mulaude",
+  "version": "1.0.0",
+  "description": "멀티 세션 Claude Code 터미널 데스크톱 앱",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "postinstall": "@electron/rebuild -f -w node-pty",
+    "package": "npm run build && electron-builder",
+    "package:mac": "npm run build && electron-builder --mac",
+    "package:dmg": "npm run build && electron-builder --mac dmg"
+  },
+  "keywords": [
+    "electron",
+    "claude",
+    "terminal",
+    "multi-session"
+  ],
+  "author": "mylumiere",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mylumiere/mulaude.git"
+  },
+  "dependencies": {
+    "@electron-toolkit/preload": "^3.0.2",
+    "@electron-toolkit/utils": "^4.0.0",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0",
+    "node-pty": "^1.1.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^4.0.3",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.4",
+    "electron": "^33.4.11",
+    "electron-builder": "^26.8.1",
+    "electron-rebuild": "^3.2.9",
+    "electron-vite": "^5.0.0",
+    "typescript": "^5.9.3"
+  }
+}

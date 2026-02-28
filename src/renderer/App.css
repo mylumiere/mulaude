@@ -1,0 +1,374 @@
+/* ========================================
+ * Mulaude - Dark Observatory Theme
+ *
+ * 멀티 세션 Claude 터미널을 위한 다크 커맨드 센터 UI
+ * Glassmorphism + Electric Accents + Atmospheric Depth
+ * ======================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Syne:wght@700;800&family=DM+Mono:wght@300;400;500&display=swap');
+
+/* --- Design Tokens --- */
+:root {
+  /* Surfaces */
+  --bg-void: #06060e;
+  --bg-deep: #0a0a18;
+  --bg-surface: #0e0e20;
+  --bg-elevated: #141430;
+  --bg-glass: rgba(16, 16, 42, 0.65);
+  --bg-glass-hover: rgba(22, 22, 56, 0.75);
+
+  /* Accent Palette */
+  --accent-primary: #7c5cfc;
+  --accent-primary-glow: rgba(124, 92, 252, 0.35);
+  --accent-primary-soft: rgba(124, 92, 252, 0.12);
+  --accent-secondary: #06d6a0;
+  --accent-secondary-glow: rgba(6, 214, 160, 0.3);
+  --accent-warm: #f7a046;
+  --accent-danger: #ff5c72;
+
+  /* Text */
+  --text-primary: #eaeaf4;
+  --text-secondary: #8585a8;
+  --text-muted: #4e4e6e;
+  --text-ghost: #2d2d4a;
+
+  /* Borders */
+  --border-subtle: rgba(124, 92, 252, 0.08);
+  --border-default: rgba(124, 92, 252, 0.15);
+  --border-active: rgba(124, 92, 252, 0.4);
+
+  /* Shadows */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 24px rgba(0, 0, 0, 0.4);
+  --shadow-glow: 0 0 30px var(--accent-primary-glow);
+
+  /* Spacing */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+
+  /* Fonts */
+  --font-ui: 'Outfit', -apple-system, sans-serif;
+  --font-display: 'Syne', 'Outfit', sans-serif;
+  --font-mono: 'DM Mono', 'SF Mono', monospace;
+
+  /* Transitions */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-fast: 0.15s var(--ease-out-expo);
+  --transition-normal: 0.25s var(--ease-out-expo);
+  --transition-slow: 0.4s var(--ease-out-expo);
+
+  /* Status Colors (테마와 무관하게 고정) */
+  --status-thinking: #6B8AFF;
+  --status-thinking-glow: rgba(107, 138, 255, 0.35);
+  --status-tool: #F0A050;
+  --status-tool-glow: rgba(240, 160, 80, 0.35);
+  --status-agent: #34D399;
+  --status-agent-glow: rgba(52, 211, 153, 0.35);
+  --status-idle: #888899;
+  --status-idle-completed: #34D399;
+  --status-idle-completed-glow: rgba(52, 211, 153, 0.35);
+  --status-permission: #FBBF24;
+  --status-permission-glow: rgba(251, 191, 36, 0.35);
+  --status-error: #FF5C72;
+  --status-error-glow: rgba(255, 92, 114, 0.35);
+  --status-shell: #888899;
+  --status-exited: #555566;
+
+  /* UI Scale (글씨 크기 조절) */
+  --ui-scale: 1;
+  font-size: calc(14px * var(--ui-scale));
+}
+
+/* --- Reset & Base --- */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--font-ui);
+  background: var(--bg-void);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 전체 배경: 미묘한 radial gradient + noise overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 10%, var(--glow-bg-1) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 80% 90%, var(--glow-bg-2) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  opacity: 0.03;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* --- App Layout --- */
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+.app-main {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+/* --- Titlebar --- */
+.titlebar {
+  height: 38px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px 0 80px;
+  background: var(--bg-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-subtle);
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+.titlebar-title {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-primary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.titlebar-session {
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 50%;
+}
+
+/* --- Resize Handle --- */
+.resize-handle {
+  width: 1px;
+  cursor: col-resize;
+  background: var(--border-subtle);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
+  transition: background var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.resize-handle::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -3px;
+  width: 7px;
+  cursor: col-resize;
+}
+
+.resize-handle:hover {
+  background: var(--accent-primary);
+  box-shadow: 0 0 12px var(--accent-primary-glow);
+}
+
+/* --- Terminal Area --- */
+.terminal-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--bg-deep);
+  position: relative;
+}
+
+.terminal-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* ─── Terminal Split Layout (에이전트 존재 시) ─── */
+.terminal-split {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.terminal-split-parent {
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.terminal-split-agents {
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.terminal-split-handle {
+  width: 1px;
+  cursor: col-resize;
+  background: var(--border-subtle);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
+  transition: background var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.terminal-split-handle::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -3px;
+  width: 7px;
+  cursor: col-resize;
+}
+
+.terminal-split-handle:hover {
+  background: var(--accent-primary);
+  box-shadow: 0 0 12px var(--accent-primary-glow);
+}
+
+/* --- Empty State --- */
+.empty-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  user-select: none;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Ambient glow behind empty state */
+.empty-state::before {
+  content: '';
+  position: absolute;
+  width: 400px;
+  height: 400px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--accent-primary-glow) 0%, transparent 70%);
+  opacity: 0.4;
+  animation: pulse-ambient 6s ease-in-out infinite;
+}
+
+@keyframes pulse-ambient {
+  0%, 100% { transform: scale(0.8); opacity: 0.3; }
+  50% { transform: scale(1.1); opacity: 0.5; }
+}
+
+.empty-icon {
+  font-size: 4rem;
+  opacity: 0.15;
+  margin-bottom: 4px;
+  position: relative;
+  z-index: 1;
+}
+
+.empty-state h2 {
+  font-family: var(--font-display);
+  font-size: 2.3rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-primary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  position: relative;
+  z-index: 1;
+}
+
+.empty-state p {
+  font-size: 1rem;
+  font-weight: 300;
+  color: var(--text-muted);
+  letter-spacing: 0.3px;
+  position: relative;
+  z-index: 1;
+}
+
+.empty-create-btn {
+  margin-top: 24px;
+  padding: 12px 28px;
+  background: linear-gradient(135deg, var(--accent-primary), #9a7cff);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-ui);
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  -webkit-app-region: no-drag;
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 4px 20px var(--accent-primary-glow);
+}
+
+.empty-create-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 30px var(--accent-primary-glow), 0 0 0 1px rgba(124, 92, 252, 0.3);
+}
+
+.empty-create-btn:active {
+  transform: translateY(0);
+}
+
+/* --- Scrollbar --- */
+::-webkit-scrollbar {
+  width: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--text-ghost);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}

@@ -1,0 +1,75 @@
+/* ========================================
+ * AgentTerminal - 에이전트 전용 xterm.js 터미널
+ *
+ * 각 자식 에이전트 pane을 개별 xterm 인스턴스로 렌더링합니다.
+ * 포커스 상태에 따라 accent 보더와 glow 효과를 적용합니다.
+ * ======================================== */
+
+.agent-terminal-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 120px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.agent-terminal-container--focused {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 12px var(--accent-primary-glow), inset 0 0 8px rgba(124, 92, 252, 0.05);
+}
+
+/* ─── Header ─── */
+.agent-terminal-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  background: var(--bg-glass);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.agent-terminal-name {
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.agent-terminal-badge {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  padding: 1px 5px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+/* ─── Terminal Body ─── */
+.agent-terminal-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  padding: 2px 4px;
+}
+
+.agent-terminal-body .xterm {
+  height: 100%;
+  width: 100%;
+}
+
+.agent-terminal-body .xterm-viewport {
+  overflow-y: auto !important;
+}
+
+.agent-terminal-body .xterm-selection div {
+  background: rgba(124, 92, 252, 0.25) !important;
+}

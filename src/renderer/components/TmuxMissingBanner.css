@@ -1,0 +1,82 @@
+/**
+ * TmuxMissingBanner 스타일
+ *
+ * 전체 화면 오버레이로 tmux 미설치 안내를 표시합니다.
+ * 반투명 배경 위에 중앙 정렬된 카드 형태의 배너를 렌더링합니다.
+ */
+
+.tmux-banner-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+}
+
+.tmux-banner {
+  background: #1e1e2e;
+  border: 1px solid #45475a;
+  border-radius: 12px;
+  padding: 40px 48px;
+  max-width: 480px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.tmux-banner-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.tmux-banner-title {
+  color: #cdd6f4;
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+
+.tmux-banner-body {
+  color: #a6adc8;
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0 0 20px;
+}
+
+.tmux-banner-install {
+  background: #181825;
+  border: 1px solid #313244;
+  border-radius: 8px;
+  padding: 12px 20px;
+  margin-bottom: 24px;
+}
+
+.tmux-banner-install code {
+  color: #a6e3a1;
+  font-size: 15px;
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+}
+
+.tmux-banner-actions {
+  display: flex;
+  justify-content: center;
+}
+
+.tmux-banner-continue {
+  background: transparent;
+  border: 1px solid #45475a;
+  border-radius: 8px;
+  color: #a6adc8;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 8px 20px;
+  transition: all 0.15s ease;
+}
+
+.tmux-banner-continue:hover {
+  background: #313244;
+  border-color: #585b70;
+  color: #cdd6f4;
+}

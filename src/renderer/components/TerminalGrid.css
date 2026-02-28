@@ -1,0 +1,239 @@
+/* ========================================
+ * TerminalGrid - 이진 트리 기반 터미널 분할 스타일
+ *
+ * 재귀적 브랜치/리프 구조로 자유로운 분할 지원
+ * ======================================== */
+
+/* --- 그리드 컨테이너 --- */
+.terminal-grid {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  min-height: 0;
+  min-width: 0;
+  height: 100%;
+  position: relative;
+}
+
+.terminal-grid--zoomed {
+  /* 줌 모드: 전체 영역 */
+}
+
+/* --- 브랜치 (재귀 컨테이너) --- */
+.terminal-grid-branch {
+  display: flex;
+  min-height: 0;
+  min-width: 0;
+  flex: 1;
+}
+
+.terminal-grid-branch--horizontal {
+  flex-direction: row;
+}
+
+.terminal-grid-branch--vertical {
+  flex-direction: column;
+}
+
+/* --- 브랜치 자식 래퍼 --- */
+.terminal-grid-branch-child {
+  display: flex;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* --- 패인 (리프) --- */
+.terminal-grid-pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid transparent;
+  transition: border-color var(--transition-fast), opacity 0.2s ease;
+}
+
+.terminal-grid-pane--focused {
+  border-color: var(--accent-primary);
+  box-shadow: inset 0 0 0 1px var(--accent-primary-soft),
+              0 0 12px var(--accent-primary-glow);
+}
+
+/* 비활성 패인 디밍 */
+.terminal-grid-pane--dimmed {
+  opacity: 0.55;
+}
+
+.terminal-grid-pane--dimmed:hover {
+  opacity: 0.85;
+}
+
+/* --- 드롭 표시 --- */
+.terminal-grid-pane--drop-left {
+  border-left: 3px solid var(--accent-secondary);
+}
+
+.terminal-grid-pane--drop-right {
+  border-right: 3px solid var(--accent-secondary);
+}
+
+.terminal-grid-pane--drop-top {
+  border-top: 3px solid var(--accent-secondary);
+}
+
+.terminal-grid-pane--drop-bottom {
+  border-bottom: 3px solid var(--accent-secondary);
+}
+
+.terminal-grid-pane--drop-center {
+  border: 2px solid var(--accent-secondary);
+  background: rgba(6, 214, 160, 0.05);
+}
+
+/* --- 패인 헤더 --- */
+.terminal-grid-pane-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 26px;
+  padding: 0 8px;
+  background: var(--bg-glass);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+  user-select: none;
+  cursor: grab;
+}
+
+.terminal-grid-pane-header:active {
+  cursor: grabbing;
+}
+
+.terminal-grid-pane-title {
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.terminal-grid-pane--focused .terminal-grid-pane-title {
+  color: var(--text-primary);
+}
+
+.terminal-grid-pane-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  padding: 0 4px;
+  line-height: 1;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+
+.terminal-grid-pane-close:hover {
+  color: var(--accent-danger);
+  background: rgba(255, 92, 114, 0.1);
+}
+
+/* --- 패인 내용 --- */
+.terminal-grid-pane-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* --- 리사이즈 핸들 (공통) --- */
+.terminal-grid-handle {
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
+  transition: background var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+/* 열 핸들 (수평 분할 사이) */
+.terminal-grid-handle--col {
+  width: 1px;
+  background: var(--border-subtle);
+  cursor: col-resize;
+}
+
+.terminal-grid-handle--col::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -4px;
+  width: 9px;
+  cursor: col-resize;
+}
+
+.terminal-grid-handle--col:hover {
+  background: var(--accent-primary);
+  box-shadow: 0 0 12px var(--accent-primary-glow);
+}
+
+/* 행 핸들 (수직 분할 사이) */
+.terminal-grid-handle--row {
+  height: 1px;
+  background: var(--border-subtle);
+  cursor: row-resize;
+}
+
+.terminal-grid-handle--row::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -4px;
+  height: 9px;
+  cursor: row-resize;
+}
+
+.terminal-grid-handle--row:hover {
+  background: var(--accent-primary);
+  box-shadow: 0 0 12px var(--accent-primary-glow);
+}
+
+/* --- 중복 세션 토스트 --- */
+.terminal-grid-toast {
+  position: fixed;
+  top: 48px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-elevated);
+  border: 1px solid var(--accent-danger);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  padding: 6px 16px;
+  border-radius: var(--radius-md);
+  z-index: 100;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  animation: toast-fade 2s ease-in-out forwards;
+  pointer-events: none;
+}
+
+@keyframes toast-fade {
+  0% { opacity: 0; transform: translateX(-50%) translateY(-4px); }
+  15% { opacity: 1; transform: translateX(-50%) translateY(0); }
+  75% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* --- 숨겨진 세션 컨테이너 --- */
+.terminal-grid-hidden {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}

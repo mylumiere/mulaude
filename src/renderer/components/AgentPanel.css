@@ -1,0 +1,122 @@
+/* ========================================
+ * AgentPanel - 에이전트 터미널 리스트 컨테이너
+ *
+ * 상단 헤더 ("Agents (N)") + 하단 터미널 리스트
+ * 3개 이하: 균등 분배, 4개+: 고정 높이 스크롤
+ * ======================================== */
+
+.agent-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+/* ─── Header ─── */
+.agent-panel-header {
+  display: flex;
+  align-items: center;
+  padding: 6px 10px;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.agent-panel-title {
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ─── Terminal List ─── */
+.agent-panel-list {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 4px 4px;
+  min-height: 0;
+}
+
+/* 3개 이하: 균등 분배 */
+.agent-panel-list > .agent-terminal-container {
+  flex: 1;
+}
+
+/* 4개 이상: 고정 높이 + 스크롤 */
+.agent-panel-list--scroll {
+  overflow-y: auto;
+}
+
+.agent-panel-list--scroll > .agent-terminal-container {
+  flex: none;
+  height: 200px;
+}
+
+/* ─── Scroll Navigation ─── */
+.agent-panel-scroll-nav {
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
+}
+
+.agent-panel-scroll-btn {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  width: 20px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition-fast), background var(--transition-fast);
+  line-height: 1;
+  padding: 0;
+}
+
+.agent-panel-scroll-btn:hover {
+  background: var(--bg-glass-hover);
+  color: var(--text-primary);
+}
+
+.agent-panel-scroll-btn--disabled {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+/* ─── Scroll Fade Indicators ─── */
+.agent-panel-fade {
+  position: relative;
+  z-index: 5;
+  height: 0;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+.agent-panel-fade--top::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 4px;
+  right: 4px;
+  height: 20px;
+  background: linear-gradient(to bottom, var(--bg-deep), transparent);
+  z-index: 5;
+}
+
+.agent-panel-fade--bottom::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 4px;
+  right: 4px;
+  height: 20px;
+  background: linear-gradient(to top, var(--bg-deep), transparent);
+  z-index: 5;
+}

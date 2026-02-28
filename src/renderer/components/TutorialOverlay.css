@@ -1,0 +1,149 @@
+/* TutorialOverlay - 인터랙티브 튜토리얼 스포트라이트 + 툴팁 */
+
+.tutorial-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  pointer-events: none;
+}
+
+.tutorial-spotlight {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: all;
+}
+
+.tutorial-tooltip {
+  position: fixed;
+  z-index: 201;
+  pointer-events: all;
+  background: var(--bg-elevated);
+  border: 1.5px solid var(--accent-primary);
+  border-radius: 12px;
+  padding: 18px 20px;
+  width: 300px;
+  box-shadow: 0 0 24px rgba(var(--accent-primary-rgb, 138, 180, 248), 0.25),
+              0 8px 32px rgba(0, 0, 0, 0.4);
+  animation: tutorial-fade-in 0.25s ease-out;
+}
+
+.tutorial-tooltip.center {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+@keyframes tutorial-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.tutorial-tooltip.center {
+  animation-name: tutorial-fade-in-center;
+}
+
+@keyframes tutorial-fade-in-center {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.96); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+.tutorial-tooltip-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.tutorial-tooltip-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 14px;
+}
+
+.tutorial-tooltip-arrow {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: var(--bg-elevated);
+  border: 1.5px solid var(--accent-primary);
+  transform: rotate(45deg);
+}
+
+.tutorial-tooltip-arrow.arrow-left {
+  left: -6px;
+  top: 24px;
+  border-right: none;
+  border-top: none;
+}
+
+.tutorial-tooltip-arrow.arrow-right {
+  right: -6px;
+  top: 24px;
+  border-left: none;
+  border-bottom: none;
+}
+
+.tutorial-dots {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.tutorial-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-tertiary);
+  transition: background 0.2s;
+}
+
+.tutorial-dot.active {
+  background: var(--accent-primary);
+}
+
+.tutorial-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.tutorial-actions button {
+  padding: 5px 14px;
+  border-radius: 6px;
+  border: none;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.tutorial-btn-skip {
+  background: transparent;
+  color: var(--text-tertiary);
+}
+
+.tutorial-btn-skip:hover {
+  color: var(--text-secondary);
+}
+
+.tutorial-btn-prev {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+}
+
+.tutorial-btn-prev:hover {
+  background: var(--bg-tertiary);
+}
+
+.tutorial-btn-next {
+  background: var(--accent-primary);
+  color: var(--bg-primary);
+  font-weight: 600;
+}
+
+.tutorial-btn-next:hover {
+  filter: brightness(1.1);
+}

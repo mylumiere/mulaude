@@ -1,0 +1,77 @@
+/* ========================================
+ * TerminalView - Dark Observatory Terminal
+ *
+ * xterm.js 터미널을 감싸는 컨테이너
+ * 미묘한 inner shadow로 깊이감 표현
+ * ======================================== */
+
+.terminal-view {
+  flex: 1;
+  padding: 4px 8px 8px;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+/* 터미널 상단 미묘한 vignette 효과 */
+.terminal-view::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  background: linear-gradient(180deg, var(--bg-deep) 0%, transparent 100%);
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.5;
+}
+
+.terminal-view .xterm {
+  height: 100%;
+}
+
+.terminal-view .xterm-viewport {
+  overflow-y: auto !important;
+}
+
+/* xterm.js 선택 영역 스타일 오버라이드 */
+.terminal-view .xterm-selection div {
+  background: rgba(124, 92, 252, 0.25) !important;
+}
+
+/* ─── Terminal Container ─── */
+.terminal-view-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  min-height: 0;
+  border: 1px solid transparent;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.terminal-view-container--focused {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 12px var(--accent-primary-glow), inset 0 0 8px rgba(124, 92, 252, 0.05);
+}
+
+/* ─── Context Badge ─── */
+.terminal-context-badge {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  padding: 2px 6px;
+  border-radius: 4px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.terminal-context-badge--warn {
+  color: var(--status-error);
+}
