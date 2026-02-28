@@ -55,9 +55,12 @@ export function setupSessionDataForwarding(
 ): void {
   const append = createBatchForwarder<string>((pending) => {
     if (mainWindow.isDestroyed()) return false
+    // 모든 세션 데이터를 단일 IPC로 배치 전송 (세션 수에 비례하던 IPC 호출 → 1회)
+    const batch: Record<string, string> = {}
     for (const [id, data] of pending) {
-      mainWindow.webContents.send('session:data', id, data)
+      batch[id] = data
     }
+    mainWindow.webContents.send('session:data-batch', batch)
   })
 
   sessionManager.onAnyData((id: string, data: string) => {

@@ -52,8 +52,6 @@ interface PaneStream {
   readOffset: number
   /** 파일 디스크립터 (읽기 전용) */
   fd: number | null
-  /** 파일 폴링 타이머 */
-  pollTimer: ReturnType<typeof setInterval>
 }
 
 type DataCallback = (sessionId: string, paneIndex: number, data: string) => void
@@ -67,9 +65,43 @@ export class ChildPaneStreamer {
   private dataCallbacks: DataCallback[] = []
   private paneDiscoveredCallbacks: PaneDiscoveredCallback[] = []
   private paneRemovedCallbacks: PaneRemovedCallback[] = []
+  /** 클래스 레벨 단일 폴링 타이머 (모든 스트림 공유) */
+  private globalPollTimer: ReturnType<typeof setInterval> | null = null
 
   constructor(tmuxPath: string) {
     this.tmuxPath = tmuxPath
+  }
+
+  /** 활성 스트림 총 개수 */
+  private get totalStreamCount(): number {
+    let count = 0
+    for (const m of this.streams.values()) count += m.size
+    return count
+  }
+
+  /** 글로벌 타이머 시작 (활성 스트림 1개 이상일 때) */
+  private ensureGlobalTimer(): void {
+    if (this.globalPollTimer) return
+    this.globalPollTimer = setInterval(() => {
+      this.pollAllStreams()
+    }, PIPE_POLL_INTERVAL)
+  }
+
+  /** 글로벌 타이머 정리 (활성 스트림 0개일 때) */
+  private clearGlobalTimerIfEmpty(): void {
+    if (this.totalStreamCount === 0 && this.globalPollTimer) {
+      clearInterval(this.globalPollTimer)
+      this.globalPollTimer = null
+    }
+  }
+
+  /** 모든 활성 스트림의 pipe 파일을 한 번에 순회 */
+  private pollAllStreams(): void {
+    for (const [sessionId, sessionStreams] of this.streams) {
+      for (const stream of sessionStreams.values()) {
+        this.pollPipeFile(sessionId, stream)
+      }
+    }
   }
 
   /**
@@ -158,26 +190,24 @@ export class ChildPaneStreamer {
       return
     }
 
-    // 6) 50ms 폴링으로 새 바이트 읽기
+    // 6) 스트림 등록 (글로벌 타이머에서 폴링)
     const stream: PaneStream = {
       paneId,
       paneIndex,
       pipePath,
       ttyPath,
       readOffset: 0,
-      fd,
-      pollTimer: null!
+      fd
     }
-
-    stream.pollTimer = setInterval(() => {
-      this.pollPipeFile(sessionId, stream)
-    }, PIPE_POLL_INTERVAL)
 
     // streams에 등록
     if (!this.streams.has(sessionId)) {
       this.streams.set(sessionId, new Map())
     }
     this.streams.get(sessionId)!.set(paneId, stream)
+
+    // 글로벌 타이머 시작 (첫 스트림일 때)
+    this.ensureGlobalTimer()
 
     // 콜백 호출
     for (const cb of this.paneDiscoveredCallbacks) {
@@ -235,22 +265,19 @@ export class ChildPaneStreamer {
     // 1) pipe-pane 중지 (paneId로 직접 타겟)
     stopPipePane(this.tmuxPath, stream.paneId)
 
-    // 2) 폴링 타이머 정리
-    clearInterval(stream.pollTimer)
-
-    // 3) 파일 디스크립터 닫기
+    // 2) 파일 디스크립터 닫기
     if (stream.fd !== null) {
       try {
         fs.closeSync(stream.fd)
       } catch { /* ignore */ }
     }
 
-    // 4) 임시 파일 삭제
+    // 3) 임시 파일 삭제
     try {
       fs.unlinkSync(stream.pipePath)
     } catch { /* ignore */ }
 
-    // 5) Map에서 제거
+    // 4) Map에서 제거
     sessionStreams.delete(paneId)
     if (sessionStreams.size === 0) {
       this.streams.delete(sessionId)
@@ -260,6 +287,9 @@ export class ChildPaneStreamer {
     for (const cb of this.paneRemovedCallbacks) {
       cb(sessionId, stream.paneIndex)
     }
+
+    // 활성 스트림 0개면 글로벌 타이머 정리
+    this.clearGlobalTimerIfEmpty()
   }
 
   /**
@@ -328,6 +358,10 @@ export class ChildPaneStreamer {
   cleanupAll(): void {
     for (const [sessionId] of this.streams) {
       this.cleanupSession(sessionId)
+    }
+    if (this.globalPollTimer) {
+      clearInterval(this.globalPollTimer)
+      this.globalPollTimer = null
     }
   }
 

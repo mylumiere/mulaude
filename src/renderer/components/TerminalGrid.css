@@ -53,84 +53,167 @@
   overflow: hidden;
   position: relative;
   border: 1px solid transparent;
-  transition: border-color var(--transition-fast), opacity 0.2s ease, box-shadow 0.3s ease;
+  transition: border-color var(--transition-fast), opacity 0.2s ease;
+}
+
+/* ::after 의사 요소로 글로우 레이어 분리 — GPU 가속 opacity 애니메이션 */
+.terminal-grid-pane::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  will-change: opacity;
+  z-index: 1;
 }
 
 .terminal-grid-pane--focused {
   border-color: var(--accent-primary);
-  box-shadow: inset 0 0 0 1px var(--accent-primary-soft),
-              0 0 12px var(--accent-primary-glow);
 }
 
-/* ── 세션 상태별 패인 글로우 ── */
+.terminal-grid-pane--focused::after {
+  box-shadow: inset 0 0 0 1px var(--accent-primary-soft),
+              0 0 12px var(--accent-primary-glow);
+  opacity: 1;
+}
+
+/* ── 세션 상태별 패인 글로우 (opacity 기반) ── */
 
 .terminal-grid-pane--thinking {
   border-color: var(--status-thinking);
-  box-shadow: 0 0 10px var(--status-thinking-glow);
-  animation: pane-thinking 1.2s ease-in-out infinite;
 }
-
-@keyframes pane-thinking {
-  0%, 100% { box-shadow: 0 0 8px var(--status-thinking-glow); }
-  50% { box-shadow: 0 0 18px var(--status-thinking-glow); }
+.terminal-grid-pane--thinking::after {
+  box-shadow: 0 0 18px var(--status-thinking-glow);
+  animation: pane-glow-pulse 1.2s ease-in-out infinite;
 }
 
 .terminal-grid-pane--tool {
   border-color: var(--status-tool);
-  box-shadow: 0 0 10px var(--status-tool-glow);
-  animation: pane-tool 0.8s ease-in-out infinite;
 }
-
-@keyframes pane-tool {
-  0%, 100% { box-shadow: 0 0 6px var(--status-tool-glow); }
-  50% { box-shadow: 0 0 14px var(--status-tool-glow); }
+.terminal-grid-pane--tool::after {
+  box-shadow: 0 0 14px var(--status-tool-glow);
+  animation: pane-glow-pulse 0.8s ease-in-out infinite;
 }
 
 .terminal-grid-pane--agent {
   border-color: var(--status-agent);
-  box-shadow: 0 0 10px var(--status-agent-glow);
-  animation: pane-agent 1.5s ease-in-out infinite;
 }
-
-@keyframes pane-agent {
-  0%, 100% { box-shadow: 0 0 8px var(--status-agent-glow); }
-  50% { box-shadow: 0 0 16px var(--status-agent-glow); }
+.terminal-grid-pane--agent::after {
+  box-shadow: 0 0 16px var(--status-agent-glow);
+  animation: pane-glow-pulse 1.5s ease-in-out infinite;
 }
 
 .terminal-grid-pane--permission {
   border-color: var(--status-permission);
-  box-shadow: 0 0 10px var(--status-permission-glow);
-  animation: pane-permission 1s ease-in-out infinite;
+}
+.terminal-grid-pane--permission::after {
+  box-shadow: 0 0 14px var(--status-permission-glow);
+  animation: pane-glow-pulse 1s ease-in-out infinite;
 }
 
-@keyframes pane-permission {
-  0%, 100% { box-shadow: 0 0 6px var(--status-permission-glow); }
-  50% { box-shadow: 0 0 14px var(--status-permission-glow); }
+/* 활성 상태: ::after opacity를 1로 고정 */
+.terminal-grid-pane--thinking::after,
+.terminal-grid-pane--tool::after,
+.terminal-grid-pane--agent::after,
+.terminal-grid-pane--permission::after,
+.terminal-grid-pane--starting::after {
+  opacity: 1;
+}
+
+@keyframes pane-glow-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
 }
 
 .terminal-grid-pane--error {
   border-color: var(--status-error);
+}
+.terminal-grid-pane--error::after {
   box-shadow: 0 0 10px var(--status-error-glow);
+  opacity: 1;
 }
 
 .terminal-grid-pane--completed {
   border-color: var(--status-idle-completed);
+}
+.terminal-grid-pane--completed::after {
   box-shadow: 0 0 8px var(--status-idle-completed-glow);
+  opacity: 1;
 }
 
-/* idle/shell/exited — 글로우 없음 */
+/* Starting: 세션 시작 중 */
+.terminal-grid-pane--starting {
+  border-color: var(--status-thinking);
+}
+.terminal-grid-pane--starting::after {
+  box-shadow: 0 0 12px var(--status-thinking-glow);
+  animation: pane-glow-pulse 2s ease-in-out infinite;
+}
 
-/* focused + status: 포커스 보더 유지하되 상태 글로우 병합 */
-.terminal-grid-pane--focused.terminal-grid-pane--thinking,
-.terminal-grid-pane--focused.terminal-grid-pane--tool,
-.terminal-grid-pane--focused.terminal-grid-pane--agent,
-.terminal-grid-pane--focused.terminal-grid-pane--permission,
-.terminal-grid-pane--focused.terminal-grid-pane--error,
+/* idle/shell/exited — 글로우 없음 (::after opacity 기본값 0) */
+
+/* focused + status: 포커스 보더 유지 + 상태 글로우 병합 */
+.terminal-grid-pane--focused.terminal-grid-pane--starting {
+  border-color: var(--accent-primary);
+}
+.terminal-grid-pane--focused.terminal-grid-pane--starting::after {
+  box-shadow: inset 0 0 0 1px var(--accent-primary-soft),
+              0 0 12px var(--status-thinking-glow);
+  animation: pane-glow-pulse 2s ease-in-out infinite;
+}
+
+.terminal-grid-pane--focused.terminal-grid-pane--thinking {
+  border-color: var(--accent-primary);
+}
+.terminal-grid-pane--focused.terminal-grid-pane--thinking::after {
+  box-shadow: inset 0 0 0 1px var(--accent-primary-soft),
+              0 0 14px var(--status-thinking-glow);
+  animation: pane-glow-pulse 1.2s ease-in-out infinite;
+}
+
+.terminal-grid-pane--focused.terminal-grid-pane--tool {
+  border-color: var(--accent-primary);
+}
+.terminal-grid-pane--focused.terminal-grid-pane--tool::after {
+  box-shadow: inset 0 0 0 1px var(--accent-primary-soft),
+              0 0 14px var(--status-tool-glow);
+  animation: pane-glow-pulse 0.8s ease-in-out infinite;
+}
+
+.terminal-grid-pane--focused.terminal-grid-pane--agent {
+  border-color: var(--accent-primary);
+}
+.terminal-grid-pane--focused.terminal-grid-pane--agent::after {
+  box-shadow: inset 0 0 0 1px var(--accent-primary-soft),
+              0 0 14px var(--status-agent-glow);
+  animation: pane-glow-pulse 1.5s ease-in-out infinite;
+}
+
+.terminal-grid-pane--focused.terminal-grid-pane--permission {
+  border-color: var(--status-permission);
+}
+.terminal-grid-pane--focused.terminal-grid-pane--permission::after {
+  box-shadow: inset 0 0 0 1px var(--accent-primary-soft),
+              0 0 14px var(--status-permission-glow);
+  animation: pane-glow-pulse 1s ease-in-out infinite;
+}
+
+.terminal-grid-pane--focused.terminal-grid-pane--error {
+  border-color: var(--status-error);
+}
+.terminal-grid-pane--focused.terminal-grid-pane--error::after {
+  box-shadow: inset 0 0 0 1px var(--accent-primary-soft),
+              0 0 14px var(--status-error-glow);
+}
+
 .terminal-grid-pane--focused.terminal-grid-pane--completed {
   border-color: var(--accent-primary);
+}
+.terminal-grid-pane--focused.terminal-grid-pane--completed::after {
   box-shadow: inset 0 0 0 1px var(--accent-primary-soft),
-              0 0 12px var(--accent-primary-glow);
-  animation: none;
+              0 0 12px var(--status-idle-completed-glow);
 }
 
 /* 비활성 패인 디밍 */
@@ -220,6 +303,12 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+}
+
+/* 드래그 중 xterm 캔버스의 마우스 이벤트 차단 (tmux 마우스 모드 개입 방지) */
+.terminal-grid--dragging .terminal-view,
+.terminal-grid--dragging .agent-terminal-body {
+  pointer-events: none;
 }
 
 /* --- 리사이즈 핸들 (공통) --- */

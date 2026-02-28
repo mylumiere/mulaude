@@ -122,6 +122,16 @@ export function registerIpcHandlers(
     }
   })
 
+  // 세션 화면 캡처 (세션 전환 시 xterm 복원용)
+  ipcMain.handle('session:capture-screen', async (_event, id: string) => {
+    try {
+      return sessionManager.captureScreen(id)
+    } catch (err) {
+      console.error('[IPC] session:capture-screen failed:', err)
+      return null
+    }
+  })
+
   // 렌더러에서 locale 변경 시 main에 전달
   ipcMain.on('app:set-locale', (_event, locale: string) => {
     setLocale(locale)

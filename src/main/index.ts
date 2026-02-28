@@ -183,6 +183,8 @@ app.whenReady().then(() => {
       // 모든 세션 완전 종료
       sessionManager.destroyAll()
     }
+    // 디바운스된 save가 있으면 즉시 flush
+    sessionManager.getSessionStore().saveImmediate()
     resetCloseAction()
     cleanupPanePolling()
     hooksManager.cleanup()

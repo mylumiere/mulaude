@@ -4,12 +4,15 @@
  * 2초 간격으로 tmux pane 내용을 캡처하고,
  * team config 기반으로 에이전트-pane 매칭을 수행합니다.
  * 자식 pane 데이터를 16ms 배치 처리로 렌더러에 전달합니다.
+ *
+ * 비동기 전환: execFileSync → execFileAsync로 이벤트 루프 블로킹 방지.
+ * 이중 호출 제거: getSessionPaneContents 결과를 변수에 저장 후 재사용.
  */
 
 import type { BrowserWindow } from 'electron'
 import { ipcMain } from 'electron'
 import type { SessionManager } from './session-manager'
-import { listTmuxPanesWithIds, getPaneCurrentCommand } from './tmux-utils'
+import { listTmuxPanesWithIdsAsync, getPaneCurrentCommandAsync } from './tmux-utils'
 import { scanTeamConfigs } from './team-config-scanner'
 import {
   sendAgentsIfChanged,
@@ -37,56 +40,83 @@ export function setupPanePolling(
   const streamer = sessionManager.getChildPaneStreamer()
   const tmuxPath = sessionManager.getTmuxPath()!
 
+  /** pane command 폴링 라운드 카운터 — 매 사이클 세션의 1/3만 체크 */
+  let pollRound = 0
+  /** 에이전트 활성 세션 캐시 (child pane이 있었던 세션) */
+  const sessionsWithAgents = new Set<string>()
+  /** 중복 실행 방지 가드 */
+  let polling = false
+
   const timer = setInterval(() => {
     if (mainWindow.isDestroyed()) {
       clearInterval(timer)
       return
     }
+    if (polling) return // 이전 폴링이 아직 진행 중이면 스킵
+    polling = true
+    ;(async () => {
+      try {
+        const sessions = sessionManager.getSessionList()
+        if (sessions.length === 0) return
 
-    const sessions = sessionManager.getSessionList()
-    if (sessions.length === 0) return
+        pollRound++
 
-    // team config는 세션 루프 밖에서 한 번만 스캔
-    const teamConfigs = scanTeamConfigs()
+        // team config는 세션 루프 밖에서 한 번만 스캔 (비동기)
+        const teamConfigs = await scanTeamConfigs()
 
-    for (const session of sessions) {
-      // 메인 pane의 현재 프로세스명 확인 (쉘 감지용)
-      if (session.tmuxSessionName) {
-        const cmd = getPaneCurrentCommand(tmuxPath, session.tmuxSessionName)
-        if (cmd) {
-          mainWindow.webContents.send('session:pane-command', session.id, cmd)
+        // team config가 있을 때만 에이전트 감지 수행 (없으면 비용 절약)
+        const hasTeamConfigs = teamConfigs.length > 0
+
+        for (let i = 0; i < sessions.length; i++) {
+          const session = sessions[i]
+
+          // pane command 체크: 라운드 로빈으로 분산 (세션 수가 많을 때 exec 호출 분산)
+          if (session.tmuxSessionName && (i % 3 === pollRound % 3)) {
+            const cmd = await getPaneCurrentCommandAsync(tmuxPath, session.tmuxSessionName)
+            if (cmd) {
+              mainWindow.webContents.send('session:pane-command', session.id, cmd)
+            }
+          }
+
+          if (!session.tmuxSessionName) continue
+
+          // 에이전트 감지: team config가 있거나 이전에 에이전트가 있었던 세션만
+          if (!hasTeamConfigs && !sessionsWithAgents.has(session.id)) continue
+
+          // -s 플래그로 모든 window의 pane 조회 (break-pane 후 별도 window의 child pane 포함)
+          const panesWithIds = await listTmuxPanesWithIdsAsync(tmuxPath, session.tmuxSessionName)
+          const allPaneIds = new Set(panesWithIds.map(p => p.paneId))
+          const childPanes = panesWithIds.filter(p => p.windowIndex > 0)
+          const hasChildPanes = childPanes.length > 0
+
+          const childPaneMap = new Map<string, number>()
+          for (const p of childPanes) {
+            childPaneMap.set(p.paneId, p.windowIndex)
+          }
+
+          const { agents, agentPanes } = await buildAgentsFromConfig(tmuxPath, session.id, teamConfigs, childPaneMap, allPaneIds)
+
+          sendAgentsIfChanged(mainWindow, session.id, agents)
+          if (streamer) streamer.syncWithAgents(session.id, agentPanes)
+
+          // child pane이 있으면 pane 내용도 캡처하여 전달
+          if (hasChildPanes) {
+            sessionsWithAgents.add(session.id)
+            const panes = await sessionManager.getSessionPaneContents(session.id)
+            if (panes.length > 0) {
+              mainWindow.webContents.send('session:panes', session.id, panes)
+            }
+          } else if (agents.length === 0) {
+            // 에이전트도 child pane도 없으면 캐시에서 제거
+            sessionsWithAgents.delete(session.id)
+          }
         }
+      } catch (err) {
+        console.error('[PanePoller] polling error:', err)
+      } finally {
+        polling = false
       }
-
-      const panes = sessionManager.getSessionPaneContents(session.id)
-      if (panes.length > 0) {
-        mainWindow.webContents.send('session:panes', session.id, panes)
-      }
-
-      // Team config 기반 에이전트-pane 매칭 + ChildPaneStreamer 동기화
-      if (!session.tmuxSessionName) continue
-
-      const panesWithIds = listTmuxPanesWithIds(tmuxPath, session.tmuxSessionName)
-      // 이 세션에 속하는 전체 paneId 셋 (session ↔ team 바인딩 검증용)
-      const allPaneIds = new Set(panesWithIds.map(p => p.paneId))
-
-      // window 0 = 리더, window 1+ = break-pane으로 분리된 child pane
-      const childPanes = panesWithIds.filter(p => p.windowIndex > 0)
-
-      // paneId -> windowIndex 맵 (렌더러 식별용)
-      const childPaneMap = new Map<string, number>()
-      for (const p of childPanes) {
-        childPaneMap.set(p.paneId, p.windowIndex)
-      }
-
-      // Config SSOT: config 기반 에이전트 목록 생성
-      const { agents, agentPanes } = buildAgentsFromConfig(tmuxPath, session.id, teamConfigs, childPaneMap, allPaneIds)
-
-      // UI: config 기반 (안정적, 깜박임 없음)
-      sendAgentsIfChanged(mainWindow, session.id, agents)
-      // 스트리밍: 실제 tmux pane만 (buildAgentsFromConfig가 필터링)
-      if (streamer) streamer.syncWithAgents(session.id, agentPanes)
-    }
+    })()
   }, PANE_POLL_INTERVAL)
 
   return (): void => {

@@ -12,7 +12,7 @@ import { t } from '../i18n'
 
 interface UseSessionManagerParams {
   locale: Locale
-  initSession: (id: string) => void
+  initSession: (id: string, restored: boolean) => void
   cleanupSession: (id: string) => void
 }
 
@@ -71,9 +71,9 @@ export function useSessionManager({
           sessionCounter.current = restored.length
           // 첫 번째 복원 세션을 활성화
           setActiveSessionId(restored[0].id)
-          // 각 복원 세션에 대해 initSession 호출
+          // 각 복원 세션에 대해 initSession 호출 (restored=true)
           for (const s of restored) {
-            initSession(s.id)
+            initSession(s.id, true)
           }
         }
       } catch (err) {
@@ -120,13 +120,13 @@ export function useSessionManager({
     const dir = await window.api.openDirectory()
     if (!dir) return
     try {
-      sessionCounter.current++
+      const count = ++sessionCounter.current
       const session = await window.api.createSession(dir)
       const projectName = dir.split('/').pop() || dir
-      const displayName = `${projectName} - ${t(locale, 'session.defaultName')} ${sessionCounter.current}`
+      const displayName = `${projectName} - ${t(locale, 'session.defaultName')} ${count}`
       setSessions((prev) => [...prev, { ...session, name: displayName }])
       setActiveSessionId(session.id)
-      initSession(session.id)
+      initSession(session.id, false)
       // 영속 저장소에 표시 이름 동기화
       window.api.updateSessionName(session.id, displayName)
     } catch (err) {
@@ -137,13 +137,13 @@ export function useSessionManager({
   const addSession = useCallback(
     async (workingDir: string) => {
       try {
-        sessionCounter.current++
+        const count = ++sessionCounter.current
         const session = await window.api.createSession(workingDir)
         const projectName = workingDir.split('/').pop() || workingDir
-        const displayName = `${projectName} - ${t(locale, 'session.defaultName')} ${sessionCounter.current}`
+        const displayName = `${projectName} - ${t(locale, 'session.defaultName')} ${count}`
         setSessions((prev) => [...prev, { ...session, name: displayName }])
         setActiveSessionId(session.id)
-        initSession(session.id)
+        initSession(session.id, false)
         // 영속 저장소에 표시 이름 동기화
         window.api.updateSessionName(session.id, displayName)
       } catch (err) {
@@ -170,20 +170,23 @@ export function useSessionManager({
 
   const removeProject = useCallback(
     async (workingDir: string) => {
-      const toRemove = sessions.filter((s) => s.workingDir === workingDir)
-      for (const s of toRemove) await window.api.destroySession(s.id)
-      const ids = new Set(toRemove.map((s) => s.id))
-      setSessions((prev) => prev.filter((s) => !ids.has(s.id)))
+      // 함수형 setState로 sessions 의존성 제거
+      let toRemoveIds: string[] = []
+      setSessions((prev) => {
+        const toRemove = prev.filter((s) => s.workingDir === workingDir)
+        toRemoveIds = toRemove.map((s) => s.id)
+        return prev.filter((s) => s.workingDir !== workingDir)
+      })
+      // 병렬 destroy
+      await Promise.all(toRemoveIds.map((id) => window.api.destroySession(id)))
+      const ids = new Set(toRemoveIds)
       setActiveSessionId((cur) => {
-        if (cur && ids.has(cur)) {
-          const remaining = sessions.filter((s) => !ids.has(s.id))
-          return remaining[remaining.length - 1]?.id ?? null
-        }
+        if (cur && ids.has(cur)) return null
         return cur
       })
-      for (const s of toRemove) cleanupSession(s.id)
+      for (const id of toRemoveIds) cleanupSession(id)
     },
-    [sessions, cleanupSession]
+    [cleanupSession]
   )
 
   return {

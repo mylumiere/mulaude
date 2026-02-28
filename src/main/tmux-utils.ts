@@ -9,8 +9,11 @@
  * 모든 tmux 세션명은 `mulaude-` 접두사를 사용하여 다른 tmux 세션과 구분합니다.
  */
 
-import { execSync, execFileSync } from 'child_process'
+import { execSync, execFileSync, execFile } from 'child_process'
+import { promisify } from 'util'
 import { TMUX_EXEC_TIMEOUT, SHELL_ENV_TIMEOUT, TMUX_VERSION_TIMEOUT, TMUX_SESSION_CREATE_TIMEOUT, TMUX_HISTORY_LIMIT, TMUX_SEND_KEYS_TIMEOUT } from '../shared/constants'
+
+const execFileAsync = promisify(execFile)
 
 /* ═══════ 기본 실행 ═══════ */
 
@@ -28,6 +31,24 @@ import { TMUX_EXEC_TIMEOUT, SHELL_ENV_TIMEOUT, TMUX_VERSION_TIMEOUT, TMUX_SESSIO
 export function execTmux(tmuxPath: string, args: string[], timeout = TMUX_EXEC_TIMEOUT): string | null {
   try {
     return execFileSync(tmuxPath, ['-u', ...args], { encoding: 'utf-8', timeout }).trim()
+  } catch {
+    return null
+  }
+}
+
+/**
+ * tmux 명령을 비동기로 실행하고 결과를 반환하는 공통 래퍼입니다.
+ * 폴링 경로에서 이벤트 루프 블로킹을 방지합니다.
+ *
+ * @param tmuxPath - tmux 실행 파일 경로
+ * @param args - tmux 명령 인자 배열
+ * @param timeout - 실행 타임아웃 (ms, 기본 5000)
+ * @returns 실행 결과 문자열 (trimmed) 또는 null (에러 시)
+ */
+export async function execTmuxAsync(tmuxPath: string, args: string[], timeout = TMUX_EXEC_TIMEOUT): Promise<string | null> {
+  try {
+    const { stdout } = await execFileAsync(tmuxPath, ['-u', ...args], { encoding: 'utf-8', timeout })
+    return stdout.trim()
   } catch {
     return null
   }
@@ -197,6 +218,11 @@ export function resizeTmuxWindow(
   rows: number
 ): void {
   execTmux(tmuxPath, ['resize-window', '-t', name, '-x', String(cols), '-y', String(rows)])
+
+  // 리사이즈 후 클라이언트 새로고침 (ANSI 리플로우 깨짐 방지)
+  try {
+    execFileSync(tmuxPath, ['-u', 'refresh-client', '-t', name], { timeout: TMUX_EXEC_TIMEOUT })
+  } catch { /* 무시 */ }
 }
 
 /**
@@ -454,4 +480,76 @@ export function captureTmuxPaneWithAnsi(
   paneId: string
 ): string {
   return execTmux(tmuxPath, ['capture-pane', '-t', paneId, '-e', '-p']) ?? ''
+}
+
+/* ═══════ 비동기 폴링용 함수 ═══════ */
+
+/** listTmuxPanes의 비동기 버전 */
+export async function listTmuxPanesAsync(
+  tmuxPath: string,
+  sessionName: string
+): Promise<{ index: number; title: string }[]> {
+  const output = await execTmuxAsync(tmuxPath, ['list-panes', '-t', sessionName, '-F', '#{pane_index}\t#{pane_title}'])
+  if (!output) return []
+  return output.split('\n').map((line) => {
+    const [idx, ...rest] = line.split('\t')
+    return { index: parseInt(idx, 10), title: rest.join('\t') }
+  })
+}
+
+/** listTmuxPanesWithIds의 비동기 버전 */
+export async function listTmuxPanesWithIdsAsync(
+  tmuxPath: string,
+  sessionName: string
+): Promise<{ windowIndex: number; paneIndex: number; title: string; paneId: string }[]> {
+  const output = await execTmuxAsync(
+    tmuxPath,
+    ['list-panes', '-s', '-t', sessionName, '-F', '#{window_index}\t#{pane_index}\t#{pane_title}\t#{pane_id}']
+  )
+  if (!output) return []
+  return output.split('\n').map((line) => {
+    const [winIdx, paneIdx, title, paneId] = line.split('\t')
+    return {
+      windowIndex: parseInt(winIdx, 10),
+      paneIndex: parseInt(paneIdx, 10),
+      title: title || '',
+      paneId: paneId || ''
+    }
+  })
+}
+
+/** captureTmuxPane의 비동기 버전 */
+export async function captureTmuxPaneAsync(
+  tmuxPath: string,
+  sessionName: string,
+  paneIndex: number,
+  lines: number
+): Promise<string> {
+  return (await execTmuxAsync(tmuxPath, ['capture-pane', '-t', `${sessionName}.${paneIndex}`, '-p', '-S', `-${lines}`])) ?? ''
+}
+
+/** getPaneCurrentCommand의 비동기 버전 */
+export async function getPaneCurrentCommandAsync(
+  tmuxPath: string,
+  sessionName: string
+): Promise<string | null> {
+  return execTmuxAsync(tmuxPath, ['display-message', '-t', `${sessionName}:0.0`, '-p', '#{pane_current_command}'])
+}
+
+/** getPaneCommand의 비동기 버전 */
+export async function getPaneCommandAsync(tmuxPath: string, paneId: string): Promise<string | null> {
+  return execTmuxAsync(tmuxPath, ['display-message', '-t', paneId, '-p', '#{pane_current_command}'])
+}
+
+/** resizeTmuxWindow의 비동기 fire-and-forget 버전 */
+export async function resizeTmuxWindowAsync(
+  tmuxPath: string,
+  name: string,
+  cols: number,
+  rows: number
+): Promise<void> {
+  await execTmuxAsync(tmuxPath, ['resize-window', '-t', name, '-x', String(cols), '-y', String(rows)])
+  try {
+    await execFileAsync(tmuxPath, ['-u', 'refresh-client', '-t', name], { timeout: TMUX_EXEC_TIMEOUT })
+  } catch { /* 무시 */ }
 }

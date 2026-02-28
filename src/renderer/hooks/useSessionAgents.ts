@@ -5,24 +5,18 @@
  * tmux pane 폴링(session:panes)에서 에이전트 활동 정보를 보강합니다.
  */
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import type { AgentInfo, TmuxPaneInfo } from '../../shared/types'
 import { extractPaneActivity } from '../pty-parser'
 
 interface UseSessionAgentsReturn {
   sessionAgents: Record<string, AgentInfo[]>
-  /** 에이전트 상태 설정 함수 (hook 모듈에서 Stop 시 초기화용) */
-  setSessionAgents: React.Dispatch<React.SetStateAction<Record<string, AgentInfo[]>>>
-  /** 최신 에이전트 목록 동기 참조 (hook 핸들러에서 사용) */
-  sessionAgentsRef: React.MutableRefObject<Record<string, AgentInfo[]>>
   /** 세션 삭제 시 에이전트 상태 정리 */
   cleanupAgentState: (id: string) => void
 }
 
 export function useSessionAgents(): UseSessionAgentsReturn {
   const [sessionAgents, setSessionAgents] = useState<Record<string, AgentInfo[]>>({})
-  const sessionAgentsRef = useRef(sessionAgents)
-  sessionAgentsRef.current = sessionAgents
 
   const cleanupAgentState = (id: string): void => {
     setSessionAgents((prev) => {
@@ -94,5 +88,5 @@ export function useSessionAgents(): UseSessionAgentsReturn {
     })
   }, [])
 
-  return { sessionAgents, setSessionAgents, sessionAgentsRef, cleanupAgentState }
+  return { sessionAgents, cleanupAgentState }
 }

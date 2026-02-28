@@ -20,7 +20,7 @@ import { rmSync } from 'fs'
 import { join } from 'path'
 import { homedir } from 'os'
 import type { BrowserWindow } from 'electron'
-import { getPaneCommand } from './tmux-utils'
+import { getPaneCommandAsync } from './tmux-utils'
 import type { AgentPaneInfo } from './child-pane-streamer'
 import type { AgentInfo } from '../shared/types'
 import type { TeamConfigCache } from './team-config-scanner'
@@ -57,13 +57,13 @@ export function sendAgentsIfChanged(
  * @returns agents - UI용 (config 기반, 안정적)
  * @returns agentPanes - 스트리밍용 (실제 tmux pane만)
  */
-export function buildAgentsFromConfig(
+export async function buildAgentsFromConfig(
   tmuxPath: string,
   sessionId: string,
   teamConfigs: { teamName: string; leadAgentId?: string; members: TeamConfigCache['members'] }[],
   childPaneMap: Map<string, number>,
   allPaneIds: Set<string>
-): { agents: AgentInfo[]; agentPanes: AgentPaneInfo[] } {
+): Promise<{ agents: AgentInfo[]; agentPanes: AgentPaneInfo[] }> {
   const agents: AgentInfo[] = []
   const agentPanes: AgentPaneInfo[] = []
   let pendingIdx = 1 // pending 에이전트용 안정적 인덱스 (-(1), -(2), ...)
@@ -89,6 +89,15 @@ export function buildAgentsFromConfig(
       )
       if (!hasMatchingPane) continue // 이 세션과 무관한 team → 스킵
     }
+
+    // running 멤버의 paneCommand를 병렬 조회하기 위한 준비
+    interface MemberResolveInfo {
+      member: typeof members[0]
+      paneIndex: number
+      tmuxIndex: number | undefined
+      status: 'running' | 'completed' | 'exited'
+    }
+    const toResolve: MemberResolveInfo[] = []
 
     for (const member of members) {
       // 리더는 메인 터미널이므로 스킵
@@ -128,23 +137,35 @@ export function buildAgentsFromConfig(
         continue
       }
 
-      // status: config의 isActive 기준
-      let status: 'running' | 'completed' | 'exited' =
+      const status: 'running' | 'completed' | 'exited' =
         member.isActive !== false ? 'running' : 'exited'
 
-      // running + 실제 tmux에 존재 → 쉘 프로세스 감지로 exited 판별
-      if (status === 'running' && tmuxIndex !== undefined) {
-        const cmd = getPaneCommand(tmuxPath, member.tmuxPaneId)
-        if (cmd && (SHELL_COMMANDS as readonly string[]).includes(cmd)) {
-          status = 'exited'
+      toResolve.push({ member, paneIndex, tmuxIndex, status })
+    }
+
+    // running 멤버의 pane command를 병렬 조회
+    const cmdResults = await Promise.all(
+      toResolve.map(async (r) => {
+        if (r.status === 'running' && r.tmuxIndex !== undefined) {
+          return getPaneCommandAsync(tmuxPath, r.member.tmuxPaneId!)
         }
+        return null
+      })
+    )
+
+    for (let i = 0; i < toResolve.length; i++) {
+      const r = toResolve[i]
+      let finalStatus = r.status
+      const cmd = cmdResults[i]
+      if (finalStatus === 'running' && cmd && (SHELL_COMMANDS as readonly string[]).includes(cmd)) {
+        finalStatus = 'exited'
       }
 
-      agents.push({ name: member.name, type: member.agentType, status, paneIndex })
+      agents.push({ name: r.member.name, type: r.member.agentType, status: finalStatus, paneIndex: r.paneIndex })
 
       // 스트리밍은 실제 tmux에 존재하는 pane만
-      if (tmuxIndex !== undefined) {
-        agentPanes.push({ paneId: member.tmuxPaneId, paneIndex })
+      if (r.tmuxIndex !== undefined) {
+        agentPanes.push({ paneId: r.member.tmuxPaneId!, paneIndex: r.paneIndex })
       }
     }
 

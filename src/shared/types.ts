@@ -49,6 +49,7 @@ export interface UsageData {
 /**
  * Claude Code 세션 상태
  *
+ *   starting   – 세션 생성/복원 직후, Claude 로딩 중
  *   idle       – Claude 프롬프트(>) 표시, 사용자 입력 대기
  *   thinking   – 생각 중 / 응답 출력 중
  *   tool       – 도구 사용 중 (Read, Edit, Bash 등)
@@ -59,7 +60,7 @@ export interface UsageData {
  *   exited     – PTY 프로세스 종료
  */
 export interface SessionStatus {
-  state: 'idle' | 'thinking' | 'tool' | 'agent' | 'permission' | 'error' | 'shell' | 'exited'
+  state: 'starting' | 'idle' | 'thinking' | 'tool' | 'agent' | 'permission' | 'error' | 'shell' | 'exited'
   label: string
 }
 

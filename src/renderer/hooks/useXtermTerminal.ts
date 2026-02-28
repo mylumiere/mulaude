@@ -139,7 +139,7 @@ export function useXtermTerminal({
           fitAddonRef.current.fit()
           onResize(xtermRef.current.cols, xtermRef.current.rows)
         }
-      }, 100)
+      }, 150)
     })
 
     if (containerRef.current) {

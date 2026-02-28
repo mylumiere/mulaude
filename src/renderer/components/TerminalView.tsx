@@ -3,9 +3,11 @@
  *
  * 세션별 독립 xterm 인스턴스를 관리합니다.
  * useXtermTerminal 공통 훅을 사용하여 초기화, 테마 적용, 리사이즈를 처리합니다.
+ *
+ * 마운트 시 tmux 화면 캡처로 이전 출력을 복원합니다.
  */
 
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { useXtermTerminal } from '../hooks/useXtermTerminal'
 import { TERMINAL_FONT_SIZE } from '../../shared/constants'
 import '@xterm/xterm/css/xterm.css'
@@ -24,6 +26,21 @@ interface TerminalViewProps {
 
 export default function TerminalView({ sessionId, isActive, themeId, contextPercent, isFocused, onFocusTerminal }: TerminalViewProps): JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null)
+  const [initialContent, setInitialContent] = useState<string | undefined>(undefined)
+  const [ready, setReady] = useState(false)
+
+  // 마운트 시 tmux 화면 캡처로 이전 출력 복원
+  useEffect(() => {
+    let cancelled = false
+    window.api.captureScreen(sessionId).then((screen) => {
+      if (cancelled) return
+      if (screen) setInitialContent(screen)
+      setReady(true)
+    }).catch(() => {
+      if (!cancelled) setReady(true)
+    })
+    return () => { cancelled = true }
+  }, [sessionId])
 
   const { terminalRef } = useXtermTerminal({
     containerRef,
@@ -33,17 +50,16 @@ export default function TerminalView({ sessionId, isActive, themeId, contextPerc
     isFocused,
     onData: (data) => window.api.writeSession(sessionId, data),
     onResize: (cols, rows) => window.api.resizeSession(sessionId, cols, rows),
-    deps: [sessionId]
+    initialContent,
+    disabled: !ready,
+    deps: [sessionId, ready]
   })
 
-  // PTY 데이터 수신 (터미널 인스턴스에 직접 write)
+  // PTY 데이터 수신 (세션별 리스너 — O(1) 디스패치)
   useEffect(() => {
-    const cleanup = window.api.onSessionData((id: string, data: string) => {
-      if (id === sessionId && terminalRef.current) {
-        terminalRef.current.write(data)
-      }
+    return window.api.onSessionDataById(sessionId, (data: string) => {
+      if (terminalRef.current) terminalRef.current.write(data)
     })
-    return cleanup
   }, [sessionId, terminalRef])
 
   return (

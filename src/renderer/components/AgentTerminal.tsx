@@ -57,17 +57,14 @@ export default memo(function AgentTerminal({
     disabled: isPending
   })
 
-  // pane 출력 수신
+  // pane 출력 수신 (O(1) 키 기반 디스패치)
   useEffect(() => {
     if (isPending) return
-    const cleanup = window.api.onChildPaneData(
-      (sid: string, idx: number, data: string) => {
-        if (sid === sessionId && idx === paneIndex && terminalRef.current) {
-          terminalRef.current.write(data)
-        }
+    return window.api.onChildPaneDataById(sessionId, paneIndex, (data: string) => {
+      if (terminalRef.current) {
+        terminalRef.current.write(data)
       }
-    )
-    return cleanup
+    })
   }, [sessionId, paneIndex, terminalRef, isPending])
 
   const displayTitle = title || `Agent #${paneIndex}`

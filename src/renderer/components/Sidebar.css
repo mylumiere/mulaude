@@ -414,6 +414,23 @@
 
 /* ─── Status States (테마 무관 고정 색상) ─── */
 
+/* Starting: 세션 시작 중 (느린 펄스) */
+.indicator--starting {
+  background: var(--status-thinking) !important;
+  box-shadow: 0 0 6px var(--status-thinking-glow) !important;
+  animation: indicator-starting 2s ease-in-out infinite;
+}
+
+@keyframes indicator-starting {
+  0%, 100% { opacity: 0.3; transform: scale(0.7); }
+  50% { opacity: 0.8; transform: scale(1.1); }
+}
+
+.status--starting {
+  color: var(--status-thinking);
+  opacity: 0.7;
+}
+
 /* Thinking: 펄스 애니메이션 */
 .indicator--thinking {
   background: var(--status-thinking) !important;
@@ -495,7 +512,7 @@
 
 @keyframes indicator-permission {
   0%, 100% { opacity: 0.7; }
-  50% { opacity: 1; box-shadow: 0 0 12px var(--status-permission-glow); }
+  50% { opacity: 1; }
 }
 
 .status--permission {

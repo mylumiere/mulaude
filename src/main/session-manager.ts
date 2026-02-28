@@ -28,11 +28,11 @@ import {
   createTmuxSession,
   killTmuxSession,
   sendKeysToTmux,
-  resizeTmuxWindow,
+  resizeTmuxWindowAsync,
   updateTmuxEnvironment,
   toTmuxSessionName,
-  listTmuxPanes,
-  captureTmuxPane,
+  listTmuxPanesAsync,
+  captureTmuxPaneAsync,
   setAutoBreakPaneHook
 } from './tmux-utils'
 import { ChildPaneStreamer } from './child-pane-streamer'
@@ -488,23 +488,41 @@ export class SessionManager {
    * @param id - 세션 ID
    * @returns 에이전트 pane 정보 배열 (메인 pane 제외). 에이전트 pane이 없으면 빈 배열
    */
-  getSessionPaneContents(id: string): TmuxPaneInfo[] {
+  async getSessionPaneContents(id: string): Promise<TmuxPaneInfo[]> {
     if (!this.tmuxPath) return []
 
     const session = this.sessions.get(id)
     if (!session?.tmuxSessionName) return []
 
-    const panes = listTmuxPanes(this.tmuxPath, session.tmuxSessionName)
+    const panes = await listTmuxPanesAsync(this.tmuxPath, session.tmuxSessionName)
     // pane 0 = 메인, 1+ = 에이전트. 에이전트 pane이 없으면 빈 배열
     if (panes.length < 2) return []
 
-    const result: TmuxPaneInfo[] = []
-    for (const pane of panes) {
-      if (pane.index === 0) continue // 메인 pane 스킵
-      const content = captureTmuxPane(this.tmuxPath, session.tmuxSessionName, pane.index, PANE_CAPTURE_LINES)
-      result.push({ index: pane.index, title: pane.title, content })
-    }
+    const tmuxPath = this.tmuxPath
+    const tmuxName = session.tmuxSessionName
+    const result = await Promise.all(
+      panes
+        .filter((pane) => pane.index !== 0)
+        .map(async (pane) => {
+          const content = await captureTmuxPaneAsync(tmuxPath, tmuxName, pane.index, PANE_CAPTURE_LINES)
+          return { index: pane.index, title: pane.title, content } as TmuxPaneInfo
+        })
+    )
     return result
+  }
+
+  /**
+   * 세션의 현재 tmux 화면을 ANSI 이스케이프 포함하여 캡처합니다.
+   * 세션 전환 시 xterm 재생성 후 즉시 화면을 복원하는 데 사용합니다.
+   *
+   * @param id - 세션 ID
+   * @returns ANSI 포함 화면 문자열 또는 null
+   */
+  async captureScreen(id: string): Promise<string | null> {
+    if (!this.tmuxPath) return null
+    const session = this.sessions.get(id)
+    if (!session?.tmuxSessionName) return null
+    return captureTmuxPaneAsync(this.tmuxPath, session.tmuxSessionName, 0, 200)
   }
 
   /**
@@ -532,9 +550,9 @@ export class SessionManager {
         // 리사이즈 에러 무시
       }
 
-      // tmux 내부 윈도우도 리사이즈
+      // tmux 내부 윈도우도 리사이즈 (fire-and-forget 비동기)
       if (session.tmuxSessionName && this.tmuxPath) {
-        resizeTmuxWindow(this.tmuxPath, session.tmuxSessionName, cols, rows)
+        resizeTmuxWindowAsync(this.tmuxPath, session.tmuxSessionName, cols, rows).catch(() => {})
       }
     }
   }

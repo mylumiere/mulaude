@@ -2,7 +2,7 @@
  * useSessionStatus - PTY + hooks + agents 통합 상태 관리 (래퍼 훅)
  *
  * 3개의 하위 훅을 조합하여 세션 상태를 통합 관리합니다:
- *   - useSessionPtyState: PTY 출력 파싱, 상태 분류, 소스 태깅
+ *   - useSessionPtyState: PTY 출력 파싱, 상태 분류, SessionMeta 관리
  *   - useSessionHooks: Hook 이벤트 처리, 부모/자식 분류
  *   - useSessionAgents: 팀 에이전트 목록 관리, pane 활동 보강
  */
@@ -25,7 +25,7 @@ interface UseSessionStatusReturn {
   /** 세션별 서브 에이전트 목록 */
   sessionAgents: Record<string, AgentInfo[]>
   /** 새 세션 생성 시 초기 상태 설정 */
-  initSession: (id: string) => void
+  initSession: (id: string, restored: boolean) => void
   /** 세션 삭제 시 내부 상태 정리 */
   cleanupSession: (id: string) => void
 }
@@ -35,7 +35,7 @@ export function useSessionStatus({
   updateSessionSubtitleRef
 }: UseSessionStatusParams): UseSessionStatusReturn {
   // 에이전트 관리 (독립적이므로 먼저 초기화)
-  const { sessionAgents, setSessionAgents, sessionAgentsRef, cleanupAgentState } =
+  const { sessionAgents, cleanupAgentState } =
     useSessionAgents()
 
   // PTY 상태 감지 (기반 훅)
@@ -45,16 +45,15 @@ export function useSessionStatus({
     initSession,
     cleanupPtyState,
     updateStatus,
-    hasWorked
+    sessionMetas
   } = useSessionPtyState({ updateSessionSubtitleRef })
 
-  // Hook 이벤트 처리 (PTY 상태 + 에이전트에 의존)
+  // Hook 이벤트 처리 (통합 메타 참조)
   const { cleanupHookState } = useSessionHooks({
     locale,
     updateSessionSubtitleRef,
     updateStatus,
-    hasWorked,
-    sessionAgentsRef
+    sessionMetas
   })
 
   // 통합 정리 함수

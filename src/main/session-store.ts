@@ -17,6 +17,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs'
 import { join } from 'path'
 import { homedir } from 'os'
+import { SESSION_STORE_SAVE_DEBOUNCE } from '../shared/constants'
 
 /**
  * 영속화되는 세션 정보
@@ -58,6 +59,8 @@ export class SessionStore {
   private filePath: string
   /** 메모리 캐시 — 디스크 읽기 최소화 */
   private sessions: PersistedSession[] = []
+  /** 디바운스 타이머 */
+  private saveTimer: ReturnType<typeof setTimeout> | null = null
 
   constructor() {
     this.dirPath = join(homedir(), '.mulaude')
@@ -89,12 +92,28 @@ export class SessionStore {
   }
 
   /**
-   * 현재 세션 목록을 디스크에 저장합니다.
+   * 현재 세션 목록을 디스크에 저장합니다 (500ms 디바운스).
+   *
+   * 빈번한 호출 시 디스크 I/O를 줄이기 위해 디바운싱합니다.
+   */
+  save(): void {
+    if (this.saveTimer) clearTimeout(this.saveTimer)
+    this.saveTimer = setTimeout(() => {
+      this.saveImmediate()
+    }, SESSION_STORE_SAVE_DEBOUNCE)
+  }
+
+  /**
+   * 현재 세션 목록을 즉시 디스크에 저장합니다 (앱 종료 시 사용).
    *
    * ~/.mulaude 디렉토리가 없으면 자동 생성합니다.
    * 쓰기 실패 시 에러를 로깅하되 예외를 던지지 않습니다.
    */
-  save(): void {
+  saveImmediate(): void {
+    if (this.saveTimer) {
+      clearTimeout(this.saveTimer)
+      this.saveTimer = null
+    }
     try {
       if (!existsSync(this.dirPath)) {
         mkdirSync(this.dirPath, { recursive: true })

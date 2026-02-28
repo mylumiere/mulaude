@@ -58,8 +58,8 @@ export const LEGACY_SHELL_INIT_DELAY = 300
 
 /* ═══════ 자식 pane ═══════ */
 
-/** pipe-pane 파일 폴링 간격 (ms) */
-export const PIPE_POLL_INTERVAL = 50
+/** pipe-pane 파일 폴링 간격 (ms) — 50→100ms (체감 지연 미미, I/O 50% 감소) */
+export const PIPE_POLL_INTERVAL = 100
 /** pane 재캡처 지연 (ms) */
 export const PANE_RECAPTURE_DELAY = 200
 /** 자식 pane 기본 컬럼 수 */
@@ -80,6 +80,8 @@ export const HOOK_FILE_READ_DELAY = 10
 
 /** 윈도우 상태 저장 디바운스 (ms) */
 export const WINDOW_SAVE_DEBOUNCE = 500
+/** 세션 저장소 디바운스 (ms) */
+export const SESSION_STORE_SAVE_DEBOUNCE = 500
 /** 화면 가시성 판정 마진 (px) */
 export const SCREEN_VISIBILITY_MARGIN = 100
 

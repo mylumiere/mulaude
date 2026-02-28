@@ -7,6 +7,30 @@ import type { SessionInfo, HookEvent, UsageData, TmuxPaneInfo, AgentInfo } from 
  * window.api 객체로 접근 가능하며,
  * IPC 통신을 추상화하여 세션 관리 기능을 제공합니다.
  */
+
+/* ═══════ 세션 데이터 디스패처 (성능 최적화) ═══════ */
+
+/**
+ * 세션별 데이터 콜백 레지스트리.
+ * 기존: N개의 ipcRenderer.on 리스너가 모든 데이터를 브로드캐스트 수신.
+ * 개선: 1개의 배치 리스너 → 세션 ID로 O(1) 디스패치.
+ */
+const sessionDataCallbacks = new Map<string, Set<(data: string) => void>>()
+/** 전체 세션 데이터를 수신하는 글로벌 콜백 (상태 파싱용) */
+const globalDataCallbacks = new Set<(id: string, data: string) => void>()
+
+// 단일 IPC 리스너로 모든 세션 데이터 수신 (배치)
+ipcRenderer.on('session:data-batch', (_event, batch: Record<string, string>) => {
+  for (const id in batch) {
+    const data = batch[id]
+    // 세션별 콜백 (TerminalView)
+    const cbs = sessionDataCallbacks.get(id)
+    if (cbs) for (const cb of cbs) cb(data)
+    // 글로벌 콜백 (상태 파싱)
+    for (const gcb of globalDataCallbacks) gcb(id, data)
+  }
+})
+
 const api = {
   /** 새 Claude CLI 세션을 생성합니다 */
   createSession: (workingDir: string): Promise<SessionInfo> =>
@@ -28,13 +52,20 @@ const api = {
   resizeSession: (id: string, cols: number, rows: number): void =>
     ipcRenderer.send('session:resize', id, cols, rows),
 
-  /** 터미널 데이터 출력 이벤트를 수신합니다 */
+  /** 전체 세션 데이터 이벤트를 수신합니다 (상태 파싱용 글로벌 리스너) */
   onSessionData: (callback: (id: string, data: string) => void): (() => void) => {
-    const handler = (_event: Electron.IpcRendererEvent, id: string, data: string): void => {
-      callback(id, data)
+    globalDataCallbacks.add(callback)
+    return () => { globalDataCallbacks.delete(callback) }
+  },
+
+  /** 특정 세션의 데이터만 수신합니다 (TerminalView용 세션별 리스너) */
+  onSessionDataById: (id: string, callback: (data: string) => void): (() => void) => {
+    if (!sessionDataCallbacks.has(id)) sessionDataCallbacks.set(id, new Set())
+    sessionDataCallbacks.get(id)!.add(callback)
+    return () => {
+      const cbs = sessionDataCallbacks.get(id)
+      if (cbs) { cbs.delete(callback); if (cbs.size === 0) sessionDataCallbacks.delete(id) }
     }
-    ipcRenderer.on('session:data', handler)
-    return () => ipcRenderer.removeListener('session:data', handler)
   },
 
   /** 세션 종료 이벤트를 수신합니다 */
@@ -95,6 +126,10 @@ const api = {
   /** 세션 부제목(subtitle) 업데이트 (자동 감지 작업명 → 영속 저장소) */
   updateSessionSubtitle: (id: string, subtitle: string): void =>
     ipcRenderer.send('session:subtitle-update', id, subtitle),
+
+  /** 세션 화면 캡처 (세션 전환 시 xterm 복원용) */
+  captureScreen: (id: string): Promise<string | null> =>
+    ipcRenderer.invoke('session:capture-screen', id),
 
   /** 현재 locale을 main 프로세스에 전달 (다이얼로그 다국어용) */
   setLocale: (locale: string): void =>
@@ -171,6 +206,29 @@ const api = {
     ipcRenderer.send('app:openLogFolder')
 }
 
-contextBridge.exposeInMainWorld('api', api)
+/* ═══════ 자식 pane 데이터 디스패처 (O(1) 키 기반) ═══════ */
+
+const childPaneDataCallbacks = new Map<string, Set<(data: string) => void>>()
+
+// 단일 IPC 리스너로 모든 childpane:data 수신 → 키 기반 O(1) 디스패치
+ipcRenderer.on('childpane:data', (_event, sessionId: string, paneIndex: number, data: string) => {
+  const key = `${sessionId}:${paneIndex}`
+  const cbs = childPaneDataCallbacks.get(key)
+  if (cbs) for (const cb of cbs) cb(data)
+})
+
+contextBridge.exposeInMainWorld('api', {
+  ...api,
+  /** 특정 세션+pane의 자식 pane 데이터만 수신 (O(1) 디스패치) */
+  onChildPaneDataById: (sessionId: string, paneIndex: number, callback: (data: string) => void): (() => void) => {
+    const key = `${sessionId}:${paneIndex}`
+    if (!childPaneDataCallbacks.has(key)) childPaneDataCallbacks.set(key, new Set())
+    childPaneDataCallbacks.get(key)!.add(callback)
+    return () => {
+      const cbs = childPaneDataCallbacks.get(key)
+      if (cbs) { cbs.delete(callback); if (cbs.size === 0) childPaneDataCallbacks.delete(key) }
+    }
+  }
+})
 
 export type ApiType = typeof api

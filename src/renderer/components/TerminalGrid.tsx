@@ -13,7 +13,7 @@
  * - 사이드바 드래그 앤 드롭 수신
  */
 
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { X } from 'lucide-react'
 import TerminalView from './TerminalView'
 import AgentPanel from './AgentPanel'
@@ -62,15 +62,8 @@ interface TerminalGridProps {
   blockCenterDrop?: boolean
 }
 
-/** 트리에서 모든 리프의 sessionId 수집 */
-function collectSessionIds(node: PaneNode): Set<string> {
-  if (node.type === 'leaf') return new Set([node.sessionId])
-  const set = new Set<string>()
-  for (const child of node.children) {
-    for (const id of collectSessionIds(child)) set.add(id)
-  }
-  return set
-}
+/** childPaneMap 폴백용 빈 Map (매 렌더링 새 인스턴스 방지) */
+const EMPTY_MAP = new Map<number, { title: string; initialContent: string }>()
 
 export default function TerminalGrid({
   tree,
@@ -99,8 +92,15 @@ export default function TerminalGrid({
   const [dropTarget, setDropTarget] = useState<{
     paneId: string; position: DropPosition
   } | null>(null)
+  /** 드래그 진행 중 여부 — true일 때 xterm 캔버스의 pointer-events 차단 */
+  const [isDragging, setIsDragging] = useState(false)
 
-  const gridSessionIds = collectSessionIds(tree.root)
+  // sessions.find() → O(1) Map 조회
+  const sessionMap = useMemo(() => {
+    const map = new Map<string, SessionInfo>()
+    for (const s of sessions) map.set(s.id, s)
+    return map
+  }, [sessions])
 
   const handleDragOver = useCallback((
     e: React.DragEvent,
@@ -122,7 +122,8 @@ export default function TerminalGrid({
 
     if (blockCenterDrop && position === 'center') position = 'right'
     setDropTarget({ paneId, position })
-  }, [blockCenterDrop])
+    if (!isDragging) setIsDragging(true)
+  }, [blockCenterDrop, isDragging])
 
   const handleDragLeave = useCallback(() => {
     setDropTarget(null)
@@ -146,6 +147,7 @@ export default function TerminalGrid({
   ) => {
     e.preventDefault()
     setDropTarget(null)
+    setIsDragging(false)
 
     let position = calcDropPosition(e)
     if (blockCenterDrop && position === 'center') position = 'right'
@@ -169,7 +171,7 @@ export default function TerminalGrid({
     const isFocused = tree.focusedPaneId === leaf.id
     const isDimmed = isGridMode && !isFocused && !tree.zoomedPaneId
     const isDropHere = dropTarget?.paneId === leaf.id
-    const session = sessions.find((s) => s.id === leaf.sessionId)
+    const session = sessionMap.get(leaf.sessionId)
     const hasAgentPanes = sessionsWithPanes.has(leaf.sessionId)
     const ratio = splitRatios[leaf.sessionId] ?? 0.35
     const agentFocus = focusedPane[leaf.sessionId] ?? null
@@ -244,7 +246,7 @@ export default function TerminalGrid({
                   themeId={getSessionThemeId(leaf.sessionId)}
                   focusedPaneIndex={typeof agentFocus === 'number' ? agentFocus : null}
                   onFocusPane={(paneIndex) => handleFocusPane(leaf.sessionId, paneIndex)}
-                  panes={childPaneMap[leaf.sessionId] || new Map()}
+                  panes={childPaneMap[leaf.sessionId] || EMPTY_MAP}
                   agents={sessionAgents[leaf.sessionId]}
                 />
               </div>
@@ -323,27 +325,16 @@ export default function TerminalGrid({
       {tree.zoomedPaneId ? (
         renderZoomed()
       ) : (
-        <div className="terminal-grid">
+        <div
+          className={`terminal-grid${isDragging ? ' terminal-grid--dragging' : ''}`}
+          onDragEnter={() => { if (!isDragging) setIsDragging(true) }}
+          onDragEnd={() => setIsDragging(false)}
+        >
           {renderNode(tree.root)}
         </div>
       )}
 
-      {/* 그리드에 표시되지 않는 세션들을 숨겨서 마운트 유지 */}
-      <div className="terminal-grid-hidden">
-        {sessions
-          .filter((s) => !gridSessionIds.has(s.id))
-          .map((session) => (
-            <div key={session.id} className="terminal-wrapper" style={{ display: 'none' }}>
-              <TerminalView
-                sessionId={session.id}
-                isActive={false}
-                themeId={getSessionThemeId(session.id)}
-                contextPercent={contextPercents[session.id] ?? null}
-              />
-            </div>
-          ))
-        }
-      </div>
+      {/* 비활성 세션은 언마운트 (성능 최적화) — 전환 시 tmux 화면 캡처로 복원 */}
 
       {/* 중복 세션 알림 토스트 */}
       {duplicateAlert && (
