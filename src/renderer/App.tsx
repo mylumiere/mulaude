@@ -69,8 +69,13 @@ export default function App(): JSX.Element {
 
   const handleSelectSession = useCallback((id: string) => {
     if (terminalLayout.isGridMode) {
-      // 그리드 모드: 포커스된 패인의 세션을 변경
-      terminalLayout.setPaneSession(terminalLayout.tree.focusedPaneId, id)
+      // 이미 그리드에 열려있는 세션이면 해당 패인으로 포커스만 이동
+      const existing = getAllLeaves(terminalLayout.tree.root).find(l => l.sessionId === id)
+      if (existing) {
+        terminalLayout.focusPane(existing.id)
+      } else {
+        terminalLayout.setPaneSession(terminalLayout.tree.focusedPaneId, id)
+      }
     } else {
       sessionManager.selectSession(id)
     }
@@ -177,6 +182,7 @@ export default function App(): JSX.Element {
               locale={settings.locale}
               getSessionThemeId={settings.getSessionThemeId}
               contextPercents={contextPercents}
+              sessionStatuses={sessionStatuses}
               sessionAgents={sessionAgents}
               sessionsWithPanes={sessionsWithPanes}
               childPaneMap={childPaneMap}

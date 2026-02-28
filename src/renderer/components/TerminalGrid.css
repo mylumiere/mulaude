@@ -53,13 +53,84 @@
   overflow: hidden;
   position: relative;
   border: 1px solid transparent;
-  transition: border-color var(--transition-fast), opacity 0.2s ease;
+  transition: border-color var(--transition-fast), opacity 0.2s ease, box-shadow 0.3s ease;
 }
 
 .terminal-grid-pane--focused {
   border-color: var(--accent-primary);
   box-shadow: inset 0 0 0 1px var(--accent-primary-soft),
               0 0 12px var(--accent-primary-glow);
+}
+
+/* ── 세션 상태별 패인 글로우 ── */
+
+.terminal-grid-pane--thinking {
+  border-color: var(--status-thinking);
+  box-shadow: 0 0 10px var(--status-thinking-glow);
+  animation: pane-thinking 1.2s ease-in-out infinite;
+}
+
+@keyframes pane-thinking {
+  0%, 100% { box-shadow: 0 0 8px var(--status-thinking-glow); }
+  50% { box-shadow: 0 0 18px var(--status-thinking-glow); }
+}
+
+.terminal-grid-pane--tool {
+  border-color: var(--status-tool);
+  box-shadow: 0 0 10px var(--status-tool-glow);
+  animation: pane-tool 0.8s ease-in-out infinite;
+}
+
+@keyframes pane-tool {
+  0%, 100% { box-shadow: 0 0 6px var(--status-tool-glow); }
+  50% { box-shadow: 0 0 14px var(--status-tool-glow); }
+}
+
+.terminal-grid-pane--agent {
+  border-color: var(--status-agent);
+  box-shadow: 0 0 10px var(--status-agent-glow);
+  animation: pane-agent 1.5s ease-in-out infinite;
+}
+
+@keyframes pane-agent {
+  0%, 100% { box-shadow: 0 0 8px var(--status-agent-glow); }
+  50% { box-shadow: 0 0 16px var(--status-agent-glow); }
+}
+
+.terminal-grid-pane--permission {
+  border-color: var(--status-permission);
+  box-shadow: 0 0 10px var(--status-permission-glow);
+  animation: pane-permission 1s ease-in-out infinite;
+}
+
+@keyframes pane-permission {
+  0%, 100% { box-shadow: 0 0 6px var(--status-permission-glow); }
+  50% { box-shadow: 0 0 14px var(--status-permission-glow); }
+}
+
+.terminal-grid-pane--error {
+  border-color: var(--status-error);
+  box-shadow: 0 0 10px var(--status-error-glow);
+}
+
+.terminal-grid-pane--completed {
+  border-color: var(--status-idle-completed);
+  box-shadow: 0 0 8px var(--status-idle-completed-glow);
+}
+
+/* idle/shell/exited — 글로우 없음 */
+
+/* focused + status: 포커스 보더 유지하되 상태 글로우 병합 */
+.terminal-grid-pane--focused.terminal-grid-pane--thinking,
+.terminal-grid-pane--focused.terminal-grid-pane--tool,
+.terminal-grid-pane--focused.terminal-grid-pane--agent,
+.terminal-grid-pane--focused.terminal-grid-pane--permission,
+.terminal-grid-pane--focused.terminal-grid-pane--error,
+.terminal-grid-pane--focused.terminal-grid-pane--completed {
+  border-color: var(--accent-primary);
+  box-shadow: inset 0 0 0 1px var(--accent-primary-soft),
+              0 0 12px var(--accent-primary-glow);
+  animation: none;
 }
 
 /* 비활성 패인 디밍 */

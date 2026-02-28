@@ -113,9 +113,13 @@ export function useXtermTerminal({
         for (const delay of fitDelays) {
           setTimeout(fitAndResize, delay)
         }
+        if (isFocused !== false) terminal.focus()
       })
     } else {
-      requestAnimationFrame(fitAndResize)
+      requestAnimationFrame(() => {
+        fitAndResize()
+        if (isFocused !== false) terminal.focus()
+      })
     }
 
     xtermRef.current = terminal
@@ -172,13 +176,17 @@ export function useXtermTerminal({
     }
   }, [isActive, isFocused]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 분할 모드 포커스 변경 시
+  // 포커스 변경 시 (그리드 패인 이동 / 분할 모드 전환)
   useEffect(() => {
     if (isFocused && isActive !== false && xtermRef.current) {
-      xtermRef.current.focus()
+      // 키보드 이벤트 처리 중 동기 focus()가 씹히므로 다음 틱으로 지연
+      const t = setTimeout(() => {
+        xtermRef.current?.focus()
+      }, 0)
       requestAnimationFrame(() => {
         fitAddonRef.current?.fit()
       })
+      return () => clearTimeout(t)
     }
   }, [isFocused, isActive])
 

@@ -323,6 +323,33 @@ export function useTerminalLayout({
     }
   }
 
+  // 세션 삭제 시 트리에서 해당 패인 자동 제거
+  useEffect(() => {
+    const validIds = new Set(sessions.map((s) => s.id))
+    const leaves = getAllLeaves(tree.root)
+    const hasInvalid = leaves.some((l) => l.sessionId && !validIds.has(l.sessionId))
+    if (!hasInvalid) return
+
+    const pruned = pruneInvalidSessions(tree.root, validIds)
+    if (!pruned) {
+      // 모든 패인 제거됨 → 남은 세션으로 초기화
+      const fallback = sessions[0]?.id ?? ''
+      const newTree = makeDefaultTree(fallback)
+      setTreeRaw(newTree)
+      saveTreeToStorage(newTree)
+      return
+    }
+    const newLeaves = getAllLeaves(pruned)
+    const focusValid = newLeaves.some((l) => l.id === tree.focusedPaneId)
+    const newTree: PaneTreeState = {
+      root: pruned,
+      focusedPaneId: focusValid ? tree.focusedPaneId : newLeaves[0].id,
+      zoomedPaneId: null
+    }
+    setTreeRaw(newTree)
+    saveTreeToStorage(newTree)
+  }, [sessions]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const isGridMode = countLeaves(tree.root) > 1
 
   // 중복 세션 알림

@@ -21,6 +21,8 @@ export interface TutorialStep {
   shortcutKeys?: string[]
   /** shortcut 스텝에서 몇 번 눌러야 진행되는지 (기본 1) */
   shortcutHits?: number
+  /** shortcut 스텝에서 Shift 키 필수 여부 */
+  shortcutRequireShift?: boolean
   /** true면 querySelectorAll로 모든 매칭 요소의 union bounding box 사용 */
   selectorAll?: boolean
 }
@@ -32,7 +34,9 @@ const STEPS: TutorialStep[] = [
   { selector: '.session-row', position: 'right', titleKey: 'tutorial.step4.title', descKey: 'tutorial.step4.desc', action: 'shortcut', shortcutKeys: ['ArrowUp', 'ArrowDown'], shortcutHits: 2, selectorAll: true },
   { selector: '.session-row:not(.session-row--active)', position: 'right', titleKey: 'tutorial.step5.title', descKey: 'tutorial.step5.desc', action: 'drag' },
   { selector: '.terminal-area', position: 'inside', titleKey: 'tutorial.step6.title', descKey: 'tutorial.step6.desc', action: 'shortcut', shortcutKeys: ['ArrowLeft', 'ArrowRight'] },
-  { selector: '.sidebar-settings-btn', position: 'right', titleKey: 'tutorial.step7.title', descKey: 'tutorial.step7.desc', action: null },
+  { selector: '.terminal-area', position: 'inside', titleKey: 'tutorial.step7.title', descKey: 'tutorial.step7.desc', action: 'shortcut', shortcutKeys: ['Enter'], shortcutHits: 2, shortcutRequireShift: true },
+  { selector: '.terminal-area', position: 'inside', titleKey: 'tutorial.step8.title', descKey: 'tutorial.step8.desc', action: null },
+  { selector: '.sidebar-settings-btn', position: 'right', titleKey: 'tutorial.step9.title', descKey: 'tutorial.step9.desc', action: null },
 ]
 
 const STORAGE_KEY = 'mulaude-tutorial-done'
@@ -103,10 +107,11 @@ export function useTutorial(sessionCount: number): TutorialState {
     if (step?.action !== 'shortcut') return
     const keys = step.shortcutKeys ?? ['ArrowLeft', 'ArrowRight']
     const required = step.shortcutHits ?? 1
+    const requireShift = step.shortcutRequireShift ?? false
     shortcutHitsRef.current = 0
     notifyCalledRef.current = false
     const handler = (e: KeyboardEvent): void => {
-      if (e.metaKey && keys.includes(e.key)) {
+      if (e.metaKey && keys.includes(e.key) && (!requireShift || e.shiftKey)) {
         shortcutHitsRef.current++
         if (shortcutHitsRef.current >= required) {
           setTimeout(() => setCurrentStep(s => s + 1), 300)

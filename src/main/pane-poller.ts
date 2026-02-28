@@ -26,6 +26,29 @@ interface TeamConfigCache {
 const teamConfigCaches = new Map<string, TeamConfigCache>()
 
 /**
+ * 에이전트 패널 깜박임 방지용 grace 카운터.
+ * child pane이 일시적으로 감지 안 되는 경우 즉시 클리어하지 않고,
+ * 연속 GRACE_THRESHOLD회 감지 안 될 때만 클리어합니다.
+ */
+const GRACE_THRESHOLD = 2
+const agentAbsentCount = new Map<string, number>()
+/** 마지막으로 전송한 에이전트 목록 직렬화 (변경 감지용) */
+const lastSentAgents = new Map<string, string>()
+
+/** 에이전트 목록이 실제로 변경되었을 때만 IPC 전송 */
+function sendAgentsIfChanged(
+  win: BrowserWindow,
+  sessionId: string,
+  agents: AgentInfo[]
+): boolean {
+  const serialized = JSON.stringify(agents)
+  if (lastSentAgents.get(sessionId) === serialized) return false
+  lastSentAgents.set(sessionId, serialized)
+  win.webContents.send('session:team-agents', sessionId, agents)
+  return true
+}
+
+/**
  * ~/.claude/teams/{name}/config.json 스캔 -> 팀 멤버 목록 반환
  * mtime 캐싱으로 불필요한 파일 읽기 방지
  */
@@ -125,12 +148,6 @@ export function setupPanePolling(
       const panesWithIds = listTmuxPanesWithIds(tmuxPath, session.tmuxSessionName)
       // window 0 = 리더, window 1+ = break-pane으로 분리된 child pane
       const childPanes = panesWithIds.filter(p => p.windowIndex > 0)
-      if (childPanes.length === 0) {
-        // child pane 없으면 기존 스트림 정리 + 에이전트 패널 제거
-        if (streamer) streamer.syncWithAgents(session.id, [])
-        mainWindow.webContents.send('session:team-agents', session.id, [])
-        continue
-      }
 
       // paneId -> windowIndex 맵 (렌더러 식별용)
       const childPaneMap = new Map<string, number>()
@@ -138,50 +155,50 @@ export function setupPanePolling(
         childPaneMap.set(p.paneId, p.windowIndex)
       }
 
-      if (teamConfigs.length === 0 || childPaneMap.size === 0) continue
+      // 에이전트 매칭 시도
+      let agents: AgentInfo[] = []
+      let agentPanes: AgentPaneInfo[] = []
 
-      // 각 팀 config를 순회하여 매칭되는 팀 찾기
-      let foundTeam = false
-      for (const { members } of teamConfigs) {
-        const agents: AgentInfo[] = []
-        const agentPanes: AgentPaneInfo[] = []
-        for (const member of members) {
-          if (!member.tmuxPaneId) continue
-          const paneIndex = childPaneMap.get(member.tmuxPaneId)
-          if (paneIndex === undefined) continue
-          // pane 프로세스 확인: 쉘이면 에이전트 종료 (비정상 종료 감지)
-          let status: 'running' | 'completed' | 'exited' = member.isActive !== false ? 'running' : 'completed'
-          if (status === 'running') {
-            const cmd = getPaneCommand(tmuxPath, member.tmuxPaneId)
-            const SHELLS = ['zsh', 'bash', 'sh', 'fish']
-            if (cmd && SHELLS.includes(cmd)) {
-              status = 'exited'
+      if (childPaneMap.size > 0 && teamConfigs.length > 0) {
+        for (const { members } of teamConfigs) {
+          for (const member of members) {
+            if (!member.tmuxPaneId) continue
+            const paneIndex = childPaneMap.get(member.tmuxPaneId)
+            if (paneIndex === undefined) continue
+            // pane 프로세스 확인: 쉘이면 에이전트 종료 (비정상 종료 감지)
+            let status: 'running' | 'completed' | 'exited' = member.isActive !== false ? 'running' : 'completed'
+            if (status === 'running') {
+              const cmd = getPaneCommand(tmuxPath, member.tmuxPaneId)
+              const SHELLS = ['zsh', 'bash', 'sh', 'fish']
+              if (cmd && SHELLS.includes(cmd)) {
+                status = 'exited'
+              }
             }
+            agents.push({
+              name: member.name,
+              type: member.agentType,
+              status,
+              paneIndex
+            })
+            agentPanes.push({ paneId: member.tmuxPaneId, paneIndex })
           }
-          agents.push({
-            name: member.name,
-            type: member.agentType,
-            status,
-            paneIndex
-          })
-          agentPanes.push({ paneId: member.tmuxPaneId, paneIndex })
-        }
-        if (agents.length > 0) {
-          foundTeam = true
-          // 렌더러에 에이전트 목록 전송
-          mainWindow.webContents.send('session:team-agents', session.id, agents)
-          // ChildPaneStreamer를 확정된 에이전트 목록으로 동기화
-          if (streamer) {
-            streamer.syncWithAgents(session.id, agentPanes)
-          }
-          break // 1 session = 1 team
+          if (agents.length > 0) break // 1 session = 1 team
         }
       }
 
-      // 매칭되는 팀이 없으면 빈 배열 전송하여 에이전트 패널 정리
-      if (!foundTeam) {
-        mainWindow.webContents.send('session:team-agents', session.id, [])
-        if (streamer) streamer.syncWithAgents(session.id, [])
+      if (agents.length > 0) {
+        // 에이전트 발견 → grace 카운터 리셋 + 변경 시만 전송
+        agentAbsentCount.delete(session.id)
+        sendAgentsIfChanged(mainWindow, session.id, agents)
+        if (streamer) streamer.syncWithAgents(session.id, agentPanes)
+      } else {
+        // 에이전트 미감지 → grace period 적용 (즉시 클리어하지 않음)
+        const count = (agentAbsentCount.get(session.id) ?? 0) + 1
+        agentAbsentCount.set(session.id, count)
+        if (count >= GRACE_THRESHOLD) {
+          sendAgentsIfChanged(mainWindow, session.id, [])
+          if (streamer) streamer.syncWithAgents(session.id, [])
+        }
       }
     }
   }, PANE_POLL_INTERVAL)

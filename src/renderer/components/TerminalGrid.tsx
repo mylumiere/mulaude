@@ -16,7 +16,7 @@
 import { useCallback, useState } from 'react'
 import TerminalView from './TerminalView'
 import AgentPanel from './AgentPanel'
-import type { SessionInfo, AgentInfo } from '../../shared/types'
+import type { SessionInfo, AgentInfo, SessionStatus } from '../../shared/types'
 import type {
   PaneTreeState,
   PaneNode,
@@ -36,6 +36,7 @@ interface TerminalGridProps {
   // 세션별 데이터
   getSessionThemeId: (id: string) => string
   contextPercents: Record<string, number>
+  sessionStatuses: Record<string, SessionStatus>
   sessionAgents: Record<string, AgentInfo[]>
   sessionsWithPanes: Set<string>
 
@@ -77,6 +78,7 @@ export default function TerminalGrid({
   locale,
   getSessionThemeId,
   contextPercents,
+  sessionStatuses,
   sessionAgents,
   sessionsWithPanes,
   childPaneMap,
@@ -111,7 +113,7 @@ export default function TerminalGrid({
     const y = (e.clientY - rect.top) / rect.height
 
     let position: DropPosition = 'center'
-    const edge = 0.25
+    const edge = 0.35
     if (x < edge) position = 'left'
     else if (x > 1 - edge) position = 'right'
     else if (y < edge) position = 'top'
@@ -129,7 +131,7 @@ export default function TerminalGrid({
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
     const x = (e.clientX - rect.left) / rect.width
     const y = (e.clientY - rect.top) / rect.height
-    const edge = 0.25
+    const edge = 0.35
     if (x < edge) return 'left'
     if (x > 1 - edge) return 'right'
     if (y < edge) return 'top'
@@ -171,11 +173,17 @@ export default function TerminalGrid({
     const ratio = splitRatios[leaf.sessionId] ?? 0.35
     const agentFocus = focusedPane[leaf.sessionId] ?? null
 
+    const status = sessionStatuses[leaf.sessionId]
+    const statusState = status
+      ? (status.state === 'idle' && status.label ? 'completed' : status.state)
+      : null
+
     const classes = [
       'terminal-grid-pane',
       isFocused && isGridMode ? 'terminal-grid-pane--focused' : '',
       isDimmed ? 'terminal-grid-pane--dimmed' : '',
-      isDropHere ? `terminal-grid-pane--drop-${dropTarget!.position}` : ''
+      isDropHere ? `terminal-grid-pane--drop-${dropTarget!.position}` : '',
+      statusState ? `terminal-grid-pane--${statusState}` : ''
     ].filter(Boolean).join(' ')
 
     return (
@@ -221,7 +229,7 @@ export default function TerminalGrid({
                   isActive={true}
                   themeId={getSessionThemeId(leaf.sessionId)}
                   contextPercent={contextPercents[leaf.sessionId] ?? null}
-                  isFocused={agentFocus === null}
+                  isFocused={isFocused && agentFocus === null}
                   onFocusTerminal={() => handleFocusParent(leaf.sessionId)}
                 />
               </div>
@@ -246,6 +254,7 @@ export default function TerminalGrid({
               isActive={true}
               themeId={getSessionThemeId(leaf.sessionId)}
               contextPercent={contextPercents[leaf.sessionId] ?? null}
+              isFocused={isFocused}
             />
           )}
         </div>
