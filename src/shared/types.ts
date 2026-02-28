@@ -71,8 +71,8 @@ export interface AgentInfo {
   type?: string
   /** 간단 설명 (Task tool의 description 파라미터) */
   description?: string
-  /** 에이전트 상태 (exited = 비정상 종료) */
-  status: 'running' | 'completed' | 'exited'
+  /** 에이전트 상태 (pending = pane 대기, exited = 종료) */
+  status: 'pending' | 'running' | 'completed' | 'exited'
   /** pane 폴링에서 얻은 현재 활동 (예: "Read src/main/...", "Bash" 등) */
   detail?: string
   /** 연결된 tmux pane 인덱스 */

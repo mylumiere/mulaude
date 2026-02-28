@@ -35,6 +35,8 @@ interface UseXtermTerminalParams {
   fitDelays?: number[]
   /** 초기 내용 (마운트 직후 write) */
   initialContent?: string
+  /** 터미널 비활성화 (pending 상태 등에서 xterm 생성 방지) */
+  disabled?: boolean
   /** 의존성 키 배열 (터미널 재생성 트리거) */
   deps?: unknown[]
 }
@@ -55,6 +57,7 @@ export function useXtermTerminal({
   onResize,
   fitDelays,
   initialContent,
+  disabled,
   deps = []
 }: UseXtermTerminalParams): UseXtermTerminalReturn {
   const xtermRef = useRef<Terminal | null>(null)
@@ -62,7 +65,7 @@ export function useXtermTerminal({
 
   // 터미널 초기화
   useEffect(() => {
-    if (!containerRef.current) return
+    if (!containerRef.current || disabled) return
 
     const theme = getThemeById(themeId)
 
@@ -179,12 +182,21 @@ export function useXtermTerminal({
   // 포커스 변경 시 (그리드 패인 이동 / 분할 모드 전환)
   useEffect(() => {
     if (isFocused && isActive !== false && xtermRef.current) {
+      // 포커스/핏 전에 스크롤 상태 저장 (사용자가 위로 스크롤한 경우 보존)
+      const buf = xtermRef.current.buffer.active
+      const savedViewportY = buf.viewportY
+      const wasScrolledUp = savedViewportY < buf.baseY
+
       // 키보드 이벤트 처리 중 동기 focus()가 씹히므로 다음 틱으로 지연
       const t = setTimeout(() => {
-        xtermRef.current?.focus()
+        if (!xtermRef.current) return
+        xtermRef.current.focus()
+        if (wasScrolledUp) xtermRef.current.scrollToLine(savedViewportY)
       }, 0)
       requestAnimationFrame(() => {
-        fitAddonRef.current?.fit()
+        if (!fitAddonRef.current || !xtermRef.current) return
+        fitAddonRef.current.fit()
+        if (wasScrolledUp) xtermRef.current.scrollToLine(savedViewportY)
       })
       return () => clearTimeout(t)
     }

@@ -97,8 +97,6 @@ export const PANE_CAPTURE_LINES = 8
 
 /* ═══════ 에이전트 ═══════ */
 
-/** 에이전트 부재 grace 카운터 임계값 */
-export const AGENT_GRACE_THRESHOLD = 2
 /** 셸 프로세스 감지 목록 */
 export const SHELL_COMMANDS = ['zsh', 'bash', 'sh', 'fish'] as const
 

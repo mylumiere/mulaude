@@ -10,7 +10,7 @@
  */
 
 import { useEffect, useRef } from 'react'
-import type { SessionStatus, HookEvent, AgentInfo } from '../../shared/types'
+import type { SessionStatus, HookEvent } from '../../shared/types'
 import type { Locale } from '../i18n'
 import { t } from '../i18n'
 import { HOOK_THINKING_DEBOUNCE } from '../../shared/constants'
@@ -23,9 +23,7 @@ interface UseSessionHooksParams {
   /** 작업 수행 여부 추적 */
   hasWorked: React.MutableRefObject<Record<string, boolean>>
   /** 세션 에이전트 목록 참조 (레거시 이벤트용) */
-  sessionAgentsRef: React.MutableRefObject<Record<string, AgentInfo[]>>
-  /** 세션 에이전트 상태 업데이트 */
-  setSessionAgents: React.Dispatch<React.SetStateAction<Record<string, AgentInfo[]>>>
+  sessionAgentsRef: React.MutableRefObject<Record<string, { status: string }[]>>
 }
 
 interface UseSessionHooksReturn {
@@ -38,8 +36,7 @@ export function useSessionHooks({
   updateSessionSubtitleRef,
   updateStatus,
   hasWorked,
-  sessionAgentsRef,
-  setSessionAgents
+  sessionAgentsRef
 }: UseSessionHooksParams): UseSessionHooksReturn {
   /** PostToolUse → thinking 전환 디바운스 타이머 (연속 도구 사용 시 깜빡임 방지) */
   const hookThinkingTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
@@ -104,12 +101,7 @@ export function useSessionHooks({
         }
 
         case 'Stop':
-          setSessionAgents((prev) => {
-            if (!prev[id]) return prev
-            const next = { ...prev }
-            delete next[id]
-            return next
-          })
+          // 에이전트 삭제는 하지 않음 — Config SSOT가 에이전트 라이프사이클 관리
           updateStatus(id, {
             state: 'idle',
             label: hasWorked.current[id] ? t(locale, 'hook.completed') : ''
@@ -196,12 +188,7 @@ export function useSessionHooks({
 
         case 'Stop':
           if (!hasRunningAgents) {
-            setSessionAgents((prev) => {
-              if (!prev[id]) return prev
-              const next = { ...prev }
-              delete next[id]
-              return next
-            })
+            // 에이전트 삭제는 하지 않음 — Config SSOT가 에이전트 라이프사이클 관리
             updateStatus(id, {
               state: 'idle',
               label: hasWorked.current[id] ? t(locale, 'hook.completed') : ''
@@ -233,7 +220,7 @@ export function useSessionHooks({
         handleChildEvent(id, event)
       }
     })
-  }, [locale, updateStatus, updateSessionSubtitleRef, hasWorked, sessionAgentsRef, setSessionAgents])
+  }, [locale, updateStatus, updateSessionSubtitleRef, hasWorked, sessionAgentsRef])
 
   return { cleanupHookState }
 }

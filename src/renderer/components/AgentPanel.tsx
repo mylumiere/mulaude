@@ -35,9 +35,9 @@ export default function AgentPanel({
   panes,
   agents
 }: AgentPanelProps): JSX.Element {
-  // 에이전트 기준 렌더링 (paneIndex 확정된 에이전트만)
+  // 에이전트 기준 렌더링 (paneIndex 확정된 에이전트만, exited 포함)
   const visibleAgents = (agents || []).filter(
-    (a) => a.paneIndex !== undefined && (a.status === 'running' || a.status === 'completed')
+    (a) => a.paneIndex !== undefined && (a.status === 'pending' || a.status === 'running' || a.status === 'completed' || a.status === 'exited')
   )
 
   const isScrollable = visibleAgents.length > 3
@@ -63,6 +63,15 @@ export default function AgentPanel({
     ro.observe(el)
     return () => { el.removeEventListener('scroll', updateScrollInfo); ro.disconnect() }
   }, [isScrollable, updateScrollInfo, visibleAgents.length])
+
+  // 포커스 변경 시 해당 pane이 보이도록 자동 스크롤
+  useEffect(() => {
+    if (!isScrollable || focusedPaneIndex === null || !listRef.current) return
+    const idx = visibleAgents.findIndex(a => a.paneIndex === focusedPaneIndex)
+    if (idx < 0) return
+    const child = listRef.current.children[idx] as HTMLElement | undefined
+    child?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  }, [focusedPaneIndex, isScrollable, visibleAgents])
 
   const scrollBy = useCallback((delta: number) => {
     listRef.current?.scrollBy({ top: delta, behavior: 'smooth' })
@@ -106,6 +115,8 @@ export default function AgentPanel({
               initialContent={paneEntry?.initialContent || ''}
               themeId={themeId}
               isFocused={focusedPaneIndex === paneIndex}
+              isPending={agent.status === 'pending'}
+              isExited={agent.status === 'exited'}
               onFocus={() => onFocusPane(paneIndex)}
             />
           )

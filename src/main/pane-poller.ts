@@ -11,7 +11,10 @@ import { ipcMain } from 'electron'
 import type { SessionManager } from './session-manager'
 import { listTmuxPanesWithIds, getPaneCurrentCommand } from './tmux-utils'
 import { scanTeamConfigs } from './team-config-scanner'
-import { sendAgentsIfChanged, matchAgentsFromTeamConfigs, applyGracePeriod } from './agent-matcher'
+import {
+  sendAgentsIfChanged,
+  buildAgentsFromConfig
+} from './agent-matcher'
 import { PANE_POLL_INTERVAL } from '../shared/constants'
 
 /**
@@ -64,6 +67,9 @@ export function setupPanePolling(
       if (!session.tmuxSessionName) continue
 
       const panesWithIds = listTmuxPanesWithIds(tmuxPath, session.tmuxSessionName)
+      // 이 세션에 속하는 전체 paneId 셋 (session ↔ team 바인딩 검증용)
+      const allPaneIds = new Set(panesWithIds.map(p => p.paneId))
+
       // window 0 = 리더, window 1+ = break-pane으로 분리된 child pane
       const childPanes = panesWithIds.filter(p => p.windowIndex > 0)
 
@@ -73,17 +79,13 @@ export function setupPanePolling(
         childPaneMap.set(p.paneId, p.windowIndex)
       }
 
-      // 에이전트 매칭
-      const { agents, agentPanes } = matchAgentsFromTeamConfigs(tmuxPath, teamConfigs, childPaneMap)
-      const shouldUpdate = applyGracePeriod(session.id, agents.length > 0)
+      // Config SSOT: config 기반 에이전트 목록 생성
+      const { agents, agentPanes } = buildAgentsFromConfig(tmuxPath, session.id, teamConfigs, childPaneMap, allPaneIds)
 
-      if (agents.length > 0) {
-        sendAgentsIfChanged(mainWindow, session.id, agents)
-        if (streamer) streamer.syncWithAgents(session.id, agentPanes)
-      } else if (shouldUpdate) {
-        sendAgentsIfChanged(mainWindow, session.id, [])
-        if (streamer) streamer.syncWithAgents(session.id, [])
-      }
+      // UI: config 기반 (안정적, 깜박임 없음)
+      sendAgentsIfChanged(mainWindow, session.id, agents)
+      // 스트리밍: 실제 tmux pane만 (buildAgentsFromConfig가 필터링)
+      if (streamer) streamer.syncWithAgents(session.id, agentPanes)
     }
   }, PANE_POLL_INTERVAL)
 

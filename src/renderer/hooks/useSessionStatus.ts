@@ -54,8 +54,7 @@ export function useSessionStatus({
     updateSessionSubtitleRef,
     updateStatus,
     hasWorked,
-    sessionAgentsRef,
-    setSessionAgents
+    sessionAgentsRef
   })
 
   // 통합 정리 함수

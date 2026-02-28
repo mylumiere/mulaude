@@ -48,11 +48,26 @@
 /* 4개 이상: 고정 높이 + 스크롤 */
 .agent-panel-list--scroll {
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-subtle) transparent;
+}
+
+.agent-panel-list--scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.agent-panel-list--scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.agent-panel-list--scroll::-webkit-scrollbar-thumb {
+  background: var(--border-subtle);
+  border-radius: 3px;
 }
 
 .agent-panel-list--scroll > .agent-terminal-container {
   flex: none;
-  height: 200px;
+  height: 240px;
 }
 
 /* ─── Scroll Navigation ─── */

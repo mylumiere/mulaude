@@ -36,6 +36,7 @@ import {
   setAutoBreakPaneHook
 } from './tmux-utils'
 import { ChildPaneStreamer } from './child-pane-streamer'
+import { cleanupAgentState } from './agent-matcher'
 
 /**
  * 관리 중인 세션의 내부 표현
@@ -424,6 +425,9 @@ export class SessionManager {
 
       // 자식 pane 스트리밍 정리
       this.childPaneStreamer?.cleanupSession(id)
+
+      // 에이전트 상태 + team config 정리
+      cleanupAgentState(id)
 
       // 메타데이터 제거
       this.sessionStore.removeSession(id)

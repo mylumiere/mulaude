@@ -8,10 +8,11 @@ import { readFileSync, readdirSync, statSync } from 'fs'
 import { join } from 'path'
 import { homedir } from 'os'
 
-/** team config mtime 캐시 (경로 -> { mtime, members }) */
+/** team config mtime 캐시 (경로 -> { mtime, leadAgentId, members }) */
 export interface TeamConfigCache {
   mtime: number
-  members: { name: string; agentType?: string; tmuxPaneId?: string; isActive?: boolean }[]
+  leadAgentId?: string
+  members: { name: string; agentId?: string; agentType?: string; tmuxPaneId?: string; isActive?: boolean }[]
 }
 
 const teamConfigCaches = new Map<string, TeamConfigCache>()
@@ -29,7 +30,7 @@ export function scanTeamConfigs(): { teamName: string; members: TeamConfigCache[
     return []
   }
 
-  const results: { teamName: string; members: TeamConfigCache['members'] }[] = []
+  const results: { teamName: string; leadAgentId?: string; members: TeamConfigCache['members'] }[] = []
   const validPaths = new Set<string>()
 
   for (const teamName of teamDirs) {
@@ -41,18 +42,24 @@ export function scanTeamConfigs(): { teamName: string; members: TeamConfigCache[
 
       if (cached && cached.mtime === mtime) {
         validPaths.add(configPath)
-        results.push({ teamName, members: cached.members })
+        results.push({ teamName, leadAgentId: cached.leadAgentId, members: cached.members })
         continue
       }
 
       const raw = readFileSync(configPath, 'utf-8')
       const config = JSON.parse(raw)
+      const leadAgentId: string | undefined = config.leadAgentId
       const members = Array.isArray(config.members) ? config.members : []
-      teamConfigCaches.set(configPath, { mtime, members })
+      teamConfigCaches.set(configPath, { mtime, leadAgentId, members })
       validPaths.add(configPath)
-      results.push({ teamName, members })
+      results.push({ teamName, leadAgentId, members })
     } catch {
-      // config.json 없거나 파싱 실패 -> 무시
+      // 파싱 실패 시 (파일 쓰기 중 등) 이전 캐시가 있으면 유지
+      const cached = teamConfigCaches.get(configPath)
+      if (cached) {
+        validPaths.add(configPath)
+        results.push({ teamName, leadAgentId: cached.leadAgentId, members: cached.members })
+      }
     }
   }
 

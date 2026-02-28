@@ -706,6 +706,11 @@
   flex-shrink: 0;
 }
 
+.session-agent-indicator--pending {
+  background: var(--text-muted);
+  animation: agent-pulse 1.5s ease-in-out infinite;
+}
+
 .session-agent-indicator--running {
   background: var(--status-agent);
   box-shadow: 0 0 6px var(--status-agent-glow);

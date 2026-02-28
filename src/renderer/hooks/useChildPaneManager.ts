@@ -5,7 +5,7 @@
  * 분할 비율 관리를 담당합니다.
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import type { AgentInfo } from '../../shared/types'
 
 interface ChildPaneEntry {
@@ -75,7 +75,7 @@ export function useChildPaneManager({
     const newIndicesMap: Record<string, number[]> = {}
     for (const [sessionId, agents] of Object.entries(sessionAgents)) {
       newIndicesMap[sessionId] = agents
-        .filter((a) => a.paneIndex !== undefined && (a.status === 'running' || a.status === 'completed'))
+        .filter((a) => a.paneIndex !== undefined && (a.status === 'pending' || a.status === 'running' || a.status === 'completed' || a.status === 'exited'))
         .map((a) => a.paneIndex!)
         .sort((a, b) => a - b)
     }
@@ -102,9 +102,12 @@ export function useChildPaneManager({
     })
   }, [sessionAgents])
 
-  // team config에서 에이전트가 확정된 세션만 split view 렌더
-  const sessionsWithPanes = new Set(
-    Object.keys(sessionAgents).filter((id) => sessionAgents[id].length > 0)
+  // team config에서 에이전트가 확정된 세션만 split view 렌더 (참조 안정화)
+  const sessionsWithPanes = useMemo(
+    () => new Set(
+      Object.keys(sessionAgents).filter((id) => sessionAgents[id].length > 0)
+    ),
+    [sessionAgents]
   )
 
   const handleFocusPane = useCallback((sessionId: string, paneIndex: number) => {
