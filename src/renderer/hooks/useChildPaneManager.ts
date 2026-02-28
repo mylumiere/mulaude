@@ -102,7 +102,7 @@ export function useChildPaneManager({
     })
   }, [sessionAgents])
 
-  // team config에서 에이전트가 확정된 세션만 split view 렌더 (참조 안정화)
+  // team config 에이전트가 있는 세션만 split view 렌더 (config SSOT)
   const sessionsWithPanes = useMemo(
     () => new Set(
       Object.keys(sessionAgents).filter((id) => sessionAgents[id].length > 0)

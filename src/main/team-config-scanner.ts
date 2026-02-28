@@ -13,7 +13,7 @@ import { homedir } from 'os'
 export interface TeamConfigCache {
   mtime: number
   leadAgentId?: string
-  members: { name: string; agentId?: string; agentType?: string; tmuxPaneId?: string; isActive?: boolean }[]
+  members: { name: string; agentId?: string; agentType?: string; tmuxPaneId?: string; isActive?: boolean; color?: string }[]
 }
 
 const teamConfigCaches = new Map<string, TeamConfigCache>()

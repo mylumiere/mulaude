@@ -111,7 +111,8 @@ export async function buildAgentsFromConfig(
           name: member.name,
           type: member.agentType,
           status: 'pending',
-          paneIndex: -(pendingIdx++)
+          paneIndex: -(pendingIdx++),
+          color: member.color
         })
         continue
       }
@@ -132,7 +133,8 @@ export async function buildAgentsFromConfig(
           name: member.name,
           type: member.agentType,
           status: 'pending',
-          paneIndex: -(pendingIdx++)
+          paneIndex: -(pendingIdx++),
+          color: member.color
         })
         continue
       }
@@ -161,7 +163,7 @@ export async function buildAgentsFromConfig(
         finalStatus = 'exited'
       }
 
-      agents.push({ name: r.member.name, type: r.member.agentType, status: finalStatus, paneIndex: r.paneIndex })
+      agents.push({ name: r.member.name, type: r.member.agentType, status: finalStatus, paneIndex: r.paneIndex, color: r.member.color })
 
       // 스트리밍은 실제 tmux에 존재하는 pane만
       if (r.tmuxIndex !== undefined) {

@@ -22,8 +22,10 @@ interface UseSessionStatusParams {
 interface UseSessionStatusReturn {
   sessionStatuses: Record<string, SessionStatus>
   contextPercents: Record<string, number>
-  /** 세션별 서브 에이전트 목록 */
-  sessionAgents: Record<string, AgentInfo[]>
+  /** team config 기반 에이전트 (Config SSOT — pane split, AgentTree, 알림용) */
+  teamAgents: Record<string, AgentInfo[]>
+  /** Hook 이벤트 기반 Task 에이전트 카운터 (사이드바 라벨 전용) */
+  hookAgents: Record<string, AgentInfo[]>
   /** 새 세션 생성 시 초기 상태 설정 */
   initSession: (id: string, restored: boolean) => void
   /** 세션 삭제 시 내부 상태 정리 */
@@ -49,7 +51,7 @@ export function useSessionStatus({
   } = useSessionPtyState({ updateSessionSubtitleRef })
 
   // Hook 이벤트 처리 (통합 메타 참조)
-  const { cleanupHookState } = useSessionHooks({
+  const { cleanupHookState, hookAgents } = useSessionHooks({
     locale,
     updateSessionSubtitleRef,
     updateStatus,
@@ -63,5 +65,5 @@ export function useSessionStatus({
     cleanupAgentState(id)
   }, [cleanupPtyState, cleanupHookState, cleanupAgentState])
 
-  return { sessionStatuses, contextPercents, sessionAgents, initSession, cleanupSession }
+  return { sessionStatuses, contextPercents, teamAgents: sessionAgents, hookAgents, initSession, cleanupSession }
 }

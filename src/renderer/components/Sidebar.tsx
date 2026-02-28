@@ -38,7 +38,10 @@ interface SidebarProps {
   attentionSessions: Set<string>
   usageData: UsageData | null
   contextPercents: Record<string, number>
-  sessionAgents: Record<string, AgentInfo[]>
+  /** team config 기반 에이전트 (AgentTree용) */
+  teamAgents: Record<string, AgentInfo[]>
+  /** Hook 기반 Task 에이전트 카운터 (라벨용) */
+  hookAgents: Record<string, AgentInfo[]>
   /** 그리드에 현재 열려있는 세션 ID 셋 */
   gridSessionIds?: Set<string>
   /** 튜토리얼 다시보기 */
@@ -64,7 +67,8 @@ export default function Sidebar({
   attentionSessions,
   usageData,
   contextPercents,
-  sessionAgents,
+  teamAgents,
+  hookAgents,
   sidebarFocused,
   sidebarCursorId,
   gridSessionIds,
@@ -145,7 +149,10 @@ export default function Sidebar({
                 {!isCollapsed && (
                   <div className="project-sessions">
                     {project.sessions.map((session, idx) => {
-                      const agents = sessionAgents[session.id] || []
+                      const team = teamAgents[session.id] || []
+                      const hookEntry = !team.length
+                        ? (hookAgents[session.id] || [])[0] ?? null
+                        : null
                       return (
                         <div key={session.id} className="session-row-wrapper">
                           <SessionRow
@@ -162,9 +169,15 @@ export default function Sidebar({
                             onDestroy={() => onDestroySession(session.id)}
                             onUpdateName={(name) => onUpdateSessionName(session.id, name)}
                           />
-                          {agents.length > 0 && (
+                          {hookEntry && (
+                            <div className="session-hook-agents">
+                              <span className={`session-agent-indicator session-agent-indicator--${hookEntry.status}`} />
+                              <span className="session-hook-agents-label">{hookEntry.name}</span>
+                            </div>
+                          )}
+                          {team.length > 0 && (
                             <AgentTree
-                              agents={agents}
+                              agents={team}
                               isCollapsed={collapsedAgents.has(session.id)}
                               onToggleCollapse={() => toggleAgentsCollapse(session.id)}
                             />

@@ -676,6 +676,20 @@
   color: var(--text-muted);
 }
 
+/* Hook 에이전트 카운터 (펼침 없는 단순 라벨) */
+.session-hook-agents {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px 2px 20px;
+}
+
+.session-hook-agents-label {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-muted);
+}
+
 .session-agents-list {
   padding-left: 4px;
   animation: agents-in 0.12s ease;

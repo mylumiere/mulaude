@@ -27,7 +27,7 @@ export default function App(): JSX.Element {
   // 세션 부제목(subtitle) 업데이트 ref (useSessionStatus <-> useSessionManager 간 순환 의존 해소)
   const updateSessionSubtitleRef = useRef<(id: string, subtitle: string) => void>(() => {})
 
-  const { sessionStatuses, contextPercents, sessionAgents, initSession, cleanupSession } =
+  const { sessionStatuses, contextPercents, teamAgents, hookAgents, initSession, cleanupSession } =
     useSessionStatus({ locale: settings.locale, updateSessionSubtitleRef })
 
   const sessionManager = useSessionManager({
@@ -50,11 +50,11 @@ export default function App(): JSX.Element {
     handleFocusParent,
     handleSplitResize,
     setFocusedPane
-  } = useChildPaneManager({ sessionAgents })
+  } = useChildPaneManager({ sessionAgents: teamAgents })
 
   const { attentionSessions, clearAttention } = useNotifications({
     sessionStatuses,
-    sessionAgents,
+    sessionAgents: teamAgents,
     sessions: sessionManager.sessions,
     activeSessionId: sessionManager.activeSessionId,
     notifSettings: settings.notifSettings,
@@ -166,7 +166,8 @@ export default function App(): JSX.Element {
           sessionStatuses={sessionStatuses}
           usageData={settings.usageData}
           contextPercents={contextPercents}
-          sessionAgents={sessionAgents}
+          teamAgents={teamAgents}
+          hookAgents={hookAgents}
           gridSessionIds={gridSessionIds}
           onRestartTutorial={tutorial.restart}
           shortcutsOpen={shortcutsOpen}
@@ -183,7 +184,7 @@ export default function App(): JSX.Element {
               getSessionThemeId={settings.getSessionThemeId}
               contextPercents={contextPercents}
               sessionStatuses={sessionStatuses}
-              sessionAgents={sessionAgents}
+              sessionAgents={teamAgents}
               sessionsWithPanes={sessionsWithPanes}
               childPaneMap={childPaneMap}
               focusedPane={focusedPane}

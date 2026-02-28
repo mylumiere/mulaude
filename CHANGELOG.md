@@ -1,5 +1,50 @@
 # Changelog
 
+## [1.1.3] - 2026-03-01
+
+### 성능 최적화
+- Main Process: 동기 I/O (`execFileSync`) → 비동기 (`execFile` + `Promise.all`) 전환
+  - `tmux-utils.ts`: `execTmuxAsync`, 비동기 pane 조회 함수 5개 추가
+  - `session-manager.ts`: `getSessionPaneContents()`, `captureScreen()` 비동기화
+  - `pane-poller.ts`: setInterval 콜백 비동기화, 이중 호출 제거
+  - `team-config-scanner.ts`: `fs/promises` 기반, `Promise.all` 병렬 스캔
+  - `agent-matcher.ts`: `getPaneCommandAsync()` + 러닝 멤버 병렬 조회
+- `child-pane-streamer.ts`: 개별 pane당 타이머 → 단일 글로벌 타이머 통합
+- `session-store.ts`: `save()` 500ms 디바운싱
+- Renderer: `classifyChunk` 100ms 쓰로틀, TerminalGrid 세션 Map 인덱싱
+- CSS: box-shadow 애니메이션 → opacity 기반 GPU 가속
+
+### 에이전트 시스템
+
+#### Hook 기반 Task 에이전트 추적
+- Claude Code의 Task tool 백그라운드/포그라운드 에이전트를 Hook 이벤트로 추적
+- 카운터 방식 표시 ("2/3 agents", "3/3 done")
+- `tool_input.team_name`으로 팀/비팀 에이전트 구분
+- Foreground Task: `PostToolUse[Task]`에서 완료 처리
+- Background Task: `run_in_background` 추적, child Stop에서 완료 처리
+- `parentStopped` 플래그로 부모/자식 이벤트 라우팅
+
+#### 팀 에이전트 분리
+- Config SSOT (`teamAgents`) vs Hook 카운터 (`hookAgents`) 완전 분리
+- `mergedAgents` 제거, 각각 독립 경로로 전달
+- 팀 에이전트 config `color` 필드 → AgentTree 이름 색상 적용
+
+### 코드 정리
+- `useSessionHooks.ts`: `handleLegacyEvent` 제거 (handleParentEvent로 통합)
+- `handlePreToolUse`/`handlePostToolUse` 공통 함수 추출
+- 디버그 로그 제거
+
+---
+
+## [1.1.2] - 2026-02-28
+
+### 코드 리팩토링
+- 매직 넘버 상수화 완료
+- Main Process 모듈 분리 세분화
+- `useSessionHooks`: 부모/자식 이벤트 분류 로직 개선
+
+---
+
 ## [1.1.0] - 2026-02-28
 
 ### 신규 기능

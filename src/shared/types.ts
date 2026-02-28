@@ -78,6 +78,8 @@ export interface AgentInfo {
   detail?: string
   /** 연결된 tmux pane 인덱스 */
   paneIndex?: number
+  /** team config 색상 (blue, green, yellow 등) */
+  color?: string
 }
 
 /** tmux pane 정보 (에이전트 상태 폴링용) */
