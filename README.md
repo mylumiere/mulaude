@@ -1,3 +1,5 @@
+[English](README.en.md) | **한국어** | [日本語](README.ja.md) | [中文](README.zh.md)
+
 # Mulaude
 
 **Multi-session Claude Code Terminal** — 여러 Claude Code 세션을 동시에 관리하는 macOS 데스크톱 앱
@@ -125,31 +127,37 @@ npm run package:mac
 
 ```
 src/
-├── main/                    # Electron Main 프로세스
-│   ├── index.ts             # 앱 진입점
-│   ├── ipc-handlers.ts      # IPC 핸들러 등록
-│   ├── session-manager.ts   # 세션 생성/삭제, PTY 관리
-│   ├── session-store.ts     # ~/.mulaude/sessions.json 영속화
-│   ├── session-forwarder.ts # 세션 데이터 배치 포워딩
-│   ├── pane-poller.ts       # 에이전트 pane 폴링 + 팀 config
-│   ├── close-handler.ts     # 닫기 다이얼로그
-│   ├── hooks-manager.ts     # Claude Code Hooks 감시
+├── main/                      # Electron Main 프로세스
+│   ├── index.ts               # 앱 진입점
+│   ├── ipc-handlers.ts        # IPC 핸들러 등록
+│   ├── session-manager.ts     # 세션 생성/삭제, PTY 관리
+│   ├── session-store.ts       # ~/.mulaude/sessions.json 영속화
+│   ├── session-forwarder.ts   # 세션 데이터 배치 포워딩
+│   ├── env-resolver.ts        # 셸 환경변수/Claude 경로 탐색
+│   ├── pane-poller.ts         # 에이전트 pane 폴링
+│   ├── team-config-scanner.ts # 팀 config 스캔/캐싱
+│   ├── agent-matcher.ts       # 에이전트-pane 매칭
+│   ├── close-handler.ts       # 닫기 다이얼로그
+│   ├── hooks-manager.ts       # Claude Code Hooks 감시
 │   ├── child-pane-streamer.ts # 자식 pane 스트리밍
-│   └── tmux-utils.ts        # tmux 명령어 유틸
+│   └── tmux-utils.ts          # tmux 명령어 유틸
 ├── preload/
-│   └── index.ts             # contextBridge API
-├── renderer/                # React 앱
-│   ├── App.tsx              # 루트 컴포넌트
-│   ├── i18n.ts              # 다국어
-│   ├── themes.ts            # 6가지 테마
-│   ├── roadmap.ts           # 로드맵 데이터
-│   ├── settings.ts          # 설정 타입/유틸
-│   ├── pty-parser.ts        # PTY 출력 파서
-│   ├── hooks/               # React 커스텀 훅 (11개)
-│   └── components/          # React 컴포넌트 (15개)
+│   └── index.ts               # contextBridge API
+├── renderer/                  # React 앱
+│   ├── App.tsx                # 루트 컴포넌트
+│   ├── i18n.ts                # 다국어
+│   ├── themes.ts              # 6가지 테마
+│   ├── roadmap.ts             # 로드맵 데이터
+│   ├── settings.ts            # 설정 타입/유틸
+│   ├── pty-parser.ts          # PTY 출력 파서
+│   ├── hooks/                 # React 커스텀 훅 (11개)
+│   ├── utils/                 # 순수 유틸리티
+│   │   ├── pane-tree.ts       # 이진 트리 자료구조/연산
+│   │   └── pane-storage.ts    # 레이아웃 localStorage 영속화
+│   └── components/            # React 컴포넌트 (15개)
 └── shared/
-    ├── types.ts             # 공유 타입
-    └── constants.ts         # 공유 상수
+    ├── types.ts               # 공유 타입
+    └── constants.ts           # 공유 상수 (41개)
 ```
 
 ## 기여
