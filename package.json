@@ -7,7 +7,7 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
-    "postinstall": "@electron/rebuild -f -w node-pty",
+    "postinstall": "electron-rebuild -f -w node-pty",
     "package": "npm run build && electron-builder",
     "package:mac": "npm run build && electron-builder --mac",
     "package:dmg": "npm run build && electron-builder --mac dmg"
