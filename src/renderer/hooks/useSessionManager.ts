@@ -120,7 +120,7 @@ export function useSessionManager({
     const dir = await window.api.openDirectory()
     if (!dir) return
     try {
-      const count = ++sessionCounter.current
+      ++sessionCounter.current
       const session = await window.api.createSession(dir)
       const projectName = dir.split('/').pop() || dir
       setSessions((prev) => [...prev, { ...session, name: projectName }])
@@ -136,7 +136,7 @@ export function useSessionManager({
   const addSession = useCallback(
     async (workingDir: string) => {
       try {
-        const count = ++sessionCounter.current
+        ++sessionCounter.current
         const session = await window.api.createSession(workingDir)
         const projectName = workingDir.split('/').pop() || workingDir
         setSessions((prev) => [...prev, { ...session, name: projectName }])

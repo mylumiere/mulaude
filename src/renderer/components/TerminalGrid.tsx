@@ -184,8 +184,8 @@ export default function TerminalGrid({
     const agentFocus = focusedPane[leaf.sessionId] ?? null
 
     const claudeId = claudeSessionIds?.[leaf.sessionId]
-    const isShellStatus = sessionStatuses[leaf.sessionId]?.state === 'shell'
     const status = sessionStatuses[leaf.sessionId]
+    const isShellStatus = status?.state === 'shell'
     const statusState = status
       ? (status.state === 'idle' && status.label ? 'completed' : status.state)
       : null
