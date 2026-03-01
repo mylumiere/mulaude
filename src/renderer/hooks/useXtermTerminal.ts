@@ -31,6 +31,8 @@ interface UseXtermTerminalParams {
   onData: (data: string) => void
   /** 리사이즈 핸들러 (cols, rows) */
   onResize: (cols: number, rows: number) => void
+  /** cols 변경 시 스크롤백 재캡처 콜백 (tmux reflow된 내용 복원) */
+  onRecapture?: () => Promise<string | null>
   /** 초기 내용 (마운트 직후 write) */
   initialContent?: string
   /** 터미널 비활성화 (pending 상태 등에서 xterm 생성 방지) */
@@ -53,6 +55,7 @@ export function useXtermTerminal({
   isFocused,
   onData,
   onResize,
+  onRecapture,
   initialContent,
   disabled,
   deps = []
@@ -136,9 +139,22 @@ export function useXtermTerminal({
         const newCols = xtermRef.current.cols
         const newRows = xtermRef.current.rows
         onResize(newCols, newRows)
-        // cols 변경 시 스크롤백 포함 전체 reflow + 렌더 캐시 초기화
         if (newCols !== prevCols) {
+          // cols 변경: tmux가 hard-wrap한 이전 스크롤백은 reflow 불가
+          // → xterm 스크롤백 비우고 tmux에서 reflow된 내용 재캡처
           xtermRef.current.clearTextureAtlas()
+          xtermRef.current.clear()
+          if (onRecapture) {
+            const term = xtermRef.current
+            setTimeout(() => {
+              onRecapture().then((screen) => {
+                if (screen && term) {
+                  term.clear()
+                  term.write(screen)
+                }
+              }).catch(() => {})
+            }, 150) // tmux reflow 대기
+          }
         }
         xtermRef.current.refresh(0, newRows - 1)
       }, 100)
