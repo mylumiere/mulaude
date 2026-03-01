@@ -30,6 +30,7 @@ import {
   sendKeysToTmux,
   resizeTmuxWindowAsync,
   updateTmuxEnvironment,
+  unsetTmuxEnvironment,
   toTmuxSessionName,
   listTmuxPanesAsync,
   captureTmuxPaneAsync,
@@ -61,7 +62,7 @@ type ExitCallback = (id: string, exitCode: number) => void
  *
  * tmux 모드 (tmux 설치됨):
  *   1. tmux new-session -d → 백그라운드 세션 생성
- *   2. tmux send-keys 'claude' Enter → Claude CLI 실행
+ *   2. tmux send-keys 'unset CLAUDECODE CLAUDE_CODE; claude' → 중첩 방지 + CLI 실행
  *   3. pty.spawn(tmux, ['attach-session']) → PTY로 attach
  *   4. 앱 종료 시: PTY만 kill, tmux 세션은 보존
  *   5. 앱 재시작 시: 살아있는 tmux 세션에 reattach
@@ -198,7 +199,7 @@ export class SessionManager {
     // 1.5) auto-break hook 설정: 자식 pane 생성 시 즉시 별도 window로 분리
     setAutoBreakPaneHook(tmuxPath, tmuxName)
 
-    // 2) tmux 세션 안에서 환경변수 export + claude 실행
+    // 2) tmux 세션 안에서 중첩 방지 unset + 환경변수 export + claude 실행
     //    tmux set-environment는 새 pane에만 적용되므로,
     //    초기 셸에는 send-keys로 직접 export해야 합니다.
     try {
@@ -295,9 +296,10 @@ export class SessionManager {
    *
    * 동작 순서:
    *   1. tmux 세션이 살아있는지 확인 → 죽었으면 메타데이터 정리 후 null 반환
-   *   2. tmux set-environment → MULAUDE_IPC_DIR 갱신 (새 앱 PID에 맞게)
-   *   3. pty.spawn(tmux, ['attach-session']) → PTY attach
-   *   4. 이벤트 바인딩 (onData, onExit)
+   *   2. tmux set-environment -u → CLAUDECODE/CLAUDE_CODE 제거 (중첩 세션 방지)
+   *   3. tmux set-environment → MULAUDE_IPC_DIR 갱신 (새 앱 PID에 맞게)
+   *   4. pty.spawn(tmux, ['attach-session']) → PTY attach
+   *   5. 이벤트 바인딩 (onData, onExit)
    *
    * @param persisted - 영속 저장소에서 로드된 세션 정보
    * @returns 복원된 세션 정보 또는 null (tmux 세션이 죽은 경우)
@@ -314,7 +316,10 @@ export class SessionManager {
       return null
     }
 
-    // 2) MULAUDE_IPC_DIR 갱신 (새 앱 인스턴스의 IPC 디렉토리)
+    // 2) 중첩 세션 방지: CLAUDECODE 환경변수 제거
+    unsetTmuxEnvironment(tmuxPath, persisted.tmuxSessionName, ['CLAUDECODE', 'CLAUDE_CODE'])
+
+    // 3) MULAUDE_IPC_DIR 갱신 (새 앱 인스턴스의 IPC 디렉토리)
     if (this.ipcDir) {
       updateTmuxEnvironment(tmuxPath, persisted.tmuxSessionName, {
         MULAUDE_SESSION_ID: persisted.id,
@@ -331,7 +336,7 @@ export class SessionManager {
       }
     }
 
-    // 3) PTY로 tmux 세션에 attach
+    // 4) PTY로 tmux 세션에 attach
     const cleanEnv = { ...this.shellEnv }
     delete cleanEnv['CLAUDECODE']
     delete cleanEnv['CLAUDE_CODE']
@@ -354,7 +359,7 @@ export class SessionManager {
       return null
     }
 
-    // 4) 이벤트 바인딩
+    // 5) 이벤트 바인딩
     const session: ManagedSession = {
       id: persisted.id,
       name: persisted.name,

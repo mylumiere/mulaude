@@ -124,8 +124,11 @@ export function listMulaudeTmuxSessions(tmuxPath: string): string[] {
  *
  * 실행 순서:
  *   1. `tmux new-session -d -s {name} -x {cols} -y {rows}` — 분리 모드로 세션 생성
- *   2. `tmux set-environment` — MULAUDE_SESSION_ID, MULAUDE_IPC_DIR 등 환경변수 주입
- *   3. `tmux set-option history-limit 50000` — 스크롤백 버퍼 확장
+ *   2. `tmux set-environment -u` — CLAUDECODE/CLAUDE_CODE 제거 (중첩 세션 방지)
+ *   3. `tmux set-environment` — MULAUDE_SESSION_ID, MULAUDE_IPC_DIR 등 환경변수 주입
+ *   4. `tmux set-option history-limit 50000` — 스크롤백 버퍼 확장
+ *   5. `tmux set-option status off` — 상태바 비활성화
+ *   6. `tmux set-option mouse on` — 마우스 모드 활성화
  *
  * @param tmuxPath - tmux 실행 파일 경로
  * @param name - tmux 세션명 (mulaude-xxx 형식)
@@ -150,8 +153,12 @@ export function createTmuxSession(
   })
 
   // 2) 중첩 세션 방지: CLAUDECODE 환경변수 제거
-  execTmux(tmuxPath, ['set-environment', '-t', name, '-u', 'CLAUDECODE'])
-  execTmux(tmuxPath, ['set-environment', '-t', name, '-u', 'CLAUDE_CODE'])
+  if (execTmux(tmuxPath, ['set-environment', '-t', name, '-u', 'CLAUDECODE']) === null) {
+    console.warn('[tmux-utils] unset CLAUDECODE failed')
+  }
+  if (execTmux(tmuxPath, ['set-environment', '-t', name, '-u', 'CLAUDE_CODE']) === null) {
+    console.warn('[tmux-utils] unset CLAUDE_CODE failed')
+  }
 
   // 3) 환경변수 주입 (개별 실패 무시)
   for (const [key, value] of Object.entries(envVars)) {
@@ -266,6 +273,25 @@ export function updateTmuxEnvironment(
   for (const [key, value] of Object.entries(envVars)) {
     if (execTmux(tmuxPath, ['set-environment', '-t', name, key, value]) === null) {
       console.warn(`[tmux-utils] update env failed for ${key}`)
+    }
+  }
+}
+
+/**
+ * tmux 세션에서 환경변수를 제거합니다 (중첩 세션 방지용).
+ *
+ * @param tmuxPath - tmux 실행 파일 경로
+ * @param name - 대상 tmux 세션명
+ * @param keys - 제거할 환경변수 이름 배열
+ */
+export function unsetTmuxEnvironment(
+  tmuxPath: string,
+  name: string,
+  keys: string[]
+): void {
+  for (const key of keys) {
+    if (execTmux(tmuxPath, ['set-environment', '-t', name, '-u', key]) === null) {
+      console.warn(`[tmux-utils] unset env failed for ${key}`)
     }
   }
 }
