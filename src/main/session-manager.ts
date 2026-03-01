@@ -202,10 +202,11 @@ export class SessionManager {
     //    tmux set-environment는 새 pane에만 적용되므로,
     //    초기 셸에는 send-keys로 직접 export해야 합니다.
     try {
+      const unsetNested = 'unset CLAUDECODE CLAUDE_CODE; '
       const envExport = this.ipcDir
         ? `export MULAUDE_SESSION_ID='${id}' MULAUDE_IPC_DIR='${this.ipcDir}'; `
         : ''
-      sendKeysToTmux(tmuxPath, tmuxName, envExport + this.claudePath)
+      sendKeysToTmux(tmuxPath, tmuxName, unsetNested + envExport + this.claudePath)
     } catch (err) {
       console.error(`[SessionManager] tmux send-keys failed:`, err)
       killTmuxSession(tmuxPath, tmuxName)
