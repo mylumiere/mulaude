@@ -129,6 +129,7 @@ export function listMulaudeTmuxSessions(tmuxPath: string): string[] {
  *   4. `tmux set-option history-limit 50000` — 스크롤백 버퍼 확장
  *   5. `tmux set-option status off` — 상태바 비활성화
  *   6. `tmux set-option mouse on` — 마우스 모드 활성화
+ *   7. `tmux set-option allow-passthrough on` — 이스케이프 시퀀스 패스스루
  *
  * @param tmuxPath - tmux 실행 파일 경로
  * @param name - tmux 세션명 (mulaude-xxx 형식)
@@ -182,6 +183,9 @@ export function createTmuxSession(
   if (execTmux(tmuxPath, ['set-option', '-t', name, 'mouse', 'on']) === null) {
     console.warn('[tmux-utils] set mouse failed')
   }
+
+  // 7) 이스케이프 시퀀스 패스스루 (이미지 붙여넣기, OSC 52 클립보드 등)
+  execTmux(tmuxPath, ['set-option', '-t', name, 'allow-passthrough', 'on'])
 }
 
 /**
