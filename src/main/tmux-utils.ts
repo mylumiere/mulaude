@@ -149,28 +149,24 @@ export function createTmuxSession(
     timeout: TMUX_SESSION_CREATE_TIMEOUT
   })
 
-  // 2) 중첩 세션 방지: CLAUDECODE 환경변수 제거
-  execTmux(tmuxPath, ['set-environment', '-t', name, '-u', 'CLAUDECODE'])
-  execTmux(tmuxPath, ['set-environment', '-t', name, '-u', 'CLAUDE_CODE'])
-
-  // 3) 환경변수 주입 (개별 실패 무시)
+  // 2) 환경변수 주입 (개별 실패 무시)
   for (const [key, value] of Object.entries(envVars)) {
     if (execTmux(tmuxPath, ['set-environment', '-t', name, key, value]) === null) {
       console.warn(`[tmux-utils] set-environment failed for ${key}`)
     }
   }
 
-  // 4) 스크롤백 버퍼 확장
+  // 3) 스크롤백 버퍼 확장
   if (execTmux(tmuxPath, ['set-option', '-t', name, 'history-limit', String(TMUX_HISTORY_LIMIT)]) === null) {
     console.warn('[tmux-utils] set history-limit failed')
   }
 
-  // 5) tmux 상태바 비활성화 (xterm.js에서 중복 렌더링 방지)
+  // 4) tmux 상태바 비활성화 (xterm.js에서 중복 렌더링 방지)
   if (execTmux(tmuxPath, ['set-option', '-t', name, 'status', 'off']) === null) {
     console.warn('[tmux-utils] set status off failed')
   }
 
-  // 6) 마우스 모드 활성화 (스크롤 이벤트를 tmux가 처리하도록)
+  // 5) 마우스 모드 활성화 (스크롤 이벤트를 tmux가 처리하도록)
   //    alt buffer에서 xterm.js가 wheel을 화살표 키로 변환하는 문제 방지
   if (execTmux(tmuxPath, ['set-option', '-t', name, 'mouse', 'on']) === null) {
     console.warn('[tmux-utils] set mouse failed')
