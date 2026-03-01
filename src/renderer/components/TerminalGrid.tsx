@@ -14,7 +14,7 @@
  */
 
 import { useCallback, useMemo, useState } from 'react'
-import { X } from 'lucide-react'
+import { X, Maximize2, Minimize2 } from 'lucide-react'
 import TerminalView from './TerminalView'
 import AgentPanel from './AgentPanel'
 import type { SessionInfo, AgentInfo, SessionStatus } from '../../shared/types'
@@ -56,6 +56,8 @@ interface TerminalGridProps {
   onDropSession: (sessionId: string, targetPaneId: string, position: DropPosition) => void
   onMovePane: (sourcePaneId: string, targetPaneId: string, position: DropPosition) => void
 
+  /** 줌 토글 핸들러 */
+  onToggleZoom?: () => void
   /** 중복 세션 알림 메시지 */
   duplicateAlert?: string | null
   /** 튜토리얼 드래그 스텝 — center 드롭 차단 */
@@ -86,6 +88,7 @@ export default function TerminalGrid({
   onResize,
   onDropSession,
   onMovePane,
+  onToggleZoom,
   duplicateAlert,
   blockCenterDrop
 }: TerminalGridProps): JSX.Element {
@@ -169,6 +172,7 @@ export default function TerminalGrid({
   /** 리프 렌더링 */
   const renderLeaf = (leaf: PaneLeaf): JSX.Element => {
     const isFocused = tree.focusedPaneId === leaf.id
+    const isZoomed = tree.zoomedPaneId === leaf.id
     const isDimmed = isGridMode && !isFocused && !tree.zoomedPaneId
     const isDropHere = dropTarget?.paneId === leaf.id
     const session = sessionMap.get(leaf.sessionId)
@@ -200,27 +204,40 @@ export default function TerminalGrid({
         {/* 그리드 모드일 때만 패인 헤더 표시 */}
         {isGridMode && (
           <div
-            className="terminal-grid-pane-header"
-            draggable
+            className={`terminal-grid-pane-header${isZoomed ? ' terminal-grid-pane-header--zoomed' : ''}`}
+            draggable={!isZoomed}
             onDragStart={(e) => {
+              if (isZoomed) { e.preventDefault(); return }
               e.dataTransfer.setData('text/pane-id', leaf.id)
               e.dataTransfer.effectAllowed = 'move'
             }}
           >
             <span className="terminal-grid-pane-title">
+              {isZoomed && <Maximize2 size={10} className="terminal-grid-zoom-icon" />}
               {session?.name ?? leaf.sessionId}
             </span>
-            <button
-              className="terminal-grid-pane-close"
-              onClick={(e) => {
-                e.stopPropagation()
-                onFocusPane(leaf.id)
-                onClosePane()
-              }}
-              title={t(locale, 'grid.closePane')}
-            >
-              <X size={10} />
-            </button>
+            <div className="terminal-grid-pane-actions">
+              {isZoomed && (
+                <button
+                  className="terminal-grid-pane-zoom-exit"
+                  onClick={(e) => { e.stopPropagation(); onToggleZoom?.() }}
+                  title={t(locale, 'shortcuts.zoomToggle')}
+                >
+                  <Minimize2 size={10} />
+                </button>
+              )}
+              <button
+                className="terminal-grid-pane-close"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onFocusPane(leaf.id)
+                  onClosePane()
+                }}
+                title={t(locale, 'grid.closePane')}
+              >
+                <X size={10} />
+              </button>
+            </div>
           </div>
         )}
         <div className="terminal-grid-pane-content">

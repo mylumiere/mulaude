@@ -16,7 +16,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { SessionManager } from './session-manager'
 import { HooksManager } from './hooks-manager'
 import { registerIpcHandlers } from './ipc-handlers'
-import { setupSessionDataForwarding, watchUsageData } from './session-forwarder'
+import { setupSessionDataForwarding, watchUsageData, stopHudPoller } from './session-forwarder'
 import { setupPanePolling, setupChildPaneForwarding } from './pane-poller'
 import { setupCloseHandler, dt, setLocale, getCloseAction, resetCloseAction } from './close-handler'
 import { logger } from './logger'
@@ -189,6 +189,7 @@ app.whenReady().then(() => {
     cleanupPanePolling()
     hooksManager.cleanup()
     cleanupUsageWatch()
+    stopHudPoller()
 
     app.quit()
   })

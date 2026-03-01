@@ -171,16 +171,17 @@ export function useKeyboardShortcuts({
         }
       }
 
-      // ── 비-그리드 모드: Cmd+↑/↓ 세션 전환 ──
+      // ── 비-그리드 모드: Cmd+↑/↓ 세션 전환 (사이드바 표시 순서 기준) ──
       if (!isGridMode && !e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
         e.preventDefault()
         if (!activeSessionId || sessions.length < 2) return
-        const currentIdx = sessions.findIndex((s) => s.id === activeSessionId)
+        const visualOrder = projects.flatMap((p) => p.sessions)
+        const currentIdx = visualOrder.findIndex((s) => s.id === activeSessionId)
         if (currentIdx < 0) return
         if (e.key === 'ArrowUp' && currentIdx > 0) {
-          selectSession(sessions[currentIdx - 1].id)
-        } else if (e.key === 'ArrowDown' && currentIdx < sessions.length - 1) {
-          selectSession(sessions[currentIdx + 1].id)
+          selectSession(visualOrder[currentIdx - 1].id)
+        } else if (e.key === 'ArrowDown' && currentIdx < visualOrder.length - 1) {
+          selectSession(visualOrder[currentIdx + 1].id)
         }
         return
       }

@@ -10,6 +10,7 @@ import { readFileSync, writeFileSync, existsSync } from 'fs'
 import { join } from 'path'
 import { homedir } from 'os'
 import type { SessionManager } from './session-manager'
+import { startHudPoller, stopHudPoller } from './session-forwarder'
 import type { UsageData } from '../shared/types'
 
 /**
@@ -198,7 +199,14 @@ export function registerIpcHandlers(
           }
           delete settings._mulaudeHudPluginBackup
         }
+        // statusLine 제거로 claude-hud가 실행되지 않으므로 백그라운드 폴링으로 대체
+        const backup = settings._mulaudeStatusLineBackup
+        if (backup?.command) {
+          startHudPoller(backup.command)
+        }
       } else {
+        // 백그라운드 폴러 중지 (statusLine 복원 → Claude Code가 직접 실행)
+        stopHudPoller()
         // statusLine 복원
         if (settings._mulaudeStatusLineBackup) {
           settings.statusLine = settings._mulaudeStatusLineBackup

@@ -9,9 +9,10 @@ import type { BrowserWindow } from 'electron'
 import { watchFile, unwatchFile } from 'fs'
 import { join } from 'path'
 import { homedir } from 'os'
+import { exec } from 'child_process'
 import type { SessionManager } from './session-manager'
 import { readUsageData } from './ipc-handlers'
-import { IPC_BATCH_INTERVAL, USAGE_WATCH_INTERVAL } from '../shared/constants'
+import { IPC_BATCH_INTERVAL, USAGE_WATCH_INTERVAL, HUD_POLL_INTERVAL } from '../shared/constants'
 
 /**
  * 16ms 배치 처리 유틸리티를 생성합니다.
@@ -72,6 +73,31 @@ export function setupSessionDataForwarding(
       mainWindow.webContents.send('session:exit', id, exitCode)
     }
   })
+}
+
+// ─── HUD 백그라운드 폴러 ───
+// statusLine 제거 시에도 claude-hud 명령을 직접 실행하여 usage-cache.json 갱신 유지
+
+let hudPollTimer: ReturnType<typeof setInterval> | null = null
+
+/**
+ * HUD 백그라운드 폴러를 시작합니다.
+ * statusLine이 제거된 상태에서도 claude-hud 명령을 주기적으로 실행하여
+ * usage-cache.json이 갱신되도록 합니다.
+ */
+export function startHudPoller(command: string): void {
+  stopHudPoller()
+  const run = (): void => { exec(command, { timeout: 10000 }, () => {}) }
+  run()
+  hudPollTimer = setInterval(run, HUD_POLL_INTERVAL)
+}
+
+/** HUD 백그라운드 폴러를 중지합니다. */
+export function stopHudPoller(): void {
+  if (hudPollTimer) {
+    clearInterval(hudPollTimer)
+    hudPollTimer = null
+  }
 }
 
 /**

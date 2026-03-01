@@ -22,10 +22,6 @@ export const DEFAULT_ROWS = 30
 /** PostToolUse → thinking 전환 디바운스 (ms) */
 export const HOOK_THINKING_DEBOUNCE = 400
 
-/** 에이전트 터미널 다중 fit 안정화 지연 (ms) */
-export const AGENT_FIT_DELAY_SHORT = 50
-export const AGENT_FIT_DELAY_LONG = 300
-
 /** 터미널 기본 폰트 사이즈 */
 export const TERMINAL_FONT_SIZE = 14
 export const AGENT_TERMINAL_FONT_SIZE = 13
@@ -89,6 +85,8 @@ export const SCREEN_VISIBILITY_MARGIN = 100
 
 /** usage 캐시 감시 간격 (ms) */
 export const USAGE_WATCH_INTERVAL = 5000
+/** HUD 숨김 시 백그라운드 폴링 간격 (ms) */
+export const HUD_POLL_INTERVAL = 30000
 
 /* ═══════ tmux ═══════ */
 

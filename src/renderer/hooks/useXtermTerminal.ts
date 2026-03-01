@@ -31,8 +31,6 @@ interface UseXtermTerminalParams {
   onData: (data: string) => void
   /** 리사이즈 핸들러 (cols, rows) */
   onResize: (cols: number, rows: number) => void
-  /** 초기화 후 추가 핏 지연 (ms 배열, 예: [50, 300]) */
-  fitDelays?: number[]
   /** 초기 내용 (마운트 직후 write) */
   initialContent?: string
   /** 터미널 비활성화 (pending 상태 등에서 xterm 생성 방지) */
@@ -55,7 +53,6 @@ export function useXtermTerminal({
   isFocused,
   onData,
   onResize,
-  fitDelays,
   initialContent,
   disabled,
   deps = []
@@ -86,29 +83,26 @@ export function useXtermTerminal({
     terminal.open(containerRef.current)
 
     // 마우스 트래킹 차단 — Claude Code가 보내는 mouse tracking enable 시퀀스를 무시
-    // 이를 통해 터미널에서 텍스트 드래그 선택 + 복사가 정상 동작
-    // Claude Code 프롬프트는 키보드(↑↓ + Enter)로 조작 가능
     terminal.parser.registerCsiHandler({ prefix: '?', final: 'h' }, (params) => {
       const mouseParams = [1000, 1002, 1003, 1004, 1006, 1015, 1016]
       for (let i = 0; i < params.length; i++) {
-        if (mouseParams.includes(params[i] as number)) return true // 차단
+        if (mouseParams.includes(params[i] as number)) return true
       }
-      return false // 나머지 DEC Private Mode는 통과
+      return false
     })
+
+    // PTY 응답 시퀀스 소비 — 리사이즈 시 DA1/CPR 응답이 raw 텍스트로 출력되지 않도록
+    terminal.parser.registerCsiHandler({ prefix: '?', final: 'c' }, () => true) // DA1
+    terminal.parser.registerCsiHandler({ final: 'R' }, () => true)              // CPR
 
     // 키 이벤트 핸들러: 앱 단축키는 window로 전달, 나머지는 xterm 처리
     terminal.attachCustomKeyEventHandler((event: KeyboardEvent) => {
       if (event.type !== 'keydown') return true
-
-      // Cmd+* 조합은 앱 단축키 → xterm이 처리하지 않음
       if (event.metaKey) return false
-
-      // Shift+Enter → CSI u 시퀀스 (Claude Code 멀티라인 입력)
       if (event.key === 'Enter' && event.shiftKey) {
         onData('\x1b[13;2u')
         return false
       }
-
       return true
     })
 
@@ -116,31 +110,20 @@ export function useXtermTerminal({
       terminal.write(initialContent)
     }
 
-    // 초기 fit + 리사이즈 통보
-    const fitAndResize = (): void => {
-      fitAddon.fit()
-      onResize(terminal.cols, terminal.rows)
-    }
-
-    if (fitDelays && fitDelays.length > 0) {
-      requestAnimationFrame(() => {
-        for (const delay of fitDelays) {
-          setTimeout(fitAndResize, delay)
-        }
-        if (isFocused !== false) terminal.focus()
-      })
-    } else {
-      requestAnimationFrame(() => {
-        fitAndResize()
-        if (isFocused !== false) terminal.focus()
-      })
-    }
-
     xtermRef.current = terminal
     fitAddonRef.current = fitAddon
 
+    // 초기 fit — 컨테이너 크기가 잡힌 후 1회 실행
+    requestAnimationFrame(() => {
+      if (!containerRef.current || containerRef.current.clientHeight === 0) return
+      fitAddon.fit()
+      onResize(terminal.cols, terminal.rows)
+      if (isFocused !== false) terminal.focus()
+    })
+
     const onDataDisposable = terminal.onData(onData)
 
+    // ResizeObserver — 컨테이너 크기 변경 시 fit (유일한 리사이즈 소스)
     let resizeTimer: ReturnType<typeof setTimeout> | null = null
     const resizeObserver = new ResizeObserver(() => {
       if (resizeTimer) return
@@ -149,6 +132,7 @@ export function useXtermTerminal({
         if (fitAddonRef.current && xtermRef.current) {
           fitAddonRef.current.fit()
           onResize(xtermRef.current.cols, xtermRef.current.rows)
+          xtermRef.current.refresh(0, xtermRef.current.rows - 1)
         }
       }, 150)
     })
@@ -175,42 +159,31 @@ export function useXtermTerminal({
     }
   }, [themeId])
 
-  // 활성 탭 전환 시 fit + focus (isFocused 변경은 아래 effect에서 처리)
+  // 활성 탭 전환 시 fit + focus
   useEffect(() => {
     if (isActive && fitAddonRef.current && xtermRef.current) {
-      requestAnimationFrame(() => {
-        fitAddonRef.current?.fit()
-        if (isFocused !== false) {
-          xtermRef.current?.focus()
-        }
-        if (xtermRef.current) {
-          onResize(xtermRef.current.cols, xtermRef.current.rows)
-        }
-      })
+      fitAddonRef.current.fit()
+      onResize(xtermRef.current.cols, xtermRef.current.rows)
+      if (isFocused !== false) xtermRef.current.focus()
     }
   }, [isActive]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // 포커스 변경 시 (그리드 패인 이동 / 분할 모드 전환)
   useEffect(() => {
     if (isFocused && isActive !== false && xtermRef.current) {
-      // 포커스/핏 전에 스크롤 상태 저장 (사용자가 위로 스크롤한 경우 보존)
-      const buf = xtermRef.current.buffer.active
-      const savedViewportY = buf.viewportY
-      const wasScrolledUp = savedViewportY < buf.baseY
-
-      // 키보드 이벤트 처리 중 동기 focus()가 씹히므로 다음 틱으로 지연
-      const t = setTimeout(() => {
-        if (!xtermRef.current) return
-        xtermRef.current.focus()
-        if (wasScrolledUp) xtermRef.current.scrollToLine(savedViewportY)
-      }, 0)
-      requestAnimationFrame(() => {
-        if (!fitAddonRef.current || !xtermRef.current) return
-        fitAddonRef.current.fit()
-        if (wasScrolledUp) xtermRef.current.scrollToLine(savedViewportY)
-      })
-      return () => clearTimeout(t)
+      xtermRef.current.focus()
     }
+  }, [isFocused, isActive])
+
+  // 앱 윈도우 포커스 복귀 시 터미널 자동 포커스
+  useEffect(() => {
+    const handleWindowFocus = (): void => {
+      if (xtermRef.current && isFocused !== false && isActive !== false) {
+        xtermRef.current.focus()
+      }
+    }
+    window.addEventListener('focus', handleWindowFocus)
+    return () => window.removeEventListener('focus', handleWindowFocus)
   }, [isFocused, isActive])
 
   return { terminalRef: xtermRef, fitAddonRef }

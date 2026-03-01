@@ -9,9 +9,7 @@ import { memo, useRef, useEffect } from 'react'
 import { useXtermTerminal } from '../hooks/useXtermTerminal'
 import {
   AGENT_TERMINAL_FONT_SIZE,
-  AGENT_SCROLLBACK,
-  AGENT_FIT_DELAY_SHORT,
-  AGENT_FIT_DELAY_LONG
+  AGENT_SCROLLBACK
 } from '../../shared/constants'
 import '@xterm/xterm/css/xterm.css'
 import './AgentTerminal.css'
@@ -51,7 +49,6 @@ export default memo(function AgentTerminal({
     isFocused: isFocused && !isPending,
     onData: (data) => window.api.writeChildPane(sessionId, paneIndex, data),
     onResize: (cols, rows) => window.api.resizeChildPane(sessionId, paneIndex, cols, rows),
-    fitDelays: [AGENT_FIT_DELAY_SHORT, AGENT_FIT_DELAY_LONG],
     initialContent,
     deps: [sessionId, paneIndex],
     disabled: isPending

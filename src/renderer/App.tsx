@@ -197,6 +197,7 @@ export default function App(): JSX.Element {
               onResize={terminalLayout.handleResize}
               onDropSession={terminalLayout.dropSession}
               onMovePane={terminalLayout.movePane}
+              onToggleZoom={terminalLayout.toggleZoom}
               duplicateAlert={terminalLayout.duplicateAlert}
               blockCenterDrop={tutorial.phase === 'steps' && tutorial.steps[tutorial.currentStep]?.action === 'drag'}
             />
