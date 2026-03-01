@@ -39,6 +39,22 @@ process.on('unhandledRejection', (reason) => {
   logger.error('CRASH', 'Unhandled rejection', reason)
 })
 
+// ─── statusLine 크래시 복구 ───
+// 이전 실행에서 크래시로 종료된 경우 백업된 statusLine을 복원합니다.
+try {
+  const _settingsPath = join(app.getPath('home'), '.claude', 'settings.json')
+  const _raw = readFileSync(_settingsPath, 'utf-8')
+  const _settings = JSON.parse(_raw)
+  if (_settings._mulaudeStatusLineBackup && !_settings.statusLine) {
+    _settings.statusLine = _settings._mulaudeStatusLineBackup
+    delete _settings._mulaudeStatusLineBackup
+    writeFileSync(_settingsPath, JSON.stringify(_settings, null, 2), 'utf-8')
+    logger.info('App', 'Restored statusLine from previous crash')
+  }
+} catch {
+  // 무시 (파일 없음 등)
+}
+
 const hooksManager = new HooksManager()
 const sessionManager = new SessionManager()
 
@@ -190,6 +206,21 @@ app.whenReady().then(() => {
     hooksManager.cleanup()
     cleanupUsageWatch()
     stopHudPoller()
+
+    // statusLine 복원 (Mulaude가 hideHud로 백업한 경우)
+    try {
+      const settingsPath = join(app.getPath('home'), '.claude', 'settings.json')
+      const raw = readFileSync(settingsPath, 'utf-8')
+      const settings = JSON.parse(raw)
+      if (settings._mulaudeStatusLineBackup && !settings.statusLine) {
+        settings.statusLine = settings._mulaudeStatusLineBackup
+        delete settings._mulaudeStatusLineBackup
+        writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf-8')
+        logger.info('App', 'Restored statusLine on exit')
+      }
+    } catch {
+      // 무시
+    }
 
     app.quit()
   })
