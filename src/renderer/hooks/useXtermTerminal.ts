@@ -126,6 +126,21 @@ export function useXtermTerminal({
 
     const onDataDisposable = terminal.onData(onData)
 
+    // 이미지 붙여넣기 지원 — 클립보드에 이미지만 있고 텍스트가 없을 때
+    // xterm.js는 텍스트만 처리하므로 아무것도 PTY로 보내지 않음
+    // → 빈 bracketed paste를 보내서 Claude Code가 클립보드를 체크하도록 트리거
+    const handlePaste = (e: ClipboardEvent): void => {
+      if (!xtermRef.current || !containerRef.current) return
+      if (!containerRef.current.contains(document.activeElement)) return
+      if (!e.clipboardData) return
+      const hasImage = Array.from(e.clipboardData.types).some(t => t.startsWith('image/'))
+      const text = e.clipboardData.getData('text/plain')
+      if (hasImage && !text.trim()) {
+        onData('\x1b[200~\x1b[201~')
+      }
+    }
+    document.addEventListener('paste', handlePaste)
+
     // ResizeObserver — 컨테이너 크기 변경 시 fit (유일한 리사이즈 소스)
     // trailing-edge 디바운스: 최종 크기를 확실히 잡음
     let resizeTimer: ReturnType<typeof setTimeout> | null = null
@@ -166,6 +181,7 @@ export function useXtermTerminal({
 
     return () => {
       if (resizeTimer) clearTimeout(resizeTimer)
+      document.removeEventListener('paste', handlePaste)
       onDataDisposable.dispose()
       resizeObserver.disconnect()
       terminal.dispose()
