@@ -124,17 +124,24 @@ export function useXtermTerminal({
     const onDataDisposable = terminal.onData(onData)
 
     // ResizeObserver — 컨테이너 크기 변경 시 fit (유일한 리사이즈 소스)
+    // trailing-edge 디바운스: 최종 크기를 확실히 잡음
     let resizeTimer: ReturnType<typeof setTimeout> | null = null
     const resizeObserver = new ResizeObserver(() => {
-      if (resizeTimer) return
+      if (resizeTimer) clearTimeout(resizeTimer)
       resizeTimer = setTimeout(() => {
         resizeTimer = null
-        if (fitAddonRef.current && xtermRef.current) {
-          fitAddonRef.current.fit()
-          onResize(xtermRef.current.cols, xtermRef.current.rows)
-          xtermRef.current.refresh(0, xtermRef.current.rows - 1)
+        if (!fitAddonRef.current || !xtermRef.current) return
+        const prevCols = xtermRef.current.cols
+        fitAddonRef.current.fit()
+        const newCols = xtermRef.current.cols
+        const newRows = xtermRef.current.rows
+        onResize(newCols, newRows)
+        // cols 변경 시 스크롤백 포함 전체 reflow + 렌더 캐시 초기화
+        if (newCols !== prevCols) {
+          xtermRef.current.clearTextureAtlas()
         }
-      }, 150)
+        xtermRef.current.refresh(0, newRows - 1)
+      }, 100)
     })
 
     if (containerRef.current) {
