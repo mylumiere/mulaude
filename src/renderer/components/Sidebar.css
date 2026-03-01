@@ -342,6 +342,17 @@
   color: #fff;
 }
 
+/* Claude session ID 칩 */
+.session-row-claude-chip {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  background: var(--bg-glass);
+  color: var(--text-muted);
+  padding: 1px 4px;
+  border-radius: var(--radius-sm);
+  margin-left: 4px;
+}
+
 /* 그리드에 열려있는 세션 표시 */
 .session-row-grid-badge {
   font-size: 0.6rem;

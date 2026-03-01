@@ -27,7 +27,7 @@ export default function App(): JSX.Element {
   // 세션 부제목(subtitle) 업데이트 ref (useSessionStatus <-> useSessionManager 간 순환 의존 해소)
   const updateSessionSubtitleRef = useRef<(id: string, subtitle: string) => void>(() => {})
 
-  const { sessionStatuses, contextPercents, teamAgents, hookAgents, initSession, cleanupSession } =
+  const { sessionStatuses, contextPercents, teamAgents, hookAgents, claudeSessionIds, initSession, cleanupSession } =
     useSessionStatus({ locale: settings.locale, updateSessionSubtitleRef })
 
   const sessionManager = useSessionManager({
@@ -168,6 +168,7 @@ export default function App(): JSX.Element {
           contextPercents={contextPercents}
           teamAgents={teamAgents}
           hookAgents={hookAgents}
+          claudeSessionIds={claudeSessionIds}
           gridSessionIds={gridSessionIds}
           onRestartTutorial={tutorial.restart}
           shortcutsOpen={shortcutsOpen}
@@ -185,6 +186,7 @@ export default function App(): JSX.Element {
               contextPercents={contextPercents}
               sessionStatuses={sessionStatuses}
               sessionAgents={teamAgents}
+              claudeSessionIds={claudeSessionIds}
               sessionsWithPanes={sessionsWithPanes}
               childPaneMap={childPaneMap}
               focusedPane={focusedPane}

@@ -42,6 +42,8 @@ interface SidebarProps {
   teamAgents: Record<string, AgentInfo[]>
   /** Hook 기반 Task 에이전트 카운터 (라벨용) */
   hookAgents: Record<string, AgentInfo[]>
+  /** 부모 Claude session ID (세션 칩 표시용) */
+  claudeSessionIds?: Record<string, string>
   /** 그리드에 현재 열려있는 세션 ID 셋 */
   gridSessionIds?: Set<string>
   /** 튜토리얼 다시보기 */
@@ -69,6 +71,7 @@ export default function Sidebar({
   contextPercents,
   teamAgents,
   hookAgents,
+  claudeSessionIds,
   sidebarFocused,
   sidebarCursorId,
   gridSessionIds,
@@ -163,6 +166,7 @@ export default function Sidebar({
                             status={sessionStatuses[session.id]}
                             contextPercent={contextPercents[session.id]}
                             needsAttention={attentionSessions.has(session.id)}
+                            claudeSessionId={claudeSessionIds?.[session.id]}
                             shortcut={idx < 9 ? `⌘${idx + 1}` : ''}
                             locale={locale}
                             onSelect={() => onSelectSession(session.id)}

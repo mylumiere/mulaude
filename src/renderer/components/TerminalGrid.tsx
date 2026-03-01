@@ -39,6 +39,8 @@ interface TerminalGridProps {
   contextPercents: Record<string, number>
   sessionStatuses: Record<string, SessionStatus>
   sessionAgents: Record<string, AgentInfo[]>
+  /** 부모 Claude session ID (패인 헤더 칩 표시용) */
+  claudeSessionIds?: Record<string, string>
   sessionsWithPanes: Set<string>
 
   // 에이전트 패인 관련
@@ -76,6 +78,7 @@ export default function TerminalGrid({
   contextPercents,
   sessionStatuses,
   sessionAgents,
+  claudeSessionIds,
   sessionsWithPanes,
   childPaneMap,
   focusedPane,
@@ -180,6 +183,8 @@ export default function TerminalGrid({
     const ratio = splitRatios[leaf.sessionId] ?? 0.35
     const agentFocus = focusedPane[leaf.sessionId] ?? null
 
+    const claudeId = claudeSessionIds?.[leaf.sessionId]
+    const isShellStatus = sessionStatuses[leaf.sessionId]?.state === 'shell'
     const status = sessionStatuses[leaf.sessionId]
     const statusState = status
       ? (status.state === 'idle' && status.label ? 'completed' : status.state)
@@ -215,6 +220,7 @@ export default function TerminalGrid({
             <span className="terminal-grid-pane-title">
               {isZoomed && <Maximize2 size={10} className="terminal-grid-zoom-icon" />}
               {session?.name ?? leaf.sessionId}
+              {claudeId && !isShellStatus && <span className="terminal-grid-claude-chip">{claudeId.slice(0, 4)}</span>}
             </span>
             <div className="terminal-grid-pane-actions">
               {isZoomed && (

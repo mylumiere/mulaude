@@ -279,6 +279,17 @@
   color: var(--text-primary);
 }
 
+/* Claude session ID 칩 */
+.terminal-grid-claude-chip {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  background: var(--bg-glass);
+  color: var(--text-muted);
+  padding: 1px 4px;
+  border-radius: var(--radius-sm);
+  margin-left: 4px;
+}
+
 /* 줌 모드 헤더 — 미세한 accent 강조 */
 .terminal-grid-pane-header--zoomed {
   background: color-mix(in srgb, var(--accent-primary) 6%, var(--bg-glass));

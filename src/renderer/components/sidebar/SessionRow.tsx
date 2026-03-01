@@ -22,6 +22,8 @@ interface SessionRowProps {
   status: SessionStatus | undefined
   contextPercent: number | undefined
   needsAttention: boolean
+  /** Claude session ID (칩 표시용) */
+  claudeSessionId?: string
   shortcut: string
   locale: Locale
   onSelect: () => void
@@ -37,6 +39,7 @@ export default memo(function SessionRow({
   status,
   contextPercent,
   needsAttention,
+  claudeSessionId,
   shortcut,
   locale,
   onSelect,
@@ -121,7 +124,11 @@ export default memo(function SessionRow({
               startEditing(session.name)
             }}
           >
-            {session.name}{isInGrid && <span className="session-row-grid-badge" title="Open in grid">&#x25a3;</span>}
+            {session.name}
+            {claudeSessionId && !isShell && (
+              <span className="session-row-claude-chip">{claudeSessionId.slice(0, 4)}</span>
+            )}
+            {isInGrid && <span className="session-row-grid-badge" title="Open in grid">&#x25a3;</span>}
           </span>
         )}
         {session.subtitle && (

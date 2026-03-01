@@ -40,6 +40,8 @@ interface UseSessionHooksReturn {
   cleanupHookState: (id: string) => void
   /** Hook 이벤트에서 감지된 Task 에이전트 목록 (사이드바 표시용) */
   hookAgents: Record<string, AgentInfo[]>
+  /** 부모 Claude session ID (mulaudeSessionId → claudeSessionId) */
+  claudeSessionIds: Record<string, string>
 }
 
 /** 세션별 에이전트 카운터 */
@@ -66,6 +68,8 @@ export function useSessionHooks({
   const pendingBgTasks = useRef<Record<string, number>>({})
   /** Hook 이벤트에서 감지된 Task 에이전트 (사이드바 리스트 전용) */
   const [hookAgents, setHookAgents] = useState<Record<string, AgentInfo[]>>({})
+  /** 부모 Claude session ID (렌더링 트리거용 state) */
+  const [claudeSessionIds, setClaudeSessionIds] = useState<Record<string, string>>({})
 
   /**
    * 카운터 → hookAgents 상태 동기화
@@ -113,6 +117,12 @@ export function useSessionHooks({
     syncAgentDisplay(id)
   }, [syncAgentDisplay])
 
+  /** parentClaudeSessionIds ref → state 동기화 */
+  const syncClaudeSessionId = useCallback((id: string, sessionId: string) => {
+    parentClaudeSessionIds.current[id] = sessionId
+    setClaudeSessionIds(prev => prev[id] === sessionId ? prev : { ...prev, [id]: sessionId })
+  }, [])
+
   function cleanupHookState(id: string): void {
     if (hookThinkingTimers.current[id]) {
       clearTimeout(hookThinkingTimers.current[id])
@@ -120,6 +130,12 @@ export function useSessionHooks({
     }
     delete parentClaudeSessionIds.current[id]
     delete parentStopped.current[id]
+    setClaudeSessionIds(prev => {
+      if (!(id in prev)) return prev
+      const next = { ...prev }
+      delete next[id]
+      return next
+    })
     resetAgents(id)
   }
 
@@ -263,14 +279,14 @@ export function useSessionHooks({
 
       // UserPromptSubmit → 항상 부모 (새 턴 시작, parentStopped 리셋)
       if (event.hook_event_name === 'UserPromptSubmit') {
-        parentClaudeSessionIds.current[id] = sessionId
+        syncClaudeSessionId(id, sessionId)
         handleParentEvent(id, event)
         return
       }
 
       // 부모 session_id 미확정 → 첫 이벤트로 확정
       if (!parentClaudeSessionIds.current[id]) {
-        parentClaudeSessionIds.current[id] = sessionId
+        syncClaudeSessionId(id, sessionId)
         handleParentEvent(id, event)
         return
       }
@@ -293,7 +309,7 @@ export function useSessionHooks({
         handleChildEvent(id, event)
       }
     })
-  }, [locale, updateStatus, updateSessionSubtitleRef, sessionMetas, incrementAgent, decrementAgent, resetAgents])
+  }, [locale, updateStatus, updateSessionSubtitleRef, sessionMetas, incrementAgent, decrementAgent, resetAgents, syncClaudeSessionId])
 
-  return { cleanupHookState, hookAgents }
+  return { cleanupHookState, hookAgents, claudeSessionIds }
 }

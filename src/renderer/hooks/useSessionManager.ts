@@ -123,16 +123,15 @@ export function useSessionManager({
       const count = ++sessionCounter.current
       const session = await window.api.createSession(dir)
       const projectName = dir.split('/').pop() || dir
-      const displayName = `${projectName} - ${t(locale, 'session.defaultName')} ${count}`
-      setSessions((prev) => [...prev, { ...session, name: displayName }])
+      setSessions((prev) => [...prev, { ...session, name: projectName }])
       setActiveSessionId(session.id)
       initSession(session.id, false)
       // 영속 저장소에 표시 이름 동기화
-      window.api.updateSessionName(session.id, displayName)
+      window.api.updateSessionName(session.id, projectName)
     } catch (err) {
       console.error('[SessionManager] createSession failed:', err)
     }
-  }, [locale, initSession])
+  }, [initSession])
 
   const addSession = useCallback(
     async (workingDir: string) => {
@@ -140,17 +139,16 @@ export function useSessionManager({
         const count = ++sessionCounter.current
         const session = await window.api.createSession(workingDir)
         const projectName = workingDir.split('/').pop() || workingDir
-        const displayName = `${projectName} - ${t(locale, 'session.defaultName')} ${count}`
-        setSessions((prev) => [...prev, { ...session, name: displayName }])
+        setSessions((prev) => [...prev, { ...session, name: projectName }])
         setActiveSessionId(session.id)
         initSession(session.id, false)
         // 영속 저장소에 표시 이름 동기화
-        window.api.updateSessionName(session.id, displayName)
+        window.api.updateSessionName(session.id, projectName)
       } catch (err) {
         console.error('[SessionManager] addSession failed:', err)
       }
     },
-    [locale, initSession]
+    [initSession]
   )
 
   const destroySession = useCallback(

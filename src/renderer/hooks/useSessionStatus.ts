@@ -26,6 +26,8 @@ interface UseSessionStatusReturn {
   teamAgents: Record<string, AgentInfo[]>
   /** Hook 이벤트 기반 Task 에이전트 카운터 (사이드바 라벨 전용) */
   hookAgents: Record<string, AgentInfo[]>
+  /** 부모 Claude session ID (mulaudeSessionId → claudeSessionId) */
+  claudeSessionIds: Record<string, string>
   /** 새 세션 생성 시 초기 상태 설정 */
   initSession: (id: string, restored: boolean) => void
   /** 세션 삭제 시 내부 상태 정리 */
@@ -51,7 +53,7 @@ export function useSessionStatus({
   } = useSessionPtyState({ updateSessionSubtitleRef })
 
   // Hook 이벤트 처리 (통합 메타 참조)
-  const { cleanupHookState, hookAgents } = useSessionHooks({
+  const { cleanupHookState, hookAgents, claudeSessionIds } = useSessionHooks({
     locale,
     updateSessionSubtitleRef,
     updateStatus,
@@ -65,5 +67,5 @@ export function useSessionStatus({
     cleanupAgentState(id)
   }, [cleanupPtyState, cleanupHookState, cleanupAgentState])
 
-  return { sessionStatuses, contextPercents, teamAgents: sessionAgents, hookAgents, initSession, cleanupSession }
+  return { sessionStatuses, contextPercents, teamAgents: sessionAgents, hookAgents, claudeSessionIds, initSession, cleanupSession }
 }
