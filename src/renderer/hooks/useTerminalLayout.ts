@@ -74,22 +74,11 @@ export function useTerminalLayout({
   sessions
 }: UseTerminalLayoutParams): UseTerminalLayoutReturn {
   const [tree, setTreeRaw] = useState<PaneTreeState>(() => {
-    const validIds = new Set(sessions.map((s) => s.id))
-    const saved = loadTreeFromStorage()
-    if (saved && validIds.size > 0) {
-      const pruned = pruneInvalidSessions(saved.root, validIds)
-      if (pruned) {
-        const leaves = getAllLeaves(pruned)
-        const focusValid = leaves.some((l) => l.id === saved.focusedPaneId)
-        return {
-          root: pruned,
-          focusedPaneId: focusValid ? saved.focusedPaneId : leaves[0].id,
-          zoomedPaneId: null // 줌 상태는 복원하지 않음
-        }
-      }
-    }
     return activeSessionId ? makeDefaultTree(activeSessionId) : makeDefaultTree('')
   })
+
+  // 저장된 레이아웃 복원 완료 여부
+  const restoredRef = useRef(false)
 
   // 트리 변경 시 자동 저장
   const setTree: typeof setTreeRaw = useCallback((action) => {
@@ -100,28 +89,40 @@ export function useTerminalLayout({
     })
   }, [])
 
-  // 단일 패인 모드에서 activeSessionId 변경 시 동기화
-  const prevActiveRef = useRef(activeSessionId)
-  if (activeSessionId && activeSessionId !== prevActiveRef.current) {
-    prevActiveRef.current = activeSessionId
-    if (tree.root.type === 'leaf' && tree.root.sessionId !== activeSessionId) {
-      const leaf = makeLeaf(activeSessionId)
-      const newTree = { root: leaf, focusedPaneId: leaf.id, zoomedPaneId: null }
-      setTreeRaw(newTree)
-      saveTreeToStorage(newTree)
-    }
-  }
-
-  // 세션 삭제 시 트리에서 해당 패인 자동 제거
+  // 세션 목록이 처음 채워질 때 저장된 레이아웃 복원 시도
+  // + 세션 삭제 시 트리에서 해당 패인 자동 제거
   useEffect(() => {
     const validIds = new Set(sessions.map((s) => s.id))
+    if (validIds.size === 0) return
+
+    // 최초 복원 시도 (세션이 비동기로 로드된 후)
+    if (!restoredRef.current) {
+      restoredRef.current = true
+      const saved = loadTreeFromStorage()
+      if (saved) {
+        const pruned = pruneInvalidSessions(saved.root, validIds)
+        if (pruned && countLeaves(pruned) > 1) {
+          const leaves = getAllLeaves(pruned)
+          const focusValid = leaves.some((l) => l.id === saved.focusedPaneId)
+          const newTree: PaneTreeState = {
+            root: pruned,
+            focusedPaneId: focusValid ? saved.focusedPaneId : leaves[0].id,
+            zoomedPaneId: null
+          }
+          setTreeRaw(newTree)
+          saveTreeToStorage(newTree)
+          return
+        }
+      }
+    }
+
+    // 세션 삭제 시 무효 패인 제거
     const leaves = getAllLeaves(tree.root)
     const hasInvalid = leaves.some((l) => l.sessionId && !validIds.has(l.sessionId))
     if (!hasInvalid) return
 
     const pruned = pruneInvalidSessions(tree.root, validIds)
     if (!pruned) {
-      // 모든 패인 제거됨 → 남은 세션으로 초기화
       const fallback = sessions[0]?.id ?? ''
       const newTree = makeDefaultTree(fallback)
       setTreeRaw(newTree)
@@ -138,6 +139,18 @@ export function useTerminalLayout({
     setTreeRaw(newTree)
     saveTreeToStorage(newTree)
   }, [sessions]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 단일 패인 모드에서 activeSessionId 변경 시 동기화
+  const prevActiveRef = useRef(activeSessionId)
+  if (activeSessionId && activeSessionId !== prevActiveRef.current) {
+    prevActiveRef.current = activeSessionId
+    if (tree.root.type === 'leaf' && tree.root.sessionId !== activeSessionId) {
+      const leaf = makeLeaf(activeSessionId)
+      const newTree = { root: leaf, focusedPaneId: leaf.id, zoomedPaneId: null }
+      setTreeRaw(newTree)
+      saveTreeToStorage(newTree)
+    }
+  }
 
   const isGridMode = countLeaves(tree.root) > 1
 
