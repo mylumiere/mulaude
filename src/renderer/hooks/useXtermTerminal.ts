@@ -44,6 +44,8 @@ interface UseXtermTerminalParams {
 interface UseXtermTerminalReturn {
   terminalRef: React.MutableRefObject<Terminal | null>
   fitAddonRef: React.MutableRefObject<FitAddon | null>
+  /** 재캡처 진행 중 여부 — true일 때 PTY 데이터 쓰기를 억제해야 함 */
+  recapturingRef: React.MutableRefObject<boolean>
 }
 
 export function useXtermTerminal({
@@ -62,6 +64,7 @@ export function useXtermTerminal({
 }: UseXtermTerminalParams): UseXtermTerminalReturn {
   const xtermRef = useRef<Terminal | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
+  const recapturingRef = useRef(false)
 
   // 터미널 초기화
   useEffect(() => {
@@ -175,6 +178,12 @@ export function useXtermTerminal({
         if (newCols !== prevCols) {
           // cols 변경: tmux가 hard-wrap한 이전 스크롤백은 reflow 불가
           // → xterm 스크롤백 비우고 tmux에서 reflow된 내용 재캡처
+          //
+          // 재캡처 중 PTY 데이터 억제:
+          // tmux 리사이즈 시 화면 재그리기 시퀀스가 PTY로 흘러들어오는데,
+          // 이걸 xterm에 쓰면 재캡처 내용과 중복되어 깨짐 발생.
+          // 재캡처 완료까지 PTY 쓰기를 막고, 캡처 내용으로 일괄 교체.
+          recapturingRef.current = true
           xtermRef.current.clearTextureAtlas()
           xtermRef.current.clear()
           if (onRecapture) {
@@ -185,11 +194,18 @@ export function useXtermTerminal({
                   term.clear()
                   term.write(screen)
                 }
-              }).catch(() => {})
+              }).catch(() => {}).finally(() => {
+                recapturingRef.current = false
+                if (term) term.refresh(0, term.rows - 1)
+              })
             }, 150) // tmux reflow 대기
+          } else {
+            recapturingRef.current = false
+            xtermRef.current.refresh(0, newRows - 1)
           }
+        } else {
+          xtermRef.current.refresh(0, newRows - 1)
         }
-        xtermRef.current.refresh(0, newRows - 1)
       }, 100)
     })
 
@@ -245,5 +261,5 @@ export function useXtermTerminal({
     return () => window.removeEventListener('focus', handleWindowFocus)
   }, [isFocused, isActive])
 
-  return { terminalRef: xtermRef, fitAddonRef }
+  return { terminalRef: xtermRef, fitAddonRef, recapturingRef }
 }

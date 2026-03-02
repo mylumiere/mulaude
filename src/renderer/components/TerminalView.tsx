@@ -42,7 +42,7 @@ export default function TerminalView({ sessionId, isActive, themeId, contextPerc
     return () => { cancelled = true }
   }, [sessionId])
 
-  const { terminalRef } = useXtermTerminal({
+  const { terminalRef, recapturingRef } = useXtermTerminal({
     containerRef,
     themeId,
     fontSize: TERMINAL_FONT_SIZE,
@@ -58,11 +58,16 @@ export default function TerminalView({ sessionId, isActive, themeId, contextPerc
   })
 
   // PTY 데이터 수신 (세션별 리스너 — O(1) 디스패치)
+  // 재캡처 중(recapturingRef)일 때는 PTY 데이터 쓰기를 억제.
+  // tmux 리사이즈 시 보내는 화면 재그리기 시퀀스와 재캡처 내용이 중복되어
+  // 화면 깨짐(잘림/중복 렌더링)을 유발하기 때문.
   useEffect(() => {
     return window.api.onSessionDataById(sessionId, (data: string) => {
-      if (terminalRef.current) terminalRef.current.write(data)
+      if (terminalRef.current && !recapturingRef.current) {
+        terminalRef.current.write(data)
+      }
     })
-  }, [sessionId, terminalRef])
+  }, [sessionId, terminalRef, recapturingRef])
 
   return (
     <div
