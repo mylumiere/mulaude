@@ -513,7 +513,8 @@ export function captureTmuxPaneWithAnsi(
   tmuxPath: string,
   paneId: string
 ): string {
-  return execTmux(tmuxPath, ['capture-pane', '-t', paneId, '-e', '-p']) ?? ''
+  const raw = execTmux(tmuxPath, ['capture-pane', '-t', paneId, '-e', '-p']) ?? ''
+  return raw.replace(/\n/g, '\r\n')
 }
 
 /* ═══════ 비동기 폴링용 함수 ═══════ */
@@ -575,7 +576,11 @@ export async function captureFullScrollbackAsync(
   sessionName: string,
   paneIndex: number
 ): Promise<string> {
-  return (await execTmuxAsync(tmuxPath, ['capture-pane', '-t', `${sessionName}.${paneIndex}`, '-e', '-p', '-S', '-'])) ?? ''
+  const raw = (await execTmuxAsync(tmuxPath, ['capture-pane', '-t', `${sessionName}.${paneIndex}`, '-e', '-p', '-S', '-'])) ?? ''
+  // tmux capture-pane -p 는 줄 구분자로 \n(LF)만 사용하지만,
+  // xterm.js는 convertEol: false가 기본이라 \r\n(CR+LF)이 필요함.
+  // \n만 보내면 커서가 col 0으로 복귀하지 않아 내용이 오른쪽으로 밀림.
+  return raw.replace(/\n/g, '\r\n')
 }
 
 /** getPaneCurrentCommand의 비동기 버전 */

@@ -22,7 +22,8 @@ interface Window {
     onChildPaneDataById: (sessionId: string, paneIndex: number, callback: (data: string) => void) => () => void
     onChildPaneDiscovered: (callback: (sessionId: string, paneIndex: number, title: string, initialContent: string) => void) => () => void
     onChildPaneRemoved: (callback: (sessionId: string, paneIndex: number) => void) => () => void
-    checkClipboardForPaste: () => Promise<{ hasImage: boolean; hasText: boolean }>
+    saveClipboardImage: () => Promise<string | null>
+    getPathForFile: (file: File) => string
     openDirectory: () => Promise<string | null>
     sendNotification: (title: string, body: string) => void
     readUsage: () => Promise<UsageData | null>

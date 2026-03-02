@@ -7,12 +7,81 @@
 
 import { ipcMain, dialog, Notification, clipboard, BrowserWindow } from 'electron'
 import { readFileSync, writeFileSync, existsSync } from 'fs'
+import { writeFile } from 'fs/promises'
 import { join } from 'path'
-import { homedir } from 'os'
+import { homedir, tmpdir } from 'os'
 import type { SessionManager } from './session-manager'
 import type { NativeChatManager } from './native-chat-manager'
 import { startHudPoller, stopHudPoller } from './session-forwarder'
 import type { UsageData } from '../shared/types'
+
+/** 이미지 파일 확장자 목록 */
+const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'tiff', 'tif']
+
+/**
+ * 클립보드에서 이미지를 추출하여 파일 경로를 반환합니다.
+ *
+ * 1. 텍스트가 있으면 null (일반 텍스트 paste에 위임)
+ * 2. macOS Finder에서 파일 복사 시 → public.file-url에서 실제 경로 추출
+ *    (clipboard.readImage()는 파일 아이콘을 반환하므로 사용하지 않음)
+ * 3. 스크린샷 등 직접 이미지 데이터 → temp 파일로 저장
+ */
+async function saveClipboardImageToFile(): Promise<string | null> {
+  const formats = clipboard.availableFormats()
+  console.log('[clipboard] formats:', formats)
+
+  // macOS Finder 파일 복사 감지: text/uri-list 포맷이 있으면 파일 경로 추출
+  if (formats.includes('text/uri-list')) {
+    // macOS 네이티브 pasteboard 타입으로 file URL 읽기 시도
+    for (const fmt of ['public.file-url', 'public.url', 'NSFilenamesPboardType']) {
+      try {
+        const buf = clipboard.readBuffer(fmt)
+        if (buf.length > 0) {
+          const raw = buf.toString('utf-8').replace(/\0/g, '').trim()
+          console.log(`[clipboard] ${fmt}:`, raw.substring(0, 300))
+          // file:// URI에서 경로 추출
+          if (raw.startsWith('file://')) {
+            const filePath = decodeURIComponent(new URL(raw).pathname)
+            const ext = filePath.toLowerCase().split('.').pop() || ''
+            if (IMAGE_EXTENSIONS.includes(ext)) {
+              console.log('[clipboard] Finder image path:', filePath)
+              return filePath
+            }
+          }
+          // NSFilenamesPboardType: plist XML에서 경로 추출
+          if (raw.includes('<string>')) {
+            const match = raw.match(/<string>(.*?)<\/string>/)
+            if (match) {
+              const filePath = match[1]
+              const ext = filePath.toLowerCase().split('.').pop() || ''
+              if (IMAGE_EXTENSIONS.includes(ext)) {
+                console.log('[clipboard] Finder image path (plist):', filePath)
+                return filePath
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.log(`[clipboard] ${fmt} failed:`, e)
+      }
+    }
+    // Finder 복사지만 이미지 파일이 아닌 경우 → null (일반 paste에 위임)
+    return null
+  }
+
+  // 텍스트가 있으면 일반 텍스트 paste에 위임
+  const text = clipboard.readText()
+  if (text.trim()) return null
+
+  // 스크린샷 등 직접 이미지 데이터 → temp 파일로 저장
+  const image = clipboard.readImage()
+  if (image.isEmpty()) return null
+  const pngBuffer = image.toPNG()
+  const filePath = join(tmpdir(), `mulaude-paste-${Date.now()}.png`)
+  await writeFile(filePath, pngBuffer)
+  console.log('[clipboard] saved screenshot to:', filePath)
+  return filePath
+}
 
 /**
  * main 프로세스 다이얼로그 번역 함수
@@ -177,11 +246,14 @@ export function registerIpcHandlers(
     return readUsageData()
   })
 
-  // 클립보드에 이미지가 있고 텍스트가 없는지 확인 (이미지 붙여넣기 감지용)
-  ipcMain.handle('clipboard:check-paste', async () => {
-    const image = clipboard.readImage()
-    const text = clipboard.readText()
-    return { hasImage: !image.isEmpty(), hasText: !!text.trim() }
+  // 클립보드 이미지를 파일 경로로 반환 (Finder 파일 복사 → 실제 경로, 스크린샷 → temp 저장)
+  ipcMain.handle('clipboard:save-paste-image', async () => {
+    try {
+      return await saveClipboardImageToFile()
+    } catch (err) {
+      console.error('[IPC] clipboard:save-paste-image failed:', err)
+      return null
+    }
   })
 
   // HUD 오버레이 숨기기/복원
@@ -359,10 +431,13 @@ export function registerNativeIpcHandlers(
     return readUsageData()
   })
 
-  ipcMain.handle('clipboard:check-paste', async () => {
-    const image = clipboard.readImage()
-    const text = clipboard.readText()
-    return { hasImage: !image.isEmpty(), hasText: !!text.trim() }
+  ipcMain.handle('clipboard:save-paste-image', async () => {
+    try {
+      return await saveClipboardImageToFile()
+    } catch (err) {
+      console.error('[IPC] clipboard:save-paste-image failed:', err)
+      return null
+    }
   })
 
   ipcMain.handle('hud:set-hidden', async (_event, hide: boolean) => {

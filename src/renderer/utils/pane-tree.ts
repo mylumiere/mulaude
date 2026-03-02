@@ -92,7 +92,30 @@ export function findPath(root: PaneNode, targetId: string): PathEntry[] | null {
   return null
 }
 
-/** 방향 기반 인접 패인 찾기 */
+/** 서브트리 내 모든 리프의 정규화된 rect 계산 (0~1 좌표계) */
+interface NormRect { x: number; y: number; w: number; h: number }
+
+function getLeafRects(
+  node: PaneNode,
+  rect: NormRect = { x: 0, y: 0, w: 1, h: 1 }
+): Map<string, NormRect> {
+  if (node.type === 'leaf') return new Map([[node.id, rect]])
+  const result = new Map<string, NormRect>()
+  let offset = 0
+  for (let i = 0; i < node.children.length; i++) {
+    const ratio = node.ratios[i]
+    const childRect: NormRect = node.direction === 'horizontal'
+      ? { x: rect.x + rect.w * offset, y: rect.y, w: rect.w * ratio, h: rect.h }
+      : { x: rect.x, y: rect.y + rect.h * offset, w: rect.w, h: rect.h * ratio }
+    for (const [id, r] of getLeafRects(node.children[i], childRect)) {
+      result.set(id, r)
+    }
+    offset += ratio
+  }
+  return result
+}
+
+/** 방향 기반 인접 패인 찾기 (중심선 거리 기반) */
 export function findAdjacentPane(
   root: PaneNode,
   currentId: string,
@@ -113,16 +136,34 @@ export function findAdjacentPane(
     const targetIdx = goBack ? entry.childIndex - 1 : entry.childIndex + 1
     if (targetIdx < 0 || targetIdx >= node.children.length) continue
 
-    return findEdgeLeaf(node.children[targetIdx], goBack ? 'last' : 'first', axis)
+    const sourceSubtree = node.children[entry.childIndex]
+    const targetSubtree = node.children[targetIdx]
+
+    // 소스 패인의 수직/수평 중심 계산
+    const sourceRects = getLeafRects(sourceSubtree)
+    const sourceRect = sourceRects.get(currentId)!
+    const sourceCenter = axis === 'horizontal'
+      ? sourceRect.y + sourceRect.h / 2   // 좌우 이동 → 수직 중심 비교
+      : sourceRect.x + sourceRect.w / 2   // 상하 이동 → 수평 중심 비교
+
+    // 대상 서브트리에서 중심이 가장 가까운 리프 선택
+    const targetRects = getLeafRects(targetSubtree)
+    let bestId: string | null = null
+    let bestDist = Infinity
+    for (const [id, rect] of targetRects) {
+      const center = axis === 'horizontal'
+        ? rect.y + rect.h / 2
+        : rect.x + rect.w / 2
+      const dist = Math.abs(center - sourceCenter)
+      if (dist < bestDist) {
+        bestDist = dist
+        bestId = id
+      }
+    }
+    return bestId
   }
 
   return null
-}
-
-export function findEdgeLeaf(node: PaneNode, edge: 'first' | 'last', _axis: 'horizontal' | 'vertical'): string {
-  if (node.type === 'leaf') return node.id
-  const idx = edge === 'first' ? 0 : node.children.length - 1
-  return findEdgeLeaf(node.children[idx], edge, _axis)
 }
 
 /* ────────── 변환 ────────── */

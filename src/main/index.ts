@@ -139,6 +139,14 @@ function createWindow(): BrowserWindow {
   mainWindow.on('move', debouncedSave)
   mainWindow.on('close', () => saveWindowState(mainWindow))
 
+  // 파일 드롭 시 Electron 기본 네비게이션 차단 (renderer drop 핸들러에서 처리)
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (url.startsWith('file://')) {
+      event.preventDefault()
+      console.log('[drop] blocked file navigation:', url)
+    }
+  })
+
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {

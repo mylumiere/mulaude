@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type { SessionInfo, HookEvent, UsageData, TmuxPaneInfo, AgentInfo, AppMode, NativeInputRequest } from '../shared/types'
 
 /**
@@ -201,9 +201,13 @@ const api = {
     return () => ipcRenderer.removeListener('session:team-agents', handler)
   },
 
-  /** 클립보드에 이미지가 있고 텍스트가 없는지 확인 (이미지 붙여넣기 감지용) */
-  checkClipboardForPaste: (): Promise<{ hasImage: boolean; hasText: boolean }> =>
-    ipcRenderer.invoke('clipboard:check-paste'),
+  /** 클립보드 이미지를 temp 파일로 저장하고 경로 반환 (이미지 붙여넣기용) */
+  saveClipboardImage: (): Promise<string | null> =>
+    ipcRenderer.invoke('clipboard:save-paste-image'),
+
+  /** 드롭된 File 객체에서 실제 파일 경로 추출 (Electron webUtils) */
+  getPathForFile: (file: File): string =>
+    webUtils.getPathForFile(file),
 
   /** 로그 파일 경로 가져오기 */
   getLogPath: (): Promise<string> =>

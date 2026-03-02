@@ -113,6 +113,8 @@ export default function TerminalGrid({
     paneId: string
   ) => {
     e.preventDefault()
+    // 외부 파일 드래그(Finder)는 xterm 컨테이너에서 처리 — 드롭 인디케이터 표시 안 함
+    if (e.dataTransfer.types.includes('Files')) return
     e.dataTransfer.dropEffect = 'move'
 
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
@@ -350,7 +352,11 @@ export default function TerminalGrid({
       ) : (
         <div
           className={`terminal-grid${isDragging ? ' terminal-grid--dragging' : ''}`}
-          onDragEnter={() => { if (!isDragging) setIsDragging(true) }}
+          onDragEnter={(e) => {
+            // 외부 파일 드래그(Finder)일 때는 pointer-events 차단 안 함
+            if (e.dataTransfer.types.includes('Files')) return
+            if (!isDragging) setIsDragging(true)
+          }}
           onDragEnd={() => setIsDragging(false)}
         >
           {renderNode(tree.root)}

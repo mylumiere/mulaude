@@ -127,22 +127,37 @@ export function useXtermTerminal({
     const onDataDisposable = terminal.onData(onData)
 
     // 이미지 붙여넣기 지원
-    // Claude Code는 \x16 (Ctrl+V raw byte)을 받으면 osascript로 클립보드 이미지를 확인함.
-    // iTerm2/Terminal.app도 클립보드에 텍스트가 없으면 \x16을 PTY로 보냄.
-    // xterm.js는 Cmd+V를 브라우저에 위임하므로(metaKey→false), 텍스트 없으면 아무것도 안 보냄.
-    // → Cmd+V 시 클립보드에 이미지만 있으면 \x16을 직접 PTY로 전송하여 동일 동작 재현.
+    // Cmd+V 시 클립보드에 이미지만 있으면 temp 파일로 저장 후 경로를 PTY에 전달.
+    // Claude Code가 파일 경로를 인식하여 이미지를 처리함.
     const handleImagePaste = (e: KeyboardEvent): void => {
       if (!xtermRef.current || !containerRef.current) return
       if (!containerRef.current.contains(document.activeElement)) return
       if (!(e.metaKey && e.code === 'KeyV')) return
-      // Electron main process에서 클립보드 확인 (비동기)
-      window.api.checkClipboardForPaste().then(({ hasImage, hasText }) => {
-        if (hasImage && !hasText) {
-          onData('\x16') // Ctrl+V raw byte — Claude Code의 이미지 감지 트리거
+      window.api.saveClipboardImage().then((filePath) => {
+        if (filePath) {
+          onData(filePath)
         }
       }).catch(() => {})
     }
     document.addEventListener('keydown', handleImagePaste)
+
+    // 파일 드래그 앤 드롭 지원 (Finder → 터미널)
+    // capture phase로 등록: xterm 내부 요소가 이벤트를 소비하기 전에 가로챔
+    // Claude Code는 이미지, PDF, 텍스트/코드 등 다양한 파일 경로를 인식
+    const handleFileDragOver = (e: DragEvent): void => {
+      e.preventDefault()
+    }
+    const handleFileDrop = (e: DragEvent): void => {
+      e.preventDefault()
+      if (!e.dataTransfer?.files?.length) return
+      if (!containerRef.current?.contains(e.target as Node)) return
+      const file = e.dataTransfer.files[0]
+      const filePath = window.api.getPathForFile(file)
+      if (!filePath) return
+      onData(filePath)
+    }
+    document.addEventListener('dragover', handleFileDragOver, true)
+    document.addEventListener('drop', handleFileDrop, true)
 
     // ResizeObserver — 컨테이너 크기 변경 시 fit (유일한 리사이즈 소스)
     // trailing-edge 디바운스: 최종 크기를 확실히 잡음
@@ -185,6 +200,8 @@ export function useXtermTerminal({
     return () => {
       if (resizeTimer) clearTimeout(resizeTimer)
       document.removeEventListener('keydown', handleImagePaste)
+      document.removeEventListener('dragover', handleFileDragOver, true)
+      document.removeEventListener('drop', handleFileDrop, true)
       onDataDisposable.dispose()
       resizeObserver.disconnect()
       terminal.dispose()
