@@ -14,6 +14,7 @@
 - **交互式教程**: 首次启动时的7步引导（语言/主题设置→项目创建→分割→快捷键）
 - **6种主题**: Void、Ocean、Ember、Forest、Arctic、Rosé
 - **4种语言**: English、한국어、日本語、中文
+- **图片和文件支持**: 剪贴板图片粘贴（⌘V）+ 从 Finder 拖放文件
 - **用量监控**: 在侧边栏实时查看 Claude 计划用量
 
 ## 安装
@@ -140,7 +141,8 @@ src/
 │   ├── close-handler.ts       # 关闭对话框
 │   ├── hooks-manager.ts       # Claude Code Hooks 监听
 │   ├── child-pane-streamer.ts # 子面板流式传输
-│   └── tmux-utils.ts          # tmux 命令工具
+│   ├── tmux-utils.ts          # tmux 命令工具
+│   └── logger.ts              # 文件日志
 ├── preload/
 │   └── index.ts               # contextBridge API
 ├── renderer/                  # React 应用
@@ -150,14 +152,14 @@ src/
 │   ├── roadmap.ts             # 路线图数据
 │   ├── settings.ts            # 设置类型/工具
 │   ├── pty-parser.ts          # PTY 输出解析器
-│   ├── hooks/                 # React 自定义 hooks（11个）
+│   ├── hooks/                 # React 自定义 hooks（12个）
 │   ├── utils/                 # 纯工具函数
 │   │   ├── pane-tree.ts       # 二叉树数据结构/运算
 │   │   └── pane-storage.ts    # 布局 localStorage 持久化
 │   └── components/            # React 组件（15个）
 └── shared/
     ├── types.ts               # 共享类型
-    └── constants.ts           # 共享常量（41个）
+    └── constants.ts           # 共享常量（37个）
 ```
 
 ## 贡献

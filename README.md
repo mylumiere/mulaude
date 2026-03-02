@@ -14,6 +14,7 @@
 - **인터랙티브 튜토리얼**: 첫 실행 시 7단계 가이드 (언어/테마 설정 → 프로젝트 생성 → 분할 → 단축키)
 - **6가지 테마**: Void, Ocean, Ember, Forest, Arctic, Rosé
 - **4개 언어**: English, 한국어, 日本語, 中文
+- **이미지 & 파일 지원**: 클립보드 이미지 붙여넣기 (⌘V) + Finder에서 파일 드래그 앤 드롭
 - **사용량 모니터**: Claude 플랜 사용량을 사이드바에서 실시간 확인
 
 ## 설치
@@ -140,7 +141,8 @@ src/
 │   ├── close-handler.ts       # 닫기 다이얼로그
 │   ├── hooks-manager.ts       # Claude Code Hooks 감시
 │   ├── child-pane-streamer.ts # 자식 pane 스트리밍
-│   └── tmux-utils.ts          # tmux 명령어 유틸
+│   ├── tmux-utils.ts          # tmux 명령어 유틸
+│   └── logger.ts              # 파일 로거
 ├── preload/
 │   └── index.ts               # contextBridge API
 ├── renderer/                  # React 앱
@@ -150,14 +152,14 @@ src/
 │   ├── roadmap.ts             # 로드맵 데이터
 │   ├── settings.ts            # 설정 타입/유틸
 │   ├── pty-parser.ts          # PTY 출력 파서
-│   ├── hooks/                 # React 커스텀 훅 (11개)
+│   ├── hooks/                 # React 커스텀 훅 (12개)
 │   ├── utils/                 # 순수 유틸리티
 │   │   ├── pane-tree.ts       # 이진 트리 자료구조/연산
 │   │   └── pane-storage.ts    # 레이아웃 localStorage 영속화
 │   └── components/            # React 컴포넌트 (15개)
 └── shared/
     ├── types.ts               # 공유 타입
-    └── constants.ts           # 공유 상수 (41개)
+    └── constants.ts           # 공유 상수 (37개)
 ```
 
 ## 기여

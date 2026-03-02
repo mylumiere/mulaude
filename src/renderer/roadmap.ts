@@ -52,6 +52,10 @@ export const ROADMAP: Milestone[] = [
       { title: 'Shortcuts Modal', desc: '키보드 단축키 목록 확인 (⌘/)', status: 'done' },
       { title: 'HUD Overlay Toggle', desc: '터미널 내 HUD 오버레이 숨기기 옵션', status: 'done' },
       { title: 'Roadmap Redesign', desc: '시각적 타임라인 스타일 로드맵 UI', status: 'done' },
+      { title: 'Image Paste', desc: '클립보드 이미지 붙여넣기 (⌘V → 파일 경로 자동 입력)', status: 'done' },
+      { title: 'File Drag & Drop', desc: 'Finder에서 터미널로 파일 드래그 앤 드롭', status: 'done' },
+      { title: 'Claude Session ID', desc: '사이드바/그리드 헤더에 Claude 세션 ID 칩 표시', status: 'done' },
+      { title: 'Smart Pane Navigation', desc: '중심선 거리 기반 직관적 패인 키보드 이동', status: 'done' },
     ]
   },
   {

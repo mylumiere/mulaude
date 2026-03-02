@@ -14,6 +14,7 @@
 - **Interactive Tutorial**: 7-step guide on first launch (language/theme setup → project creation → splitting → shortcuts)
 - **6 Themes**: Void, Ocean, Ember, Forest, Arctic, Rosé
 - **4 Languages**: English, 한국어, 日本語, 中文
+- **Image & File Support**: Clipboard image paste (⌘V) + drag-and-drop files from Finder
 - **Usage Monitor**: View Claude plan usage in real-time from the sidebar
 
 ## Installation
@@ -140,7 +141,8 @@ src/
 │   ├── close-handler.ts       # Close dialog
 │   ├── hooks-manager.ts       # Claude Code Hooks watcher
 │   ├── child-pane-streamer.ts # Child pane streaming
-│   └── tmux-utils.ts          # tmux command utilities
+│   ├── tmux-utils.ts          # tmux command utilities
+│   └── logger.ts              # File logger
 ├── preload/
 │   └── index.ts               # contextBridge API
 ├── renderer/                  # React App
@@ -150,14 +152,14 @@ src/
 │   ├── roadmap.ts             # Roadmap data
 │   ├── settings.ts            # Settings types/utils
 │   ├── pty-parser.ts          # PTY output parser
-│   ├── hooks/                 # React custom hooks (11)
+│   ├── hooks/                 # React custom hooks (12)
 │   ├── utils/                 # Pure utilities
 │   │   ├── pane-tree.ts       # Binary tree data structure/operations
 │   │   └── pane-storage.ts    # Layout localStorage persistence
 │   └── components/            # React components (15)
 └── shared/
     ├── types.ts               # Shared types
-    └── constants.ts           # Shared constants (41)
+    └── constants.ts           # Shared constants (37)
 ```
 
 ## Contributing
