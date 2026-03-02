@@ -115,13 +115,14 @@ export default function App(): JSX.Element {
     tutorialStep: tutorial.phase === 'steps' ? tutorial.steps[tutorial.currentStep] ?? null : null
   })
 
-  // 그리드 포커스 변경 → activeSessionId 동기화
+  // 그리드 포커스 변경 → activeSessionId 동기화 + attention 해제
   useEffect(() => {
     if (!terminalLayout.isGridMode) return
     const focusedId = terminalLayout.getFocusedSessionId()
     if (focusedId && focusedId !== sessionManager.activeSessionId) {
       sessionManager.selectSession(focusedId)
     }
+    if (focusedId) clearAttention(focusedId)
   }, [terminalLayout.tree.focusedPaneId, terminalLayout.isGridMode]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // 그리드에 열린 세션 ID 셋 (사이드바 표시용, 비-그리드 모드에서도 현재 세션 포함)
