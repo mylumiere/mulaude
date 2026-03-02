@@ -1,4 +1,4 @@
-[English](README.en.md) | [한국어](README.md) | **日本語** | [中文](README.zh.md)
+[English](README.md) | [한국어](README.ko.md) | **日本語** | [中文](README.zh.md)
 
 # Mulaude
 
