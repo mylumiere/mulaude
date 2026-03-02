@@ -372,3 +372,31 @@ body::after {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
 }
+
+/* --- Native Mode Placeholder --- */
+.native-chat-placeholder {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  user-select: none;
+}
+
+.native-chat-placeholder-icon {
+  font-size: 2.5rem;
+  opacity: 0.2;
+}
+
+.native-chat-placeholder-text {
+  font-family: var(--font-ui);
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.native-chat-placeholder-sub {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}

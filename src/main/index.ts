@@ -15,16 +15,21 @@ import { readFileSync, writeFileSync, mkdirSync } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { SessionManager } from './session-manager'
 import { HooksManager } from './hooks-manager'
-import { registerIpcHandlers } from './ipc-handlers'
+import { NativeChatManager } from './native-chat-manager'
+import { registerIpcHandlers, registerNativeIpcHandlers } from './ipc-handlers'
 import { setupSessionDataForwarding, watchUsageData, stopHudPoller } from './session-forwarder'
 import { setupPanePolling, setupChildPaneForwarding } from './pane-poller'
 import { setupCloseHandler, dt, setLocale, getCloseAction, resetCloseAction } from './close-handler'
 import { logger } from './logger'
 import { SCREEN_VISIBILITY_MARGIN, WINDOW_SAVE_DEBOUNCE } from '../shared/constants'
+import type { AppMode } from '../shared/types'
+
+// ─── 앱 모드 판별 (CLI 플래그) ───
+const appMode: AppMode = process.argv.includes('--native') ? 'native' : 'terminal'
 
 // 로거 초기화 (파일 로그 시작)
 logger.init()
-logger.info('App', `Mulaude v${app.getVersion()} starting`)
+logger.info('App', `Mulaude v${app.getVersion()} starting (mode: ${appMode})`)
 
 // macOS GPU 프로세스 크래시 방지
 // Chromium GPU 프로세스가 예기치 않게 종료되는 문제를 우회합니다.
@@ -56,7 +61,6 @@ try {
 }
 
 const hooksManager = new HooksManager()
-const sessionManager = new SessionManager()
 
 // ─── 윈도우 크기/위치 영속화 ───
 const WINDOW_STATE_FILE = join(app.getPath('home'), '.mulaude', 'window-state.json')
@@ -153,10 +157,9 @@ app.whenReady().then(() => {
 
   // Hooks 시스템 초기화
   hooksManager.install()
-  sessionManager.setIpcDir(hooksManager.getIpcDir())
 
-  // IPC 핸들러 등록
-  registerIpcHandlers(sessionManager, dt, setLocale)
+  // 앱 모드 IPC
+  ipcMain.handle('app:getMode', () => appMode)
 
   // 로그 파일 관련 IPC
   ipcMain.handle('app:getLogPath', () => logger.getLogPath())
@@ -164,64 +167,132 @@ app.whenReady().then(() => {
     shell.showItemInFolder(logger.getLogPath())
   })
 
-  // 창 생성 + 모듈 연결
+  // 창 생성
   const mainWindow = createWindow()
-  setupSessionDataForwarding(mainWindow, sessionManager)
-  const cleanupUsageWatch = watchUsageData(mainWindow)
-  setupCloseHandler(mainWindow, sessionManager)
 
-  // Hook 이벤트 -> 렌더러 전달
-  hooksManager.onEvent((sessionId, event) => {
-    if (!mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('session:hook', sessionId, event)
-    }
-  })
+  if (appMode === 'native') {
+    // ─── Native Chat 모드 ───
+    const nativeChatManager = new NativeChatManager(hooksManager.getIpcDir())
+    registerNativeIpcHandlers(nativeChatManager, dt, setLocale, mainWindow)
 
-  // 에이전트 pane 폴링 (2초 간격) + 자식 pane 스트리밍 포워딩
-  const cleanupPanePolling = setupPanePolling(mainWindow, sessionManager)
-  setupChildPaneForwarding(mainWindow, sessionManager)
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      const win = createWindow()
-      setupSessionDataForwarding(win, sessionManager)
-    }
-  })
-
-  // 앱 종료 시 리소스 정리
-  app.on('window-all-closed', () => {
-    logger.info('App', 'Window closed, shutting down')
-    const action = getCloseAction()
-    if (action === 'keep') {
-      // tmux 세션 보존 — PTY만 종료
-      sessionManager.detachAll()
-    } else {
-      // 모든 세션 완전 종료
-      sessionManager.destroyAll()
-    }
-    // 디바운스된 save가 있으면 즉시 flush
-    sessionManager.getSessionStore().saveImmediate()
-    resetCloseAction()
-    cleanupPanePolling()
-    hooksManager.cleanup()
-    cleanupUsageWatch()
-    stopHudPoller()
-
-    // statusLine 복원 (Mulaude가 hideHud로 백업한 경우)
-    try {
-      const settingsPath = join(app.getPath('home'), '.claude', 'settings.json')
-      const raw = readFileSync(settingsPath, 'utf-8')
-      const settings = JSON.parse(raw)
-      if (settings._mulaudeStatusLineBackup && !settings.statusLine) {
-        settings.statusLine = settings._mulaudeStatusLineBackup
-        delete settings._mulaudeStatusLineBackup
-        writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf-8')
-        logger.info('App', 'Restored statusLine on exit')
+    // 스트림 이벤트 → 렌더러 전달
+    nativeChatManager.onStreamEvent = (sessionId, event) => {
+      if (!mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('native:stream-event', sessionId, event)
       }
-    } catch {
-      // 무시
+    }
+    nativeChatManager.onTurnComplete = (sessionId, claudeSessionId) => {
+      if (!mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('native:turn-complete', sessionId, claudeSessionId)
+      }
+    }
+    nativeChatManager.onTurnError = (sessionId, error) => {
+      if (!mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('native:turn-error', sessionId, error)
+      }
+    }
+    nativeChatManager.onInputRequest = (sessionId, request) => {
+      if (!mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('native:input-request', sessionId, request)
+      }
     }
 
-    app.quit()
-  })
+    // Hook 이벤트 → 렌더러 전달 (terminal 모드와 동일)
+    hooksManager.onEvent((sessionId, event) => {
+      if (!mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('session:hook', sessionId, event)
+      }
+    })
+
+    const cleanupUsageWatch = watchUsageData(mainWindow)
+
+    app.on('window-all-closed', () => {
+      logger.info('App', 'Window closed, shutting down')
+      nativeChatManager.destroyAll()
+      nativeChatManager.getSessionStore().saveImmediate()
+      hooksManager.cleanup()
+      cleanupUsageWatch()
+      stopHudPoller()
+
+      // statusLine 복원 (Mulaude가 hideHud로 백업한 경우)
+      try {
+        const settingsPath = join(app.getPath('home'), '.claude', 'settings.json')
+        const raw = readFileSync(settingsPath, 'utf-8')
+        const settings = JSON.parse(raw)
+        if (settings._mulaudeStatusLineBackup && !settings.statusLine) {
+          settings.statusLine = settings._mulaudeStatusLineBackup
+          delete settings._mulaudeStatusLineBackup
+          writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf-8')
+          logger.info('App', 'Restored statusLine on exit')
+        }
+      } catch {
+        // 무시
+      }
+
+      app.quit()
+    })
+  } else {
+    // ─── Terminal 모드 (기존 동작) ───
+    const sessionManager = new SessionManager()
+    sessionManager.setIpcDir(hooksManager.getIpcDir())
+    registerIpcHandlers(sessionManager, dt, setLocale)
+    setupSessionDataForwarding(mainWindow, sessionManager)
+    setupCloseHandler(mainWindow, sessionManager)
+
+    // Hook 이벤트 → 렌더러 전달
+    hooksManager.onEvent((sessionId, event) => {
+      if (!mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('session:hook', sessionId, event)
+      }
+    })
+
+    // 에이전트 pane 폴링 (2초 간격) + 자식 pane 스트리밍 포워딩
+    const cleanupPanePolling = setupPanePolling(mainWindow, sessionManager)
+    setupChildPaneForwarding(mainWindow, sessionManager)
+    const cleanupUsageWatch = watchUsageData(mainWindow)
+
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) {
+        const win = createWindow()
+        setupSessionDataForwarding(win, sessionManager)
+      }
+    })
+
+    // 앱 종료 시 리소스 정리
+    app.on('window-all-closed', () => {
+      logger.info('App', 'Window closed, shutting down')
+      const action = getCloseAction()
+      if (action === 'keep') {
+        // tmux 세션 보존 — PTY만 종료
+        sessionManager.detachAll()
+      } else {
+        // 모든 세션 완전 종료
+        sessionManager.destroyAll()
+      }
+      // 디바운스된 save가 있으면 즉시 flush
+      sessionManager.getSessionStore().saveImmediate()
+      resetCloseAction()
+      cleanupPanePolling()
+      hooksManager.cleanup()
+      cleanupUsageWatch()
+      stopHudPoller()
+
+      // statusLine 복원 (Mulaude가 hideHud로 백업한 경우)
+      try {
+        const settingsPath = join(app.getPath('home'), '.claude', 'settings.json')
+        const raw = readFileSync(settingsPath, 'utf-8')
+        const settings = JSON.parse(raw)
+        if (settings._mulaudeStatusLineBackup && !settings.statusLine) {
+          settings.statusLine = settings._mulaudeStatusLineBackup
+          delete settings._mulaudeStatusLineBackup
+          writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf-8')
+          logger.info('App', 'Restored statusLine on exit')
+        }
+      } catch {
+        // 무시
+      }
+
+      app.quit()
+    })
+  }
 })

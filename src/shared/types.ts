@@ -5,6 +5,9 @@
  * 타입 중복을 방지하기 위해 이 파일에서 모든 공유 타입을 관리합니다.
  */
 
+/** 앱 모드: terminal(기존 xterm.js) / native(stream-json 기반 채팅 UI) */
+export type AppMode = 'terminal' | 'native'
+
 /** 세션 정보 */
 export interface SessionInfo {
   id: string
@@ -97,4 +100,84 @@ export interface ProjectGroup {
   workingDir: string
   name: string
   sessions: SessionInfo[]
+}
+
+/* ═══════ Native Chat 타입 ═══════ */
+
+/** 턴 완료 후 통계 (claude-hud 스타일 표시용) */
+export interface TurnStats {
+  costUsd?: number
+  durationMs?: number
+  numTools: number
+  model?: string
+}
+
+/** 대화 메시지 */
+export interface ChatMessage {
+  role: 'user' | 'assistant'
+  text?: string
+  blocks?: ChatContentBlock[]
+  isStreaming?: boolean
+  cancelled?: boolean
+  /** 큐 대기 중 메시지 (스트리밍 중 전송 시) */
+  queued?: boolean
+  timestamp: number
+  /** 턴 완료 후 통계 */
+  turnStats?: TurnStats
+}
+
+export type ChatContentBlock = ChatTextBlock | ChatToolUseBlock | ChatToolResultBlock | ChatThinkingBlock | ChatInputRequestBlock
+
+export interface ChatTextBlock {
+  type: 'text'
+  text: string
+}
+
+export interface ChatToolUseBlock {
+  type: 'tool_use'
+  id: string
+  name: string
+  input: string | Record<string, unknown>
+}
+
+/** tool_use 결과 블록 (tool_use_id로 매칭) */
+export interface ChatToolResultBlock {
+  type: 'tool_result'
+  tool_use_id: string
+  content: string
+  is_error?: boolean
+}
+
+export interface ChatThinkingBlock {
+  type: 'thinking'
+  thinking: string
+}
+
+/** Native Chat에서 발생할 수 있는 대화형 입력 요청 */
+export interface NativeInputRequest {
+  /** 요청 유형 */
+  type: 'permission' | 'question'
+  /** 고유 요청 ID (응답 매칭용) */
+  requestId: string
+  /** Permission: 도구명 */
+  toolName?: string
+  /** Permission: 도구 입력 요약 */
+  toolInput?: Record<string, unknown>
+  /** Question: 질문 텍스트 */
+  question?: string
+  /** Question: 선택지 */
+  options?: Array<{ label: string; description?: string }>
+  /** Question: 복수 선택 가능 여부 */
+  multiSelect?: boolean
+}
+
+/** Input request를 메시지 스트림에 인라인 표시하기 위한 콘텐츠 블록 */
+export interface ChatInputRequestBlock {
+  type: 'input_request'
+  /** 입력 요청 상세 */
+  request: NativeInputRequest
+  /** 사용자가 응답했는지 여부 */
+  answered: boolean
+  /** 응답 표시 텍스트 (예: "✓ Allowed", "→ Option A") */
+  responseLabel?: string
 }

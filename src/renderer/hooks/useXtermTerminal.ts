@@ -126,20 +126,23 @@ export function useXtermTerminal({
 
     const onDataDisposable = terminal.onData(onData)
 
-    // 이미지 붙여넣기 지원 — 클립보드에 이미지만 있고 텍스트가 없을 때
-    // xterm.js는 텍스트만 처리하므로 아무것도 PTY로 보내지 않음
-    // → 빈 bracketed paste를 보내서 Claude Code가 클립보드를 체크하도록 트리거
-    const handlePaste = (e: ClipboardEvent): void => {
+    // 이미지 붙여넣기 지원
+    // Claude Code는 \x16 (Ctrl+V raw byte)을 받으면 osascript로 클립보드 이미지를 확인함.
+    // iTerm2/Terminal.app도 클립보드에 텍스트가 없으면 \x16을 PTY로 보냄.
+    // xterm.js는 Cmd+V를 브라우저에 위임하므로(metaKey→false), 텍스트 없으면 아무것도 안 보냄.
+    // → Cmd+V 시 클립보드에 이미지만 있으면 \x16을 직접 PTY로 전송하여 동일 동작 재현.
+    const handleImagePaste = (e: KeyboardEvent): void => {
       if (!xtermRef.current || !containerRef.current) return
       if (!containerRef.current.contains(document.activeElement)) return
-      if (!e.clipboardData) return
-      const hasImage = Array.from(e.clipboardData.types).some(t => t.startsWith('image/'))
-      const text = e.clipboardData.getData('text/plain')
-      if (hasImage && !text.trim()) {
-        onData('\x1b[200~\x1b[201~')
-      }
+      if (!(e.metaKey && e.code === 'KeyV')) return
+      // Electron main process에서 클립보드 확인 (비동기)
+      window.api.checkClipboardForPaste().then(({ hasImage, hasText }) => {
+        if (hasImage && !hasText) {
+          onData('\x16') // Ctrl+V raw byte — Claude Code의 이미지 감지 트리거
+        }
+      }).catch(() => {})
     }
-    document.addEventListener('paste', handlePaste)
+    document.addEventListener('keydown', handleImagePaste)
 
     // ResizeObserver — 컨테이너 크기 변경 시 fit (유일한 리사이즈 소스)
     // trailing-edge 디바운스: 최종 크기를 확실히 잡음
@@ -181,7 +184,7 @@ export function useXtermTerminal({
 
     return () => {
       if (resizeTimer) clearTimeout(resizeTimer)
-      document.removeEventListener('paste', handlePaste)
+      document.removeEventListener('keydown', handleImagePaste)
       onDataDisposable.dispose()
       resizeObserver.disconnect()
       terminal.dispose()

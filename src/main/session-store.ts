@@ -33,12 +33,16 @@ export interface PersistedSession {
   subtitle?: string
   /** 세션 작업 디렉토리 절대 경로 */
   workingDir: string
-  /** tmux 세션명 (예: "mulaude-session-1") */
+  /** tmux 세션명 (예: "mulaude-session-1") — terminal 모드 전용 */
   tmuxSessionName: string
   /** 세션 최초 생성 시각 (ISO 8601) */
   createdAt: string
   /** 세션 마지막 접근 시각 (ISO 8601) */
   lastAccessedAt: string
+  /** 앱 모드: 'terminal' (기본) | 'native' */
+  mode?: 'terminal' | 'native'
+  /** Claude 세션 ID (--resume에 사용, native 모드 전용) */
+  claudeSessionId?: string
 }
 
 /**

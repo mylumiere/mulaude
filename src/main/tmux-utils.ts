@@ -557,9 +557,25 @@ export async function captureTmuxPaneAsync(
   tmuxPath: string,
   sessionName: string,
   paneIndex: number,
-  lines: number
+  lines: number,
+  /** ANSI 이스케이프 시퀀스 포함 여부 (-e 플래그) */
+  escape?: boolean
 ): Promise<string> {
-  return (await execTmuxAsync(tmuxPath, ['capture-pane', '-t', `${sessionName}.${paneIndex}`, '-p', '-S', `-${lines}`])) ?? ''
+  const args = ['capture-pane', '-t', `${sessionName}.${paneIndex}`, '-p', '-S', `-${lines}`]
+  if (escape) args.push('-e')
+  return (await execTmuxAsync(tmuxPath, args)) ?? ''
+}
+
+/**
+ * tmux pane의 전체 스크롤백 + 현재 화면을 ANSI 이스케이프 포함하여 캡처합니다.
+ * `-S -` 로 스크롤백 시작점부터 전체를 가져옵니다.
+ */
+export async function captureFullScrollbackAsync(
+  tmuxPath: string,
+  sessionName: string,
+  paneIndex: number
+): Promise<string> {
+  return (await execTmuxAsync(tmuxPath, ['capture-pane', '-t', `${sessionName}.${paneIndex}`, '-e', '-p', '-S', '-'])) ?? ''
 }
 
 /** getPaneCurrentCommand의 비동기 버전 */

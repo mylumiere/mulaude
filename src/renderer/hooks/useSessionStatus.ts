@@ -32,6 +32,8 @@ interface UseSessionStatusReturn {
   initSession: (id: string, restored: boolean) => void
   /** 세션 삭제 시 내부 상태 정리 */
   cleanupSession: (id: string) => void
+  /** 상태 직접 업데이트 (native 모드에서 채팅 phase → 사이드바 상태 연동) */
+  updateStatus: (id: string, status: SessionStatus, source: 'hook' | 'pty') => void
 }
 
 export function useSessionStatus({
@@ -67,5 +69,5 @@ export function useSessionStatus({
     cleanupAgentState(id)
   }, [cleanupPtyState, cleanupHookState, cleanupAgentState])
 
-  return { sessionStatuses, contextPercents, teamAgents: sessionAgents, hookAgents, claudeSessionIds, initSession, cleanupSession }
+  return { sessionStatuses, contextPercents, teamAgents: sessionAgents, hookAgents, claudeSessionIds, initSession, cleanupSession, updateStatus }
 }

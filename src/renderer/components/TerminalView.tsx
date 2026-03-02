@@ -9,7 +9,7 @@
 
 import { useRef, useEffect, useState } from 'react'
 import { useXtermTerminal } from '../hooks/useXtermTerminal'
-import { TERMINAL_FONT_SIZE } from '../../shared/constants'
+import { TERMINAL_FONT_SIZE, TERMINAL_SCROLLBACK } from '../../shared/constants'
 import '@xterm/xterm/css/xterm.css'
 import './TerminalView.css'
 
@@ -46,6 +46,7 @@ export default function TerminalView({ sessionId, isActive, themeId, contextPerc
     containerRef,
     themeId,
     fontSize: TERMINAL_FONT_SIZE,
+    scrollback: TERMINAL_SCROLLBACK,
     isActive,
     isFocused,
     onData: (data) => window.api.writeSession(sessionId, data),

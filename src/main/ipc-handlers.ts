@@ -5,11 +5,12 @@
  * 세션 CRUD, 터미널 입출력, 다이얼로그, 사용량 데이터 등을 처리합니다.
  */
 
-import { ipcMain, dialog, Notification } from 'electron'
+import { ipcMain, dialog, Notification, clipboard, BrowserWindow } from 'electron'
 import { readFileSync, writeFileSync, existsSync } from 'fs'
 import { join } from 'path'
 import { homedir } from 'os'
 import type { SessionManager } from './session-manager'
+import type { NativeChatManager } from './native-chat-manager'
 import { startHudPoller, stopHudPoller } from './session-forwarder'
 import type { UsageData } from '../shared/types'
 
@@ -176,6 +177,13 @@ export function registerIpcHandlers(
     return readUsageData()
   })
 
+  // 클립보드에 이미지가 있고 텍스트가 없는지 확인 (이미지 붙여넣기 감지용)
+  ipcMain.handle('clipboard:check-paste', async () => {
+    const image = clipboard.readImage()
+    const text = clipboard.readText()
+    return { hasImage: !image.isEmpty(), hasText: !!text.trim() }
+  })
+
   // HUD 오버레이 숨기기/복원
   ipcMain.handle('hud:set-hidden', async (_event, hide: boolean) => {
     try {
@@ -219,4 +227,178 @@ export function registerIpcHandlers(
       console.error('[IPC] hud:set-hidden failed:', err)
     }
   })
+}
+
+/**
+ * Native Chat 모드용 IPC 핸들러를 등록합니다.
+ *
+ * Terminal 모드와 동일한 채널명(session:create 등)을 사용하되,
+ * NativeChatManager에 위임합니다. 터미널 전용 API(session:write, session:resize 등)는
+ * 등록하지 않고, 대신 native:send-message, native:cancel 등을 추가합니다.
+ *
+ * @param nativeChatManager - Native Chat 세션 관리자
+ * @param dt - 다이얼로그 번역 함수
+ * @param setLocale - locale 변경 콜백
+ * @param mainWindow - 메인 BrowserWindow (clipboard 등에 사용)
+ */
+export function registerNativeIpcHandlers(
+  nativeChatManager: NativeChatManager,
+  dt: TranslateFn,
+  setLocale: (locale: string) => void,
+  _mainWindow: BrowserWindow
+): void {
+  // ─── 세션 CRUD (terminal 모드와 동일한 채널명) ───
+
+  ipcMain.handle('session:create', async (_event, workingDir: string) => {
+    try {
+      return nativeChatManager.createSession(workingDir)
+    } catch (err) {
+      console.error('[IPC] session:create failed:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('session:destroy', async (_event, id: string) => {
+    try {
+      nativeChatManager.destroySession(id)
+    } catch (err) {
+      console.error('[IPC] session:destroy failed:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('session:list', async () => {
+    try {
+      return nativeChatManager.getSessionList()
+    } catch (err) {
+      console.error('[IPC] session:list failed:', err)
+      throw err
+    }
+  })
+
+  // tmux 체크 → 항상 available (배너 표시 방지)
+  ipcMain.handle('tmux:check', async () => {
+    return { available: true, version: null }
+  })
+
+  ipcMain.handle('session:restore-all', async () => {
+    try {
+      return nativeChatManager.restoreAllSessions()
+    } catch (err) {
+      console.error('[IPC] session:restore-all failed:', err)
+      throw err
+    }
+  })
+
+  // ─── 세션 메타데이터 업데이트 ───
+
+  ipcMain.on('session:name-update', (_event, id: string, name: string) => {
+    try {
+      nativeChatManager.getSessionStore().updateSessionName(id, name)
+    } catch (err) {
+      console.error('[IPC] session:name-update failed:', err)
+    }
+  })
+
+  ipcMain.on('session:subtitle-update', (_event, id: string, subtitle: string) => {
+    try {
+      nativeChatManager.getSessionStore().updateSessionSubtitle(id, subtitle)
+    } catch (err) {
+      console.error('[IPC] session:subtitle-update failed:', err)
+    }
+  })
+
+  // ─── Native Chat 전용 ───
+
+  ipcMain.on('native:send-message', (_event, sessionId: string, text: string) => {
+    nativeChatManager.sendMessage(sessionId, text)
+  })
+
+  ipcMain.on('native:cancel', (_event, sessionId: string) => {
+    nativeChatManager.cancelMessage(sessionId)
+  })
+
+  // Permission/Question 응답 전달 (렌더러 → main → claude stdin)
+  ipcMain.on('native:input-response', (_event, sessionId: string, requestId: string, response: Record<string, unknown>) => {
+    nativeChatManager.respondToPrompt(sessionId, requestId, response)
+  })
+
+  // 큐 메시지 업데이트 (텍스트 수정)
+  ipcMain.on('native:update-queue', (_event, sessionId: string, text: string) => {
+    nativeChatManager.updateQueue(sessionId, text)
+  })
+
+  // 큐 메시지 삭제
+  ipcMain.on('native:clear-queue', (_event, sessionId: string) => {
+    nativeChatManager.clearQueue(sessionId)
+  })
+
+  // ─── 공유 핸들러 (두 모드 공통) ───
+
+  ipcMain.on('app:set-locale', (_event, locale: string) => {
+    setLocale(locale)
+  })
+
+  ipcMain.handle('dialog:openDirectory', async () => {
+    const result = await dialog.showOpenDialog({
+      properties: ['openDirectory'],
+      title: dt('dialog.openDirectory')
+    })
+    if (result.canceled || result.filePaths.length === 0) return null
+    return result.filePaths[0]
+  })
+
+  ipcMain.on('notify', (_event, title: string, body: string) => {
+    if (Notification.isSupported()) {
+      const notif = new Notification({ title, body: body || title, silent: false })
+      notif.show()
+    }
+  })
+
+  ipcMain.handle('usage:read', async () => {
+    return readUsageData()
+  })
+
+  ipcMain.handle('clipboard:check-paste', async () => {
+    const image = clipboard.readImage()
+    const text = clipboard.readText()
+    return { hasImage: !image.isEmpty(), hasText: !!text.trim() }
+  })
+
+  ipcMain.handle('hud:set-hidden', async (_event, hide: boolean) => {
+    try {
+      const settingsPath = join(homedir(), '.claude', 'settings.json')
+      if (!existsSync(settingsPath)) return
+
+      const raw = readFileSync(settingsPath, 'utf-8')
+      const settings = JSON.parse(raw)
+
+      if (hide) {
+        if (settings.statusLine) {
+          settings._mulaudeStatusLineBackup = settings.statusLine
+          delete settings.statusLine
+        }
+        if (settings._mulaudeHudPluginBackup) {
+          if (settings.enabledPlugins) settings.enabledPlugins['claude-hud@claude-hud'] = true
+          delete settings._mulaudeHudPluginBackup
+        }
+        const backup = settings._mulaudeStatusLineBackup
+        if (backup?.command) startHudPoller(backup.command)
+      } else {
+        stopHudPoller()
+        if (settings._mulaudeStatusLineBackup) {
+          settings.statusLine = settings._mulaudeStatusLineBackup
+          delete settings._mulaudeStatusLineBackup
+        }
+      }
+
+      writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf-8')
+    } catch (err) {
+      console.error('[IPC] hud:set-hidden failed:', err)
+    }
+  })
+
+  // ─── 터미널 전용 API의 No-op 핸들러 (Sidebar 등에서 호출 가능) ───
+
+  ipcMain.handle('session:capture-screen', async () => null)
 }

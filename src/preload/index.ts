@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { SessionInfo, HookEvent, UsageData, TmuxPaneInfo, AgentInfo } from '../shared/types'
+import type { SessionInfo, HookEvent, UsageData, TmuxPaneInfo, AgentInfo, AppMode, NativeInputRequest } from '../shared/types'
 
 /**
  * Preload 스크립트 - contextBridge를 통해 렌더러에 안전한 API를 노출합니다.
@@ -32,6 +32,10 @@ ipcRenderer.on('session:data-batch', (_event, batch: Record<string, string>) => 
 })
 
 const api = {
+  /** 앱 모드 조회 (terminal / native) */
+  getAppMode: (): Promise<AppMode> =>
+    ipcRenderer.invoke('app:getMode'),
+
   /** 새 Claude CLI 세션을 생성합니다 */
   createSession: (workingDir: string): Promise<SessionInfo> =>
     ipcRenderer.invoke('session:create', workingDir),
@@ -197,13 +201,75 @@ const api = {
     return () => ipcRenderer.removeListener('session:team-agents', handler)
   },
 
+  /** 클립보드에 이미지가 있고 텍스트가 없는지 확인 (이미지 붙여넣기 감지용) */
+  checkClipboardForPaste: (): Promise<{ hasImage: boolean; hasText: boolean }> =>
+    ipcRenderer.invoke('clipboard:check-paste'),
+
   /** 로그 파일 경로 가져오기 */
   getLogPath: (): Promise<string> =>
     ipcRenderer.invoke('app:getLogPath'),
 
   /** 로그 파일이 있는 폴더를 Finder에서 열기 */
   openLogFolder: (): void =>
-    ipcRenderer.send('app:openLogFolder')
+    ipcRenderer.send('app:openLogFolder'),
+
+  // ─── Native Chat APIs ───
+
+  /** 네이티브 채팅 메시지 전송 (claude -p 프로세스 spawn) */
+  sendNativeMessage: (sessionId: string, text: string): void =>
+    ipcRenderer.send('native:send-message', sessionId, text),
+
+  /** 진행 중인 네이티브 채팅 스트림 취소 (SIGTERM) */
+  cancelNativeStream: (sessionId: string): void =>
+    ipcRenderer.send('native:cancel', sessionId),
+
+  /** 네이티브 채팅 스트림 이벤트 수신 (JSON 라인 단위) */
+  onNativeStreamEvent: (cb: (sessionId: string, event: Record<string, unknown>) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, sessionId: string, evt: Record<string, unknown>): void => {
+      cb(sessionId, evt)
+    }
+    ipcRenderer.on('native:stream-event', handler)
+    return () => ipcRenderer.removeListener('native:stream-event', handler)
+  },
+
+  /** 네이티브 채팅 턴 완료 이벤트 수신 */
+  onNativeTurnComplete: (cb: (sessionId: string, claudeSessionId: string) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, sessionId: string, claudeSessionId: string): void => {
+      cb(sessionId, claudeSessionId)
+    }
+    ipcRenderer.on('native:turn-complete', handler)
+    return () => ipcRenderer.removeListener('native:turn-complete', handler)
+  },
+
+  /** 네이티브 채팅 턴 에러 이벤트 수신 */
+  onNativeTurnError: (cb: (sessionId: string, error: string) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, sessionId: string, error: string): void => {
+      cb(sessionId, error)
+    }
+    ipcRenderer.on('native:turn-error', handler)
+    return () => ipcRenderer.removeListener('native:turn-error', handler)
+  },
+
+  /** Permission/Question 응답 전달 (렌더러 → main → claude stdin) */
+  respondToNativeInput: (sessionId: string, requestId: string, response: Record<string, unknown>): void =>
+    ipcRenderer.send('native:input-response', sessionId, requestId, response),
+
+  /** 큐 메시지 업데이트 (텍스트 수정) */
+  updateNativeQueue: (sessionId: string, text: string): void =>
+    ipcRenderer.send('native:update-queue', sessionId, text),
+
+  /** 큐 메시지 삭제 */
+  clearNativeQueue: (sessionId: string): void =>
+    ipcRenderer.send('native:clear-queue', sessionId),
+
+  /** Permission/Question 입력 요청 이벤트 수신 (main → 렌더러) */
+  onNativeInputRequest: (cb: (sessionId: string, request: NativeInputRequest) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, sessionId: string, request: NativeInputRequest): void => {
+      cb(sessionId, request)
+    }
+    ipcRenderer.on('native:input-request', handler)
+    return () => ipcRenderer.removeListener('native:input-request', handler)
+  }
 }
 
 /* ═══════ 자식 pane 데이터 디스패처 (O(1) 키 기반) ═══════ */

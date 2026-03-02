@@ -34,6 +34,7 @@ import {
   toTmuxSessionName,
   listTmuxPanesAsync,
   captureTmuxPaneAsync,
+  captureFullScrollbackAsync,
   setAutoBreakPaneHook
 } from './tmux-utils'
 import { ChildPaneStreamer } from './child-pane-streamer'
@@ -343,7 +344,7 @@ export class SessionManager {
 
     let ptyProcess: pty.IPty
     try {
-      ptyProcess = pty.spawn(tmuxPath, ['-u', 'attach-session', '-t', persisted.tmuxSessionName], {
+      ptyProcess = pty.spawn(tmuxPath, ['-u', 'attach-session', '-d', '-t', persisted.tmuxSessionName], {
         name: 'xterm-256color',
         cols: DEFAULT_COLS,
         rows: DEFAULT_ROWS,
@@ -528,7 +529,7 @@ export class SessionManager {
     if (!this.tmuxPath) return null
     const session = this.sessions.get(id)
     if (!session?.tmuxSessionName) return null
-    return captureTmuxPaneAsync(this.tmuxPath, session.tmuxSessionName, 0, 200)
+    return captureFullScrollbackAsync(this.tmuxPath, session.tmuxSessionName, 0)
   }
 
   /**

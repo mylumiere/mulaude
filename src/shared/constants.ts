@@ -26,7 +26,9 @@ export const HOOK_THINKING_DEBOUNCE = 400
 export const TERMINAL_FONT_SIZE = 14
 export const AGENT_TERMINAL_FONT_SIZE = 13
 
-/** 터미널 스크롤백 버퍼 줄 수 */
+/** 메인 터미널 스크롤백 버퍼 줄 수 (tmux history-limit과 동일) */
+export const TERMINAL_SCROLLBACK = 50000
+/** 에이전트 터미널 스크롤백 버퍼 줄 수 */
 export const AGENT_SCROLLBACK = 5000
 
 /** 터미널 기본 폰트 패밀리 */
@@ -92,7 +94,7 @@ export const HUD_POLL_INTERVAL = 30000
 
 /** tmux 스크롤백 버퍼 줄 수 */
 export const TMUX_HISTORY_LIMIT = 50000
-/** pane 캡처 줄 수 */
+/** pane 캡처 줄 수 (에이전트 패널용) */
 export const PANE_CAPTURE_LINES = 8
 
 /* ═══════ 에이전트 ═══════ */

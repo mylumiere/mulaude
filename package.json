@@ -1,10 +1,12 @@
 {
   "name": "mulaude",
-  "version": "1.1.10",
+  "version": "1.1.11",
   "description": "멀티 세션 Claude Code 터미널 데스크톱 앱",
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
+    "dev:terminal": "electron-vite dev",
+    "dev:native": "electron-vite dev -- --native",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "postinstall": "electron-rebuild -f -w node-pty",
@@ -30,6 +32,7 @@
     "@xterm/addon-fit": "^0.11.0",
     "@xterm/xterm": "^6.0.0",
     "lucide-react": "^0.575.0",
+    "marked": "^17.0.3",
     "node-pty": "^1.1.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"
