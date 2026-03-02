@@ -22,6 +22,7 @@ import { DEFAULT_COLS, DEFAULT_ROWS, LEGACY_SHELL_INIT_DELAY, PANE_CAPTURE_LINES
 import { getShellEnv, findClaudePath } from './env-resolver'
 import { SessionStore, type PersistedSession } from './session-store'
 import {
+  execTmux,
   findTmuxPath,
   getTmuxVersion,
   isTmuxSessionAlive,
@@ -327,6 +328,9 @@ export class SessionManager {
         MULAUDE_IPC_DIR: this.ipcDir
       })
     }
+
+    // extended-keys 보장 (이전 버전에서 생성된 세션에도 적용)
+    execTmux(tmuxPath, ['set-option', '-t', persisted.tmuxSessionName, 'extended-keys', 'on'])
 
     // nextId 갱신 (복원 세션 ID와 충돌 방지)
     const match = persisted.id.match(/session-(\d+)/)

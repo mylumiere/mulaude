@@ -186,6 +186,12 @@ export function createTmuxSession(
 
   // 7) 이스케이프 시퀀스 패스스루 (이미지 붙여넣기, OSC 52 클립보드 등)
   execTmux(tmuxPath, ['set-option', '-t', name, 'allow-passthrough', 'on'])
+
+  // 8) extended-keys: CSI u (kitty keyboard protocol) 지원
+  //    Claude Code가 Shift+Enter(\x1b[13;2u]) 등 수식키 조합을 인식하려면
+  //    tmux가 CSI u 형식으로 내부 프로그램에 전달해야 함.
+  //    이 옵션 없이는 Shift+Enter가 일반 Enter(\r)로 변환됨.
+  execTmux(tmuxPath, ['set-option', '-t', name, 'extended-keys', 'on'])
 }
 
 /**
