@@ -17,6 +17,47 @@
 - **Image & File Support**: Clipboard image paste (⌘V) + drag-and-drop files from Finder
 - **Usage Monitor**: View Claude plan usage in real-time from the sidebar
 
+## Why Mulaude?
+
+Claude Code can be used in a regular terminal, tmux, or the official Claude Desktop app. Here's what Mulaude brings to the table:
+
+### vs. Regular Terminal (iTerm2, Terminal.app)
+
+| | Regular Terminal | Mulaude |
+|---|---|---|
+| Multi-session | Open tabs manually, run `claude` in each | Sidebar with project/session hierarchy, one-click switching |
+| Simultaneous monitoring | One session visible at a time | Grid split — up to 6 sessions side by side |
+| Session persistence | Close terminal = gone | tmux-based — survives app exit, auto-restores on restart |
+| Status awareness | Have to look at the screen | Sidebar shows idle/thinking/tool/permission in real-time |
+| Team agents | Check each terminal separately | Auto-detected + split pane monitoring |
+| Usage tracking | Check inside `claude` or web dashboard | Real-time usage gauge in sidebar |
+
+### vs. tmux (Manual Setup)
+
+| | tmux Manual | Mulaude |
+|---|---|---|
+| Setup | Configure tmux, manage splits/sessions yourself | Drag-and-drop splitting, automatic session management |
+| Scrollback | Manual copy-mode entry (`Ctrl+B [`) | Mouse wheel scrolls naturally (auto copy-mode via IPC) |
+| Text selection | Only in copy-mode (separate workflow) | Native drag-to-select + copy, anytime |
+| State tracking | None — watch the screen | Hooks system for accurate automatic state tracking |
+| Agent management | Find and switch panes manually | Auto-detection via team config + sidebar tree |
+| Resize handling | tmux reflow only | Atomic resize+capture with PTY buffering — no corruption |
+
+### vs. Claude Desktop App
+
+| | Claude Desktop | Mulaude |
+|---|---|---|
+| Nature | Web chat UI in a native wrapper | Terminal IDE wrapping Claude Code CLI |
+| Code execution | Limited via MCP servers | Full CLI access — git, npm, build tools, everything |
+| Multi-session | Conversation tabs | Project-based sessions + grid for simultaneous monitoring |
+| Team/Agents | Not supported | Auto-detection + agent split view |
+| Session persistence | Server-side chat history | Local tmux persistence (works offline) |
+| Customization | Minimal | 6 themes, 4 languages, free-form grid, Hook integration |
+
+### In short
+
+Mulaude is a **"Claude Code control tower"** — monitor multiple projects at a glance, catch permission prompts without context-switching, and let Claude's team agents work while you watch everything in real-time. Full terminal power with GUI convenience.
+
 ## Installation
 
 ### Option 1: DMG Download (General Users)
