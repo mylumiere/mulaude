@@ -526,13 +526,22 @@ export class SessionManager {
    * 세션의 현재 tmux 화면을 ANSI 이스케이프 포함하여 캡처합니다.
    * 세션 전환 시 xterm 재생성 후 즉시 화면을 복원하는 데 사용합니다.
    *
+   * cols/rows가 제공되면 캡처 전에 tmux resize를 await하여
+   * resize+capture를 원자적으로 실행합니다 (타이밍 레이스 방지).
+   *
    * @param id - 세션 ID
+   * @param cols - 리사이즈할 열 수 (선택)
+   * @param rows - 리사이즈할 행 수 (선택)
    * @returns ANSI 포함 화면 문자열 또는 null
    */
-  async captureScreen(id: string): Promise<string | null> {
+  async captureScreen(id: string, cols?: number, rows?: number): Promise<string | null> {
     if (!this.tmuxPath) return null
     const session = this.sessions.get(id)
     if (!session?.tmuxSessionName) return null
+    // cols/rows가 제공되면 tmux resize를 먼저 await (atomic resize+capture)
+    if (cols !== undefined && rows !== undefined) {
+      await resizeTmuxWindowAsync(this.tmuxPath, session.tmuxSessionName, cols, rows)
+    }
     return captureFullScrollbackAsync(this.tmuxPath, session.tmuxSessionName, 0)
   }
 

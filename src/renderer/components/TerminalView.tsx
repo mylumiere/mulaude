@@ -51,7 +51,7 @@ export default function TerminalView({ sessionId, isActive, themeId, contextPerc
     isFocused,
     onData: (data) => window.api.writeSession(sessionId, data),
     onResize: (cols, rows) => window.api.resizeSession(sessionId, cols, rows),
-    onRecapture: () => window.api.captureScreen(sessionId),
+    onRecapture: (cols, rows) => window.api.captureScreen(sessionId, cols, rows),
     initialContent,
     disabled: !ready,
     deps: [sessionId, ready]

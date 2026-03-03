@@ -31,8 +31,9 @@ interface UseXtermTerminalParams {
   onData: (data: string) => void
   /** 리사이즈 핸들러 (cols, rows) */
   onResize: (cols: number, rows: number) => void
-  /** cols 변경 시 스크롤백 재캡처 콜백 (tmux reflow된 내용 복원) */
-  onRecapture?: () => Promise<string | null>
+  /** cols 변경 시 스크롤백 재캡처 콜백 (tmux reflow된 내용 복원)
+   *  cols/rows를 전달하면 main에서 tmux resize를 await한 후 캡처 (atomic) */
+  onRecapture?: (cols: number, rows: number) => Promise<string | null>
   /** 초기 내용 (마운트 직후 write) */
   initialContent?: string
   /** 터미널 비활성화 (pending 상태 등에서 xterm 생성 방지) */
@@ -191,19 +192,19 @@ export function useXtermTerminal({
           xtermRef.current.reset()
           if (onRecapture) {
             const term = xtermRef.current
-            setTimeout(() => {
-              onRecapture().then((screen) => {
-                if (screen && term) {
-                  // reset()은 동기적으로 모든 버퍼(뷰포트+스크롤백)를 완전 클리어
-                  // ESC 시퀀스와 달리 write 큐와의 경합 없음
-                  term.reset()
-                  term.write(screen)
-                }
-              }).catch(() => {}).finally(() => {
-                recapturingRef.current = false
-                if (term) term.refresh(0, term.rows - 1)
-              })
-            }, 200) // tmux reflow 대기 (스크롤백 클수록 시간 소요)
+            // onRecapture에 cols/rows를 전달하여 main에서 tmux resize를
+            // await한 후 캡처 (atomic resize+capture — 타이밍 레이스 제거)
+            onRecapture(newCols, newRows).then((screen) => {
+              if (screen && term) {
+                // reset()은 동기적으로 모든 버퍼(뷰포트+스크롤백)를 완전 클리어
+                // ESC 시퀀스와 달리 write 큐와의 경합 없음
+                term.reset()
+                term.write(screen)
+              }
+            }).catch(() => {}).finally(() => {
+              recapturingRef.current = false
+              if (term) term.refresh(0, term.rows - 1)
+            })
           } else {
             recapturingRef.current = false
             xtermRef.current.refresh(0, newRows - 1)

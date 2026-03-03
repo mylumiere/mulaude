@@ -131,9 +131,10 @@ const api = {
   updateSessionSubtitle: (id: string, subtitle: string): void =>
     ipcRenderer.send('session:subtitle-update', id, subtitle),
 
-  /** 세션 화면 캡처 (세션 전환 시 xterm 복원용) */
-  captureScreen: (id: string): Promise<string | null> =>
-    ipcRenderer.invoke('session:capture-screen', id),
+  /** 세션 화면 캡처 (세션 전환 시 xterm 복원용)
+   *  cols/rows 제공 시 tmux resize를 await한 후 캡처 (atomic resize+capture) */
+  captureScreen: (id: string, cols?: number, rows?: number): Promise<string | null> =>
+    ipcRenderer.invoke('session:capture-screen', id, cols, rows),
 
   /** 현재 locale을 main 프로세스에 전달 (다이얼로그 다국어용) */
   setLocale: (locale: string): void =>

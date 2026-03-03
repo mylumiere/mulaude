@@ -194,9 +194,10 @@ export function registerIpcHandlers(
   })
 
   // 세션 화면 캡처 (세션 전환 시 xterm 복원용)
-  ipcMain.handle('session:capture-screen', async (_event, id: string) => {
+  // cols/rows가 제공되면 tmux resize를 await한 후 캡처 (atomic resize+capture)
+  ipcMain.handle('session:capture-screen', async (_event, id: string, cols?: number, rows?: number) => {
     try {
-      return sessionManager.captureScreen(id)
+      return sessionManager.captureScreen(id, cols, rows)
     } catch (err) {
       console.error('[IPC] session:capture-screen failed:', err)
       return null

@@ -12,7 +12,7 @@ interface Window {
     resizeSession: (id: string, cols: number, rows: number) => void
     onSessionData: (callback: (id: string, data: string) => void) => () => void
     onSessionDataById: (id: string, callback: (data: string) => void) => () => void
-    captureScreen: (id: string) => Promise<string | null>
+    captureScreen: (id: string, cols?: number, rows?: number) => Promise<string | null>
     onSessionExit: (callback: (id: string, exitCode: number) => void) => () => void
     onSessionHook: (callback: (id: string, event: HookEvent) => void) => () => void
     onSessionPanes: (callback: (id: string, panes: TmuxPaneInfo[]) => void) => () => void
