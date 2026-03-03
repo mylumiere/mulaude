@@ -103,6 +103,8 @@ export function useXtermTerminal({
 
     // 키 이벤트 핸들러: 앱 단축키는 window로 전달, 나머지는 xterm 처리
     terminal.attachCustomKeyEventHandler((event: KeyboardEvent) => {
+      // Cmd 조합은 앱 단축키 → window로 전달 (Cmd+Shift+Enter = 줌 토글 등)
+      if (event.metaKey) return false
       // Shift+Enter: keydown에서만 전송, keypress/keyup 모두 차단
       // keypress까지 통과시키면 xterm이 \r도 보내서 줄바꿈+즉시제출 됨
       if (event.key === 'Enter' && event.shiftKey) {
@@ -110,7 +112,6 @@ export function useXtermTerminal({
         return false
       }
       if (event.type !== 'keydown') return true
-      if (event.metaKey) return false
       return true
     })
 
@@ -186,26 +187,23 @@ export function useXtermTerminal({
           // 이걸 xterm에 쓰면 재캡처 내용과 중복되어 깨짐 발생.
           // 재캡처 완료까지 PTY 쓰기를 막고, 캡처 내용으로 일괄 교체.
           recapturingRef.current = true
-          // 뷰포트 + 스크롤백 완전 클리어
-          // terminal.clear()는 스크롤백만 지우고 뷰포트(active buffer)는 남김
-          // → 재캡처 write 시 기존 뷰포트와 중복/잘림 발생
-          // ESC 시퀀스로 화면 전체를 확실히 비움
-          xtermRef.current.write('\x1b[2J\x1b[3J\x1b[H')
-          xtermRef.current.clearTextureAtlas()
+          // 재캡처 대기 중 빈 화면 표시
+          xtermRef.current.reset()
           if (onRecapture) {
             const term = xtermRef.current
             setTimeout(() => {
               onRecapture().then((screen) => {
                 if (screen && term) {
-                  // 재캡처 직전 한 번 더 완전 클리어 (150ms 동안 누적된 잔여 방지)
-                  term.write('\x1b[2J\x1b[3J\x1b[H')
+                  // reset()은 동기적으로 모든 버퍼(뷰포트+스크롤백)를 완전 클리어
+                  // ESC 시퀀스와 달리 write 큐와의 경합 없음
+                  term.reset()
                   term.write(screen)
                 }
               }).catch(() => {}).finally(() => {
                 recapturingRef.current = false
                 if (term) term.refresh(0, term.rows - 1)
               })
-            }, 150) // tmux reflow 대기
+            }, 200) // tmux reflow 대기 (스크롤백 클수록 시간 소요)
           } else {
             recapturingRef.current = false
             xtermRef.current.refresh(0, newRows - 1)
