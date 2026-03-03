@@ -271,6 +271,10 @@ const api = {
   clearNativeQueue: (sessionId: string): void =>
     ipcRenderer.send('native:clear-queue', sessionId),
 
+  /** 미연결 tmux 세션 감지 및 정리 (앱 시작 시 호출) */
+  checkOrphanSessions: (): Promise<{ found: number; cleaned: boolean }> =>
+    ipcRenderer.invoke('session:check-orphans'),
+
   /** Permission/Question 입력 요청 이벤트 수신 (main → 렌더러) */
   onNativeInputRequest: (cb: (sessionId: string, request: NativeInputRequest) => void): (() => void) => {
     const handler = (_event: Electron.IpcRendererEvent, sessionId: string, request: NativeInputRequest): void => {

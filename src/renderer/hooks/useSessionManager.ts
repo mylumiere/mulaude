@@ -76,6 +76,18 @@ export function useSessionManager({
             initSession(s.id, true)
           }
         }
+
+        // 미연결 tmux 세션 감지 및 정리 (다이얼로그는 main process에서 표시)
+        try {
+          const orphanResult = await window.api.checkOrphanSessions()
+          if (orphanResult.found > 0) {
+            console.log(
+              `[useSessionManager] orphan check: found=${orphanResult.found}, cleaned=${orphanResult.cleaned}`
+            )
+          }
+        } catch (err) {
+          console.error('[useSessionManager] orphan check failed:', err)
+        }
       } catch (err) {
         console.error('[useSessionManager] restore failed:', err)
       }

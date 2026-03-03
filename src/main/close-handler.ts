@@ -25,7 +25,11 @@ const dialogI18n: Record<MainLocale, Record<string, string>> = {
     'close.legacy.btn.cancel': 'Cancel',
     'close.legacy.message': '{count} Claude session(s) are running.',
     'close.legacy.detail': 'All sessions will be terminated because tmux is not installed.',
-    'dialog.openDirectory': 'Select a folder to start a session'
+    'dialog.openDirectory': 'Select a folder to start a session',
+    'orphan.message': '{count} leftover tmux session(s) found.',
+    'orphan.detail': 'These sessions remain from a previous run. Would you like to clean them up?',
+    'orphan.btn.clean': 'Clean up',
+    'orphan.btn.keep': 'Keep'
   },
   ko: {
     'close.tmux.btn.keep': '세션 유지하고 닫기',
@@ -37,7 +41,11 @@ const dialogI18n: Record<MainLocale, Record<string, string>> = {
     'close.legacy.btn.cancel': '취소',
     'close.legacy.message': '{count}개의 Claude 세션이 실행 중입니다.',
     'close.legacy.detail': 'tmux가 설치되어 있지 않아 모든 세션이 종료됩니다.',
-    'dialog.openDirectory': '세션을 시작할 폴더를 선택하세요'
+    'dialog.openDirectory': '세션을 시작할 폴더를 선택하세요',
+    'orphan.message': '미연결 tmux 세션 {count}개가 발견되었습니다.',
+    'orphan.detail': '이전 실행에서 남은 세션입니다. 정리하시겠습니까?',
+    'orphan.btn.clean': '정리',
+    'orphan.btn.keep': '유지'
   },
   ja: {
     'close.tmux.btn.keep': 'セッションを維持して閉じる',
@@ -49,7 +57,11 @@ const dialogI18n: Record<MainLocale, Record<string, string>> = {
     'close.legacy.btn.cancel': 'キャンセル',
     'close.legacy.message': '{count}個のClaudeセッションが実行中です。',
     'close.legacy.detail': 'tmuxがインストールされていないため、すべてのセッションが終了します。',
-    'dialog.openDirectory': 'セッションを開始するフォルダを選択してください'
+    'dialog.openDirectory': 'セッションを開始するフォルダを選択してください',
+    'orphan.message': '未接続のtmuxセッションが{count}個見つかりました。',
+    'orphan.detail': '以前の実行で残ったセッションです。クリーンアップしますか？',
+    'orphan.btn.clean': 'クリーンアップ',
+    'orphan.btn.keep': '保持'
   },
   zh: {
     'close.tmux.btn.keep': '保留会话并关闭',
@@ -61,7 +73,11 @@ const dialogI18n: Record<MainLocale, Record<string, string>> = {
     'close.legacy.btn.cancel': '取消',
     'close.legacy.message': '{count}个Claude会话正在运行。',
     'close.legacy.detail': '由于未安装tmux，所有会话将被终止。',
-    'dialog.openDirectory': '请选择要启动会话的文件夹'
+    'dialog.openDirectory': '请选择要启动会话的文件夹',
+    'orphan.message': '发现{count}个未连接的tmux会话。',
+    'orphan.detail': '这些是上次运行遗留的会话。是否清理？',
+    'orphan.btn.clean': '清理',
+    'orphan.btn.keep': '保留'
   }
 }
 
@@ -201,4 +217,30 @@ export function setupCloseHandler(
       })
     }
   })
+}
+
+/**
+ * 고아 tmux 세션 정리 확인 다이얼로그를 표시합니다.
+ *
+ * @param mainWindow - 다이얼로그의 부모 윈도우
+ * @param count - 발견된 고아 세션 수
+ * @returns 사용자 선택 ('clean' 또는 'keep')
+ */
+export async function showOrphanDialog(
+  mainWindow: BrowserWindow,
+  count: number
+): Promise<'clean' | 'keep'> {
+  const { response } = await dialog.showMessageBox(mainWindow, {
+    type: 'question',
+    buttons: [
+      dt('orphan.btn.clean'),
+      dt('orphan.btn.keep')
+    ],
+    defaultId: 0,
+    cancelId: 1,
+    title: 'Mulaude',
+    message: dt('orphan.message', { count }),
+    detail: dt('orphan.detail')
+  })
+  return response === 0 ? 'clean' : 'keep'
 }

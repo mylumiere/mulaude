@@ -49,5 +49,6 @@ interface Window {
     onNativeInputRequest: (cb: (sessionId: string, request: NativeInputRequest) => void) => () => void
     updateNativeQueue: (sessionId: string, text: string) => void
     clearNativeQueue: (sessionId: string) => void
+    checkOrphanSessions: () => Promise<{ found: number; cleaned: boolean }>
   }
 }

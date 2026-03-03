@@ -37,7 +37,8 @@ import {
   captureTmuxPaneAsync,
   captureFullScrollbackAsync,
   setAutoBreakPaneHook,
-  scrollTmuxPaneAsync
+  scrollTmuxPaneAsync,
+  listMulaudeTmuxSessions
 } from './tmux-utils'
 import { ChildPaneStreamer } from './child-pane-streamer'
 import { cleanupAgentState } from './agent-matcher'
@@ -589,6 +590,44 @@ export class SessionManager {
     const session = this.sessions.get(id)
     if (!session?.tmuxSessionName) return
     scrollTmuxPaneAsync(this.tmuxPath, session.tmuxSessionName, direction, lines).catch(() => {})
+  }
+
+  /**
+   * store에 등록되지 않은 고아 tmux 세션 목록을 반환합니다.
+   *
+   * mulaude-* 패턴의 모든 tmux 세션을 조회한 뒤,
+   * 현재 sessions Map에 있는 tmuxSessionName과 비교하여
+   * 차집합을 반환합니다.
+   */
+  getOrphanedTmuxSessions(): string[] {
+    if (!this.tmuxPath) return []
+
+    const allTmux = listMulaudeTmuxSessions(this.tmuxPath)
+    const managed = new Set(
+      Array.from(this.sessions.values())
+        .map((s) => s.tmuxSessionName)
+        .filter(Boolean)
+    )
+
+    return allTmux.filter((name) => !managed.has(name))
+  }
+
+  /**
+   * 고아 tmux 세션들을 종료합니다.
+   *
+   * @param names - 종료할 tmux 세션명 배열
+   */
+  killOrphanedSessions(names: string[]): void {
+    if (!this.tmuxPath) return
+
+    for (const name of names) {
+      try {
+        killTmuxSession(this.tmuxPath, name)
+        console.log(`[SessionManager] killed orphan tmux session: ${name}`)
+      } catch (err) {
+        console.error(`[SessionManager] failed to kill orphan ${name}:`, err)
+      }
+    }
   }
 
   /**

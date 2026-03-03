@@ -13,6 +13,7 @@ import { homedir, tmpdir } from 'os'
 import type { SessionManager } from './session-manager'
 import type { NativeChatManager } from './native-chat-manager'
 import { startHudPoller, stopHudPoller } from './session-forwarder'
+import { showOrphanDialog } from './close-handler'
 import type { UsageData } from '../shared/types'
 
 /** 이미지 파일 확장자 목록 */
@@ -303,6 +304,34 @@ export function registerIpcHandlers(
       writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf-8')
     } catch (err) {
       console.error('[IPC] hud:set-hidden failed:', err)
+    }
+  })
+
+  // 미연결 tmux 세션 감지 및 정리
+  ipcMain.handle('session:check-orphans', async () => {
+    try {
+      const orphans = sessionManager.getOrphanedTmuxSessions()
+      if (orphans.length === 0) {
+        return { found: 0, cleaned: false }
+      }
+
+      console.log(`[IPC] found ${orphans.length} orphaned tmux sessions:`, orphans)
+
+      const mainWindow = BrowserWindow.getAllWindows()[0]
+      if (!mainWindow) {
+        return { found: orphans.length, cleaned: false }
+      }
+
+      const choice = await showOrphanDialog(mainWindow, orphans.length)
+      if (choice === 'clean') {
+        sessionManager.killOrphanedSessions(orphans)
+        return { found: orphans.length, cleaned: true }
+      }
+
+      return { found: orphans.length, cleaned: false }
+    } catch (err) {
+      console.error('[IPC] session:check-orphans failed:', err)
+      return { found: 0, cleaned: false }
     }
   })
 }
