@@ -1,18 +1,13 @@
 /**
  * 세션 데이터 포워딩 모듈
  *
- * PTY 출력 데이터와 usage 캐시 변경을 렌더러로 전달합니다.
+ * PTY 출력 데이터를 렌더러로 전달합니다.
  * 16ms 배치 처리(~60fps)로 IPC 부하를 절감합니다.
  */
 
 import type { BrowserWindow } from 'electron'
-import { watchFile, unwatchFile } from 'fs'
-import { join } from 'path'
-import { homedir } from 'os'
-import { exec } from 'child_process'
 import type { SessionManager } from './session-manager'
-import { readUsageData } from './ipc-handlers'
-import { IPC_BATCH_INTERVAL, USAGE_WATCH_INTERVAL, HUD_POLL_INTERVAL } from '../shared/constants'
+import { IPC_BATCH_INTERVAL } from '../shared/constants'
 
 /**
  * 16ms 배치 처리 유틸리티를 생성합니다.
@@ -75,48 +70,3 @@ export function setupSessionDataForwarding(
   })
 }
 
-// ─── HUD 백그라운드 폴러 ───
-// statusLine 제거 시에도 claude-hud 명령을 직접 실행하여 usage-cache.json 갱신 유지
-
-let hudPollTimer: ReturnType<typeof setInterval> | null = null
-
-/**
- * HUD 백그라운드 폴러를 시작합니다.
- * statusLine이 제거된 상태에서도 claude-hud 명령을 주기적으로 실행하여
- * usage-cache.json이 갱신되도록 합니다.
- */
-export function startHudPoller(command: string): void {
-  stopHudPoller()
-  const run = (): void => { exec(command, { timeout: 10000 }, () => {}) }
-  run()
-  hudPollTimer = setInterval(run, HUD_POLL_INTERVAL)
-}
-
-/** HUD 백그라운드 폴러를 중지합니다. */
-export function stopHudPoller(): void {
-  if (hudPollTimer) {
-    clearInterval(hudPollTimer)
-    hudPollTimer = null
-  }
-}
-
-/**
- * usage-cache.json 변경 감시 -> 렌더러에 자동 전달
- *
- * @returns cleanup 함수 (앱 종료 시 호출)
- */
-export function watchUsageData(mainWindow: BrowserWindow): () => void {
-  const usageCachePath = join(homedir(), '.claude', 'plugins', 'claude-hud', '.usage-cache.json')
-  try {
-    watchFile(usageCachePath, { interval: USAGE_WATCH_INTERVAL }, () => {
-      if (!mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('usage:updated', readUsageData())
-      }
-    })
-  } catch {
-    // 파일 없으면 무시
-  }
-  return (): void => {
-    try { unwatchFile(usageCachePath) } catch { /* ignore */ }
-  }
-}

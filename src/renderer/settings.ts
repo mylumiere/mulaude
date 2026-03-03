@@ -102,6 +102,34 @@ export function sendNotification(title: string, body: string): void {
   window.api.sendNotification(title, body || title)
 }
 
+// ─── HUD 오버레이 숨김 ───
+
+export function getSavedHideHud(): boolean {
+  try {
+    const saved = localStorage.getItem('mulaude-hide-hud')
+    if (saved !== null) return saved === 'true'
+  } catch { /* ignore */ }
+  return true // 기본: HUD 숨김 (Mulaude가 백그라운드 수집)
+}
+
+export function saveHideHud(hide: boolean): void {
+  try { localStorage.setItem('mulaude-hide-hud', String(hide)) } catch { /* ignore */ }
+}
+
+// ─── Keychain OAuth 접근 허용 ───
+
+export function getSavedKeychainAccess(): boolean {
+  try {
+    const saved = localStorage.getItem('mulaude-keychain-access')
+    if (saved !== null) return saved === 'true'
+  } catch { /* ignore */ }
+  return false // 기본: 키체인 접근 비활성 (사용자 opt-in)
+}
+
+export function saveKeychainAccess(enabled: boolean): void {
+  try { localStorage.setItem('mulaude-keychain-access', String(enabled)) } catch { /* ignore */ }
+}
+
 // ─── 세션별 테마 오버라이드 ───
 
 export function getSavedSessionThemes(): Record<string, string> {
@@ -116,16 +144,3 @@ export function saveSessionThemes(themes: Record<string, string>): void {
   try { localStorage.setItem('mulaude-session-themes', JSON.stringify(themes)) } catch { /* ignore */ }
 }
 
-// ─── HUD 오버레이 숨기기 ───
-
-export function getSavedHideHud(): boolean {
-  try {
-    const saved = localStorage.getItem('mulaude-hide-hud')
-    if (saved === null) return true  // 기본값: HUD 숨김
-    return saved === 'true'
-  } catch { return true }
-}
-
-export function saveHideHud(hide: boolean): void {
-  try { localStorage.setItem('mulaude-hide-hud', String(hide)) } catch { /* ignore */ }
-}

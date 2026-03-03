@@ -1,5 +1,40 @@
 # Changelog
 
+## [1.1.21] - 2026-03-04
+
+### claude-hud 의존성 제거 — 자체 Statusline 통합
+
+claude-hud 플러그인 없이도 Context %와 Rate Limit 데이터를 표시할 수 있도록 전면 재설계했습니다.
+
+#### Statusline 시스템 (`statusline-manager.ts`)
+- **자체 statusline 스크립트** (`~/.mulaude/statusline.mjs`): Claude Code 네이티브 Statusline API를 활용하여 stdin JSON → `~/.mulaude/ctx/{session_id}.json` 기록
+- **Context % 수집**: ctx 디렉토리 3초 폴링 → `statusline:context-batch` IPC로 렌더러에 전달
+- **프록시 모드**: `~/.mulaude/proxy-cmd` 파일 존재 시 원래 statusline도 실행 (HUD 오버레이 표시 모드)
+- **크래시 복구**: 앱 비정상 종료 시 `_mulaudeStatusLineBackup`에서 원래 statusLine 자동 복원
+
+#### Rate Limit 데이터 다중 소스
+- **Keychain OAuth API** (opt-in, 우선): `api.anthropic.com/api/oauth/usage` 엔드포인트 60초 간격 호출
+  - `anthropic-beta: oauth-2025-04-20` 헤더 필수
+  - 응답 구조: `five_hour.utilization`, `seven_day.utilization`, `resets_at`
+  - macOS Keychain에서 OAuth 토큰 읽기 (`security find-generic-password -a $(whoami)`)
+- **claude-hud 캐시** (fallback): `~/.claude/plugins/claude-hud/.usage-cache.json` 읽기
+- **HUD 백그라운드 폴러**: HUD 숨김 시에도 원래 statusline 커맨드를 30초마다 실행하여 캐시 갱신
+
+#### UsageGauge 개선
+- **데이터 신선도 표시**: 소스(HUD/API) + 경과 시간(`<1m`, `3m`, `1h` 등) 헤더에 표시
+- **Stale 경고**: 데이터가 5분 이상 오래되면 빨간색 `⚠` 표시
+- **데이터 미수집 경고**: 데이터 없을 때 `⚠ Rate Limit` + 안내 메시지 표시
+
+#### 설정 UI (고급 탭)
+- **HUD 오버레이 숨기기 토글**: claude-hud statusline 오버레이 표시/숨김 전환
+- **Keychain 접근 허용 토글**: 인라인 확인 다이얼로그로 OAuth 토큰 사용 동의 확인
+- **면책 조항**: "토큰은 사용량 집계에만 사용되며, 다른 곳에 저장·전송되지 않습니다"
+
+#### 기타
+- `session-forwarder.ts`에서 HUD 관련 코드 제거 (statusline-manager로 이전)
+- 새 IPC 채널: `statusline:context-batch`, `hud:set-hidden`, `keychain:set-access`
+- 4개 언어 번역 추가 (HUD/Keychain/Rate Limit 관련 8개 키)
+
 ## [1.1.20] - 2026-03-04
 
 ### 터미널 안정성 대폭 개선

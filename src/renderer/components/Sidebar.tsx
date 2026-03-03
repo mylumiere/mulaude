@@ -197,7 +197,7 @@ export default function Sidebar({
         )}
       </div>
 
-      {usageData && <UsageGauge usageData={usageData} />}
+      <UsageGauge usageData={usageData} locale={locale} />
       <StatusLegend locale={locale} />
 
       <div className="sidebar-footer">

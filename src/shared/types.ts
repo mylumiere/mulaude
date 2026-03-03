@@ -39,7 +39,9 @@ export interface HookEvent {
 }
 
 /**
- * Claude 사용량 데이터 (claude-hud 플러그인 캐시에서 읽음)
+ * Claude 사용량 데이터
+ *
+ * 소스: claude-hud 캐시 (.usage-cache.json) 또는 Keychain OAuth API
  */
 export interface UsageData {
   planName: string
@@ -47,6 +49,10 @@ export interface UsageData {
   sevenDay: number
   fiveHourResetAt: string
   sevenDayResetAt: string
+  /** 데이터 수집 시각 (epoch ms) — 없으면 신선도 표시 생략 */
+  lastUpdated?: number
+  /** 데이터 소스 — 없으면 소스 표시 생략 */
+  source?: 'hud' | 'keychain'
 }
 
 /**

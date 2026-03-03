@@ -845,7 +845,20 @@
 }
 
 .sidebar-usage-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: 5px;
+}
+
+.sidebar-usage-age {
+  font-family: var(--font-mono);
+  font-size: 0.5rem;
+  color: var(--text-ghost);
+}
+
+.sidebar-usage-age--stale {
+  color: var(--status-error, #e57373);
 }
 
 .sidebar-usage-plan {
@@ -891,6 +904,24 @@
 
 .sidebar-usage-fill--warn {
   background: var(--status-error);
+}
+
+.sidebar-usage-fill--empty {
+  width: 0;
+}
+
+.sidebar-usage--warn .sidebar-usage-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-muted);
+}
+
+.sidebar-usage-hint {
+  font-size: 0.5rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin-top: 4px;
 }
 
 .sidebar-usage-pct {

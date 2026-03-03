@@ -12,8 +12,9 @@ import {
   type FontSize, type NotifSettings,
   getSavedFontSize, saveFontSize, applyFontSize,
   getSavedNotifSettings, saveNotifSettings,
+  getSavedSessionThemes, saveSessionThemes,
   getSavedHideHud, saveHideHud,
-  getSavedSessionThemes, saveSessionThemes
+  getSavedKeychainAccess, saveKeychainAccess
 } from '../settings'
 import type { UsageData } from '../../shared/types'
 
@@ -23,15 +24,17 @@ interface UseSettingsReturn {
   fontSize: FontSize
   notifSettings: NotifSettings
   sessionThemes: Record<string, string>
+  hideHud: boolean
+  keychainAccess: boolean
   showSettings: boolean
   sidebarWidth: number
   usageData: UsageData | null
-  hideHud: boolean
   handleLocaleChange: (l: Locale) => void
   handleThemeChange: (id: string) => void
   handleFontSizeChange: (s: FontSize) => void
   handleNotifChange: (s: NotifSettings) => void
   handleHideHudChange: (hide: boolean) => void
+  handleKeychainAccessChange: (enabled: boolean) => void
   handleSessionThemeChange: (sessionId: string, themeId: string | null) => void
   getSessionThemeId: (sessionId: string) => string
   setShowSettings: (v: boolean) => void
@@ -45,6 +48,8 @@ export function useSettings(): UseSettingsReturn {
   const [fontSize, setFontSize] = useState<FontSize>(getSavedFontSize)
   const [notifSettings, setNotifSettings] = useState<NotifSettings>(getSavedNotifSettings)
   const [sessionThemes, setSessionThemes] = useState<Record<string, string>>(getSavedSessionThemes)
+  const [hideHud, setHideHud] = useState(getSavedHideHud)
+  const [keychainAccess, setKeychainAccess] = useState(getSavedKeychainAccess)
   const [showSettings, setShowSettings] = useState(false)
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     try {
@@ -54,7 +59,6 @@ export function useSettings(): UseSettingsReturn {
     return 240
   })
   const [usageData, setUsageData] = useState<UsageData | null>(null)
-  const [hideHud, setHideHud] = useState(getSavedHideHud)
   const isResizing = useRef(false)
 
   // 초기 설정 적용
@@ -65,25 +69,21 @@ export function useSettings(): UseSettingsReturn {
     return window.api.onUsageUpdated(setUsageData)
   }, [])
 
-  // 앱 시작 시 저장된 hideHud 상태를 Claude settings에 반영
-  useEffect(() => {
-    if (hideHud) {
-      window.api.setHudHidden(true).catch(() => {})
-    }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
   // 초기 locale을 main에 전달
   useEffect(() => { window.api.setLocale(locale) }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 초기 HUD/키체인 설정을 main에 전달 (main은 기본값으로 시작 → renderer가 저장값으로 갱신)
+  useEffect(() => {
+    window.api.setHudHidden(hideHud)
+    window.api.setKeychainAccess(keychainAccess)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleLocaleChange = useCallback((l: Locale) => { setLocale(l); saveLocale(l); window.api.setLocale(l) }, [])
   const handleThemeChange = useCallback((id: string) => { setGlobalThemeId(id); saveTheme(id); applyTheme(id) }, [])
   const handleFontSizeChange = useCallback((s: FontSize) => { setFontSize(s); saveFontSize(s); applyFontSize(s) }, [])
   const handleNotifChange = useCallback((s: NotifSettings) => { setNotifSettings(s); saveNotifSettings(s) }, [])
-  const handleHideHudChange = useCallback((hide: boolean) => {
-    setHideHud(hide)
-    saveHideHud(hide)
-    window.api.setHudHidden(hide).catch(() => {})
-  }, [])
+  const handleHideHudChange = useCallback((hide: boolean) => { setHideHud(hide); saveHideHud(hide); window.api.setHudHidden(hide) }, [])
+  const handleKeychainAccessChange = useCallback((enabled: boolean) => { setKeychainAccess(enabled); saveKeychainAccess(enabled); window.api.setKeychainAccess(enabled) }, [])
 
   const handleSessionThemeChange = useCallback((sessionId: string, themeId: string | null) => {
     setSessionThemes((prev) => {
@@ -134,15 +134,17 @@ export function useSettings(): UseSettingsReturn {
     fontSize,
     notifSettings,
     sessionThemes,
+    hideHud,
+    keychainAccess,
     showSettings,
     sidebarWidth,
     usageData,
-    hideHud,
     handleLocaleChange,
     handleThemeChange,
     handleFontSizeChange,
     handleNotifChange,
     handleHideHudChange,
+    handleKeychainAccessChange,
     handleSessionThemeChange,
     getSessionThemeId,
     setShowSettings,

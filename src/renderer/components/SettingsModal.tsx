@@ -5,7 +5,7 @@
  * 모든 변경은 즉시 적용 (auto-save 패턴).
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { X } from 'lucide-react'
 import { type Locale, LOCALES, t } from '../i18n'
 import { THEMES } from '../themes'
@@ -25,10 +25,12 @@ interface SettingsModalProps {
   onThemeChange: (themeId: string) => void
   fontSize: FontSize
   onFontSizeChange: (size: FontSize) => void
-  notifSettings: NotifSettings
-  onNotifChange: (settings: NotifSettings) => void
   hideHud: boolean
   onHideHudChange: (hide: boolean) => void
+  keychainAccess: boolean
+  onKeychainAccessChange: (enabled: boolean) => void
+  notifSettings: NotifSettings
+  onNotifChange: (settings: NotifSettings) => void
   sessions: SessionInfo[]
   onClose: () => void
 }
@@ -40,15 +42,35 @@ export default function SettingsModal({
   onThemeChange,
   fontSize,
   onFontSizeChange,
-  notifSettings,
-  onNotifChange,
   hideHud,
   onHideHudChange,
+  keychainAccess,
+  onKeychainAccessChange,
+  notifSettings,
+  onNotifChange,
   sessions,
   onClose
 }: SettingsModalProps): JSX.Element {
   const [activeTab, setActiveTab] = useState<SettingsTab>('appearance')
   const [notifTab, setNotifTab] = useState<'global' | string>('global')
+  const [keychainConfirm, setKeychainConfirm] = useState(false)
+
+  /** 키체인 토글 — 켤 때는 확인 단계 표시, 끌 때는 바로 적용 */
+  const handleKeychainToggle = useCallback(() => {
+    if (keychainAccess) {
+      // 끄기: 바로 적용
+      onKeychainAccessChange(false)
+      setKeychainConfirm(false)
+    } else {
+      // 켜기: 확인 단계 표시
+      setKeychainConfirm(true)
+    }
+  }, [keychainAccess, onKeychainAccessChange])
+
+  const confirmKeychainAccess = useCallback(() => {
+    onKeychainAccessChange(true)
+    setKeychainConfirm(false)
+  }, [onKeychainAccessChange])
 
   // ─── 알림 핸들러 (즉시 적용) ───
   const toggleGlobalNotif = (event: NotifEvent): void => {
@@ -218,22 +240,6 @@ export default function SettingsModal({
           {activeTab === 'advanced' && (
             <>
               <div className="settings-section">
-                <label className="settings-label">{t(locale, 'settings.hud')}</label>
-                <div className="notif-toggles">
-                  <div className="notif-toggle-row">
-                    <span className="notif-toggle-label">{t(locale, 'settings.hideHud')}</span>
-                    <button
-                      className={`notif-toggle ${hideHud ? 'notif-toggle--on' : ''}`}
-                      onClick={() => onHideHudChange(!hideHud)}
-                    >
-                      <div className="notif-toggle-knob" />
-                    </button>
-                  </div>
-                  <p className="settings-hint">{t(locale, 'settings.hideHudDesc')}</p>
-                </div>
-              </div>
-
-              <div className="settings-section">
                 <label className="settings-label">{t(locale, 'settings.language')}</label>
                 <div className="settings-locale-grid">
                   {LOCALES.map((loc) => (
@@ -246,6 +252,58 @@ export default function SettingsModal({
                     </button>
                   ))}
                 </div>
+              </div>
+
+              <div className="settings-section">
+                <label className="settings-label">{t(locale, 'settings.hud')}</label>
+
+                {/* HUD 오버레이 숨기기 토글 */}
+                <div className="notif-toggle-row">
+                  <div>
+                    <span className="notif-toggle-label">{t(locale, 'settings.hideHud')}</span>
+                    <span className="settings-hint">{t(locale, 'settings.hideHudDesc')}</span>
+                  </div>
+                  <button
+                    className={`notif-toggle ${hideHud ? 'notif-toggle--on' : ''}`}
+                    onClick={() => onHideHudChange(!hideHud)}
+                  >
+                    <div className="notif-toggle-knob" />
+                  </button>
+                </div>
+
+                {/* Keychain 접근 허용 토글 */}
+                <div className="notif-toggle-row">
+                  <div>
+                    <span className="notif-toggle-label">{t(locale, 'settings.keychainAccess')}</span>
+                    <span className="settings-hint">{t(locale, 'settings.keychainDesc')}</span>
+                  </div>
+                  <button
+                    className={`notif-toggle ${keychainAccess ? 'notif-toggle--on' : ''}`}
+                    onClick={handleKeychainToggle}
+                  >
+                    <div className="notif-toggle-knob" />
+                  </button>
+                </div>
+                {keychainConfirm && (
+                  <div className="settings-confirm">
+                    <span className="settings-confirm-text">{t(locale, 'settings.keychainConfirm')}</span>
+                    <div className="settings-confirm-actions">
+                      <button className="settings-confirm-btn settings-confirm-btn--ok" onClick={confirmKeychainAccess}>
+                        {t(locale, 'settings.keychainAllow')}
+                      </button>
+                      <button className="settings-confirm-btn" onClick={() => setKeychainConfirm(false)}>
+                        {t(locale, 'settings.keychainDeny')}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* 둘 다 비활성이면 안내 메시지 */}
+                {hideHud && !keychainAccess && (
+                  <div className="settings-hint settings-hint--info">
+                    {t(locale, 'settings.rateLimitWarn')}
+                  </div>
+                )}
               </div>
             </>
           )}

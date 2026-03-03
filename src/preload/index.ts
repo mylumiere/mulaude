@@ -97,10 +97,6 @@ const api = {
   readUsage: (): Promise<UsageData | null> =>
     ipcRenderer.invoke('usage:read'),
 
-  /** HUD 오버레이 숨기기/복원 */
-  setHudHidden: (hide: boolean): Promise<void> =>
-    ipcRenderer.invoke('hud:set-hidden', hide),
-
   /** 사용량 업데이트 이벤트 수신 */
   onUsageUpdated: (callback: (data: UsageData | null) => void): (() => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: UsageData | null): void => {
@@ -108,6 +104,15 @@ const api = {
     }
     ipcRenderer.on('usage:updated', handler)
     return () => ipcRenderer.removeListener('usage:updated', handler)
+  },
+
+  /** statusline 기반 context % 배치 수신 (claudeSessionId → percentage) */
+  onContextBatch: (callback: (data: Record<string, number>) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, data: Record<string, number>): void => {
+      callback(data)
+    }
+    ipcRenderer.on('statusline:context-batch', handler)
+    return () => ipcRenderer.removeListener('statusline:context-batch', handler)
   },
 
   /** Claude Code hook 이벤트 수신 (Notification, PreToolUse 등) */
@@ -270,6 +275,14 @@ const api = {
   /** 큐 메시지 삭제 */
   clearNativeQueue: (sessionId: string): void =>
     ipcRenderer.send('native:clear-queue', sessionId),
+
+  /** HUD 오버레이 숨김 여부 설정 (main → statusline-manager) */
+  setHudHidden: (hide: boolean): void =>
+    ipcRenderer.send('hud:set-hidden', hide),
+
+  /** Keychain OAuth 접근 허용 여부 설정 (main → statusline-manager) */
+  setKeychainAccess: (enabled: boolean): void =>
+    ipcRenderer.send('keychain:set-access', enabled),
 
   /** 미연결 tmux 세션 감지 및 정리 (앱 시작 시 호출) */
   checkOrphanSessions: (): Promise<{ found: number; cleaned: boolean }> =>

@@ -4,7 +4,8 @@
  * Electron 앱 초기화, 창 생성, 모듈 간 연결만 담당합니다.
  * 실제 로직은 각 모듈에 위임합니다:
  *   - ipc-handlers.ts    — IPC 핸들러 등록
- *   - session-forwarder.ts — PTY 데이터 + usage 감시
+ *   - session-forwarder.ts — PTY 데이터 포워딩
+ *   - statusline-manager.ts — Statusline + Usage API 통합
  *   - pane-poller.ts     — 에이전트 pane 폴링 + 자식 pane 포워딩
  *   - close-handler.ts   — 닫기 다이얼로그 + 번역
  */
@@ -17,8 +18,9 @@ import { SessionManager } from './session-manager'
 import { HooksManager } from './hooks-manager'
 import { NativeChatManager } from './native-chat-manager'
 import { registerIpcHandlers, registerNativeIpcHandlers } from './ipc-handlers'
-import { setupSessionDataForwarding, watchUsageData, stopHudPoller } from './session-forwarder'
+import { setupSessionDataForwarding } from './session-forwarder'
 import { setupPanePolling, setupChildPaneForwarding } from './pane-poller'
+import { startWatching as startStatuslineWatching, cleanup as cleanupStatusline } from './statusline-manager'
 import { setupCloseHandler, dt, setLocale, getCloseAction, resetCloseAction } from './close-handler'
 import { logger } from './logger'
 import { SCREEN_VISIBILITY_MARGIN, WINDOW_SAVE_DEBOUNCE } from '../shared/constants'
@@ -50,11 +52,15 @@ try {
   const _settingsPath = join(app.getPath('home'), '.claude', 'settings.json')
   const _raw = readFileSync(_settingsPath, 'utf-8')
   const _settings = JSON.parse(_raw)
-  if (_settings._mulaudeStatusLineBackup && !_settings.statusLine) {
-    _settings.statusLine = _settings._mulaudeStatusLineBackup
-    delete _settings._mulaudeStatusLineBackup
-    writeFileSync(_settingsPath, JSON.stringify(_settings, null, 2), 'utf-8')
-    logger.info('App', 'Restored statusLine from previous crash')
+  if (_settings._mulaudeStatusLineBackup) {
+    const _current = _settings.statusLine as { command?: string } | undefined
+    // Mulaude statusline이 남아있거나 statusLine이 없는 경우 복원
+    if (!_current || _current.command?.includes('mulaude')) {
+      _settings.statusLine = _settings._mulaudeStatusLineBackup
+      delete _settings._mulaudeStatusLineBackup
+      writeFileSync(_settingsPath, JSON.stringify(_settings, null, 2), 'utf-8')
+      logger.info('App', 'Restored statusLine from previous crash')
+    }
   }
 } catch {
   // 무시 (파일 없음 등)
@@ -212,30 +218,15 @@ app.whenReady().then(() => {
       }
     })
 
-    const cleanupUsageWatch = watchUsageData(mainWindow)
+    // Statusline 감시 시작 (기본: HUD 숨김, 키체인 비활성 — 렌더러가 저장된 설정으로 IPC 갱신)
+    startStatuslineWatching(mainWindow, true, false)
 
     app.on('window-all-closed', () => {
       logger.info('App', 'Window closed, shutting down')
       nativeChatManager.destroyAll()
       nativeChatManager.getSessionStore().saveImmediate()
       hooksManager.cleanup()
-      cleanupUsageWatch()
-      stopHudPoller()
-
-      // statusLine 복원 (Mulaude가 hideHud로 백업한 경우)
-      try {
-        const settingsPath = join(app.getPath('home'), '.claude', 'settings.json')
-        const raw = readFileSync(settingsPath, 'utf-8')
-        const settings = JSON.parse(raw)
-        if (settings._mulaudeStatusLineBackup && !settings.statusLine) {
-          settings.statusLine = settings._mulaudeStatusLineBackup
-          delete settings._mulaudeStatusLineBackup
-          writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf-8')
-          logger.info('App', 'Restored statusLine on exit')
-        }
-      } catch {
-        // 무시
-      }
+      cleanupStatusline()
 
       app.quit()
     })
@@ -257,7 +248,8 @@ app.whenReady().then(() => {
     // 에이전트 pane 폴링 (2초 간격) + 자식 pane 스트리밍 포워딩
     const cleanupPanePolling = setupPanePolling(mainWindow, sessionManager)
     setupChildPaneForwarding(mainWindow, sessionManager)
-    const cleanupUsageWatch = watchUsageData(mainWindow)
+    // Statusline 감시 시작 (기본: HUD 숨김, 키체인 비활성 — 렌더러가 저장된 설정으로 IPC 갱신)
+    startStatuslineWatching(mainWindow, true, false)
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) {
@@ -282,23 +274,7 @@ app.whenReady().then(() => {
       resetCloseAction()
       cleanupPanePolling()
       hooksManager.cleanup()
-      cleanupUsageWatch()
-      stopHudPoller()
-
-      // statusLine 복원 (Mulaude가 hideHud로 백업한 경우)
-      try {
-        const settingsPath = join(app.getPath('home'), '.claude', 'settings.json')
-        const raw = readFileSync(settingsPath, 'utf-8')
-        const settings = JSON.parse(raw)
-        if (settings._mulaudeStatusLineBackup && !settings.statusLine) {
-          settings.statusLine = settings._mulaudeStatusLineBackup
-          delete settings._mulaudeStatusLineBackup
-          writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf-8')
-          logger.info('App', 'Restored statusLine on exit')
-        }
-      } catch {
-        // 무시
-      }
+      cleanupStatusline()
 
       app.quit()
     })

@@ -6,14 +6,12 @@
  */
 
 import { ipcMain, dialog, Notification, clipboard, BrowserWindow } from 'electron'
-import { readFileSync, writeFileSync, existsSync } from 'fs'
 import { writeFile } from 'fs/promises'
-import { join } from 'path'
-import { homedir, tmpdir } from 'os'
+import { tmpdir } from 'os'
 import type { SessionManager } from './session-manager'
 import type { NativeChatManager } from './native-chat-manager'
-import { startHudPoller, stopHudPoller } from './session-forwarder'
 import { showOrphanDialog } from './close-handler'
+import { getCachedUsageData, setHideHud, setKeychainAccess } from './statusline-manager'
 import type { UsageData } from '../shared/types'
 
 /** 이미지 파일 확장자 목록 */
@@ -94,17 +92,10 @@ type TranslateFn = (key: string, vars?: Record<string, string | number>) => stri
 
 /**
  * Claude 사용량 데이터를 읽습니다.
- * claude-hud 플러그인의 캐시 파일에서 사용량 정보를 파싱합니다.
+ * statusline-manager의 OAuth API 캐시에서 반환합니다.
  */
 export function readUsageData(): UsageData | null {
-  try {
-    const cachePath = join(homedir(), '.claude', 'plugins', 'claude-hud', '.usage-cache.json')
-    const raw = readFileSync(cachePath, 'utf-8')
-    const parsed = JSON.parse(raw)
-    return parsed.data || null
-  } catch {
-    return null
-  }
+  return getCachedUsageData()
 }
 
 /**
@@ -253,6 +244,16 @@ export function registerIpcHandlers(
     return readUsageData()
   })
 
+  // HUD 오버레이 숨김 토글 (렌더러 → statusline-manager)
+  ipcMain.on('hud:set-hidden', (_event, hide: boolean) => {
+    setHideHud(hide)
+  })
+
+  // Keychain OAuth 접근 토글 (렌더러 → statusline-manager)
+  ipcMain.on('keychain:set-access', (_event, enabled: boolean) => {
+    setKeychainAccess(enabled)
+  })
+
   // 클립보드 이미지를 파일 경로로 반환 (Finder 파일 복사 → 실제 경로, 스크린샷 → temp 저장)
   ipcMain.handle('clipboard:save-paste-image', async () => {
     try {
@@ -260,50 +261,6 @@ export function registerIpcHandlers(
     } catch (err) {
       console.error('[IPC] clipboard:save-paste-image failed:', err)
       return null
-    }
-  })
-
-  // HUD 오버레이 숨기기/복원
-  ipcMain.handle('hud:set-hidden', async (_event, hide: boolean) => {
-    try {
-      const settingsPath = join(homedir(), '.claude', 'settings.json')
-      if (!existsSync(settingsPath)) return
-
-      const raw = readFileSync(settingsPath, 'utf-8')
-      const settings = JSON.parse(raw)
-
-      if (hide) {
-        // statusLine 백업 후 제거 (터미널 내 시각적 표시만 숨김)
-        if (settings.statusLine) {
-          settings._mulaudeStatusLineBackup = settings.statusLine
-          delete settings.statusLine
-        }
-        // claude-hud 플러그인은 활성 유지 (usage-cache.json 갱신 필요)
-        // 이전 버전에서 비활성화된 경우 복원
-        if (settings._mulaudeHudPluginBackup) {
-          if (settings.enabledPlugins) {
-            settings.enabledPlugins['claude-hud@claude-hud'] = true
-          }
-          delete settings._mulaudeHudPluginBackup
-        }
-        // statusLine 제거로 claude-hud가 실행되지 않으므로 백그라운드 폴링으로 대체
-        const backup = settings._mulaudeStatusLineBackup
-        if (backup?.command) {
-          startHudPoller(backup.command)
-        }
-      } else {
-        // 백그라운드 폴러 중지 (statusLine 복원 → Claude Code가 직접 실행)
-        stopHudPoller()
-        // statusLine 복원
-        if (settings._mulaudeStatusLineBackup) {
-          settings.statusLine = settings._mulaudeStatusLineBackup
-          delete settings._mulaudeStatusLineBackup
-        }
-      }
-
-      writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf-8')
-    } catch (err) {
-      console.error('[IPC] hud:set-hidden failed:', err)
     }
   })
 
@@ -466,45 +423,22 @@ export function registerNativeIpcHandlers(
     return readUsageData()
   })
 
+  // HUD 오버레이 숨김 토글 (렌더러 → statusline-manager)
+  ipcMain.on('hud:set-hidden', (_event, hide: boolean) => {
+    setHideHud(hide)
+  })
+
+  // Keychain OAuth 접근 토글 (렌더러 → statusline-manager)
+  ipcMain.on('keychain:set-access', (_event, enabled: boolean) => {
+    setKeychainAccess(enabled)
+  })
+
   ipcMain.handle('clipboard:save-paste-image', async () => {
     try {
       return await saveClipboardImageToFile()
     } catch (err) {
       console.error('[IPC] clipboard:save-paste-image failed:', err)
       return null
-    }
-  })
-
-  ipcMain.handle('hud:set-hidden', async (_event, hide: boolean) => {
-    try {
-      const settingsPath = join(homedir(), '.claude', 'settings.json')
-      if (!existsSync(settingsPath)) return
-
-      const raw = readFileSync(settingsPath, 'utf-8')
-      const settings = JSON.parse(raw)
-
-      if (hide) {
-        if (settings.statusLine) {
-          settings._mulaudeStatusLineBackup = settings.statusLine
-          delete settings.statusLine
-        }
-        if (settings._mulaudeHudPluginBackup) {
-          if (settings.enabledPlugins) settings.enabledPlugins['claude-hud@claude-hud'] = true
-          delete settings._mulaudeHudPluginBackup
-        }
-        const backup = settings._mulaudeStatusLineBackup
-        if (backup?.command) startHudPoller(backup.command)
-      } else {
-        stopHudPoller()
-        if (settings._mulaudeStatusLineBackup) {
-          settings.statusLine = settings._mulaudeStatusLineBackup
-          delete settings._mulaudeStatusLineBackup
-        }
-      }
-
-      writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf-8')
-    } catch (err) {
-      console.error('[IPC] hud:set-hidden failed:', err)
     }
   })
 

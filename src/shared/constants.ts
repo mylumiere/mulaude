@@ -83,12 +83,12 @@ export const SESSION_STORE_SAVE_DEBOUNCE = 500
 /** 화면 가시성 판정 마진 (px) */
 export const SCREEN_VISIBILITY_MARGIN = 100
 
-/* ═══════ Usage ═══════ */
+/* ═══════ Statusline / Usage ═══════ */
 
-/** usage 캐시 감시 간격 (ms) */
-export const USAGE_WATCH_INTERVAL = 5000
-/** HUD 숨김 시 백그라운드 폴링 간격 (ms) */
-export const HUD_POLL_INTERVAL = 30000
+/** statusline context 파일 폴링 간격 (ms) */
+export const STATUSLINE_CTX_POLL_INTERVAL = 3000
+/** OAuth Usage API 호출 간격 (ms) */
+export const USAGE_API_POLL_INTERVAL = 60000
 
 /* ═══════ tmux ═══════ */
 

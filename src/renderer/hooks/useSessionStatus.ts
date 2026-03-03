@@ -7,7 +7,7 @@
  *   - useSessionAgents: 팀 에이전트 목록 관리, pane 활동 보강
  */
 
-import { useCallback } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import type { SessionStatus, AgentInfo } from '../../shared/types'
 import type { Locale } from '../i18n'
 import { useSessionPtyState } from './useSessionPtyState'
@@ -51,7 +51,8 @@ export function useSessionStatus({
     initSession,
     cleanupPtyState,
     updateStatus,
-    sessionMetas
+    sessionMetas,
+    setContextFromStatusline
   } = useSessionPtyState({ updateSessionSubtitleRef })
 
   // Hook 이벤트 처리 (통합 메타 참조)
@@ -61,6 +62,50 @@ export function useSessionStatus({
     updateStatus,
     sessionMetas
   })
+
+  // ── statusline context batch 리스너 ──
+  // claudeSessionId → mulaudeSessionId 역매핑을 통해 context % 업데이트
+  const claudeSessionIdsRef = useRef(claudeSessionIds)
+  claudeSessionIdsRef.current = claudeSessionIds
+
+  // 매핑 전 도착한 context 데이터 버퍼 (claudeSessionId → pct)
+  const unmatchedCtxRef = useRef<Record<string, number>>({})
+
+  useEffect(() => {
+    return window.api.onContextBatch((batch: Record<string, number>) => {
+      // claude → mulaude 역매핑 구축
+      const reverseMap: Record<string, string> = {}
+      for (const [mulaudeId, claudeId] of Object.entries(claudeSessionIdsRef.current)) {
+        reverseMap[claudeId] = mulaudeId
+      }
+
+      for (const [claudeId, pct] of Object.entries(batch)) {
+        const mulaudeId = reverseMap[claudeId]
+        if (mulaudeId) {
+          setContextFromStatusline(mulaudeId, pct)
+        } else {
+          // 아직 매핑되지 않은 claude session → 버퍼에 저장
+          unmatchedCtxRef.current[claudeId] = pct
+        }
+      }
+    })
+  }, [setContextFromStatusline])
+
+  // claudeSessionIds 변경 시 버퍼된 데이터 flush
+  useEffect(() => {
+    const buf = unmatchedCtxRef.current
+    if (Object.keys(buf).length === 0) return
+
+    for (const [claudeId, pct] of Object.entries(buf)) {
+      for (const [mulaudeId, cId] of Object.entries(claudeSessionIds)) {
+        if (cId === claudeId) {
+          setContextFromStatusline(mulaudeId, pct)
+          delete buf[claudeId]
+          break
+        }
+      }
+    }
+  }, [claudeSessionIds, setContextFromStatusline])
 
   // 통합 정리 함수
   const cleanupSession = useCallback((id: string) => {

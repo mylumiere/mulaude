@@ -238,10 +238,12 @@ export default function App(): JSX.Element {
           onThemeChange={settings.handleThemeChange}
           fontSize={settings.fontSize}
           onFontSizeChange={settings.handleFontSizeChange}
-          notifSettings={settings.notifSettings}
-          onNotifChange={settings.handleNotifChange}
           hideHud={settings.hideHud}
           onHideHudChange={settings.handleHideHudChange}
+          keychainAccess={settings.keychainAccess}
+          onKeychainAccessChange={settings.handleKeychainAccessChange}
+          notifSettings={settings.notifSettings}
+          onNotifChange={settings.handleNotifChange}
           sessions={sessionManager.sessions}
           onClose={() => settings.setShowSettings(false)}
         />

@@ -302,11 +302,18 @@
 
 .notif-toggle-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: 12px;
+}
+
+.notif-toggle-row > div {
+  flex: 1;
+  min-width: 0;
 }
 
 .notif-toggle-label {
+  display: block;
   font-family: var(--font-ui);
   font-size: 0.9rem;
   color: var(--text-secondary);
@@ -315,6 +322,7 @@
 .notif-toggle {
   width: 36px;
   height: 20px;
+  flex-shrink: 0;
   border-radius: 10px;
   background: var(--bg-glass);
   cursor: pointer;
@@ -322,6 +330,7 @@
   transition: background var(--transition-fast);
   padding: 0;
   border: 1px solid var(--border-subtle);
+  margin-top: 2px;
 }
 
 .notif-toggle--on {
@@ -366,10 +375,74 @@
 
 /* ─── Settings Hint ─── */
 .settings-hint {
+  display: block;
   font-size: 0.7rem;
   color: var(--text-muted);
   margin-top: 4px;
   line-height: 1.4;
+}
+
+.settings-hint--warn {
+  color: var(--status-error, #e57373);
+  opacity: 0.8;
+}
+
+.settings-hint--info {
+  color: var(--status-thinking, #7baaf7);
+  margin-top: 8px;
+  padding: 6px 8px;
+  background: rgba(123, 170, 247, 0.08);
+  border-radius: var(--radius-sm, 4px);
+}
+
+/* ─── Confirm Inline ─── */
+.settings-confirm {
+  margin-top: 6px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm, 4px);
+}
+
+.settings-confirm-text {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+.settings-confirm-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.settings-confirm-btn {
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  border-radius: var(--radius-sm, 4px);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-glass);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.settings-confirm-btn:hover {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+.settings-confirm-btn--ok {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: #fff;
+}
+
+.settings-confirm-btn--ok:hover {
+  opacity: 0.9;
+  color: #fff;
 }
 
 /* ─── Locale Buttons ─── */

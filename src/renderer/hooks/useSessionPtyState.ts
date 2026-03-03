@@ -31,6 +31,8 @@ interface UseSessionPtyStateReturn {
   updateStatus: (id: string, status: SessionStatus, source: 'hook' | 'pty') => void
   /** 세션별 통합 메타데이터 참조 */
   sessionMetas: React.MutableRefObject<Record<string, SessionMeta>>
+  /** statusline 기반 context % 설정 (PTY 파싱보다 우선) */
+  setContextFromStatusline: (id: string, pct: number) => void
 }
 
 export function useSessionPtyState({
@@ -197,12 +199,18 @@ export function useSessionPtyState({
     })
   }, [updateStatus])
 
+  /** statusline IPC 기반 context % 업데이트 (PTY 파싱보다 우선) */
+  const setContextFromStatusline = useCallback((id: string, pct: number) => {
+    setContextPercents((prev) => prev[id] === pct ? prev : { ...prev, [id]: pct })
+  }, [])
+
   return {
     sessionStatuses,
     contextPercents,
     initSession,
     cleanupPtyState,
     updateStatus,
-    sessionMetas
+    sessionMetas,
+    setContextFromStatusline
   }
 }

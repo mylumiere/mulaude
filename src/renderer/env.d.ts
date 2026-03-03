@@ -29,7 +29,7 @@ interface Window {
     sendNotification: (title: string, body: string) => void
     readUsage: () => Promise<UsageData | null>
     onUsageUpdated: (callback: (data: UsageData | null) => void) => () => void
-    setHudHidden: (hide: boolean) => Promise<void>
+    onContextBatch: (callback: (data: Record<string, number>) => void) => () => void
     setLocale: (locale: string) => void
     updateSessionName: (id: string, name: string) => void
     updateSessionSubtitle: (id: string, subtitle: string) => void
@@ -49,6 +49,8 @@ interface Window {
     onNativeInputRequest: (cb: (sessionId: string, request: NativeInputRequest) => void) => () => void
     updateNativeQueue: (sessionId: string, text: string) => void
     clearNativeQueue: (sessionId: string) => void
+    setHudHidden: (hide: boolean) => void
+    setKeychainAccess: (enabled: boolean) => void
     checkOrphanSessions: () => Promise<{ found: number; cleaned: boolean }>
   }
 }
