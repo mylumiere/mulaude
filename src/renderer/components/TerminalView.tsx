@@ -5,6 +5,10 @@
  * useXtermTerminal 공통 훅을 사용하여 초기화, 테마 적용, 리사이즈를 처리합니다.
  *
  * 마운트 시 tmux 화면 캡처로 이전 출력을 복원합니다.
+ *
+ * PTY 데이터 버퍼링:
+ * recapture 중(reset+write)에는 PTY 데이터를 pendingData에 쌓아두고,
+ * 캡처 write 완료 후 일괄 재생하여 데이터 인터리빙을 방지합니다.
  */
 
 import { useRef, useEffect, useState } from 'react'
@@ -42,7 +46,7 @@ export default function TerminalView({ sessionId, isActive, themeId, contextPerc
     return () => { cancelled = true }
   }, [sessionId])
 
-  const { terminalRef, recapturingRef } = useXtermTerminal({
+  const { terminalRef, recapturingRef, pendingDataRef } = useXtermTerminal({
     containerRef,
     themeId,
     fontSize: TERMINAL_FONT_SIZE,
@@ -52,22 +56,26 @@ export default function TerminalView({ sessionId, isActive, themeId, contextPerc
     onData: (data) => window.api.writeSession(sessionId, data),
     onResize: (cols, rows) => window.api.resizeSession(sessionId, cols, rows),
     onRecapture: (cols, rows) => window.api.captureScreen(sessionId, cols, rows),
+    onScroll: (direction, lines) => window.api.scrollSession(sessionId, direction, lines),
     initialContent,
     disabled: !ready,
     deps: [sessionId, ready]
   })
 
   // PTY 데이터 수신 (세션별 리스너 — O(1) 디스패치)
-  // 재캡처 중(recapturingRef)일 때는 PTY 데이터 쓰기를 억제.
-  // tmux 리사이즈 시 보내는 화면 재그리기 시퀀스와 재캡처 내용이 중복되어
-  // 화면 깨짐(잘림/중복 렌더링)을 유발하기 때문.
+  // recapture 중에는 PTY 데이터를 pendingDataRef에 버퍼링하여
+  // reset()+write(captured) 사이에 데이터가 끼어드는 것을 방지.
+  // 캡처 완료 후 버퍼링된 데이터를 순서대로 재생합니다.
   useEffect(() => {
     return window.api.onSessionDataById(sessionId, (data: string) => {
-      if (terminalRef.current && !recapturingRef.current) {
+      if (!terminalRef.current) return
+      if (recapturingRef.current) {
+        pendingDataRef.current.push(data)
+      } else {
         terminalRef.current.write(data)
       }
     })
-  }, [sessionId, terminalRef, recapturingRef])
+  }, [sessionId, terminalRef, recapturingRef, pendingDataRef])
 
   return (
     <div

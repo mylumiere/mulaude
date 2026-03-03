@@ -128,7 +128,7 @@ export function listMulaudeTmuxSessions(tmuxPath: string): string[] {
  *   3. `tmux set-environment` — MULAUDE_SESSION_ID, MULAUDE_IPC_DIR 등 환경변수 주입
  *   4. `tmux set-option history-limit 50000` — 스크롤백 버퍼 확장
  *   5. `tmux set-option status off` — 상태바 비활성화
- *   6. `tmux set-option mouse on` — 마우스 모드 활성화
+ *   6. `tmux set-option mouse on` — 마우스 모드 활성화 (copy-mode 스크롤용)
  *   7. `tmux set-option allow-passthrough on` — 이스케이프 시퀀스 패스스루
  *
  * @param tmuxPath - tmux 실행 파일 경로
@@ -178,8 +178,8 @@ export function createTmuxSession(
     console.warn('[tmux-utils] set status off failed')
   }
 
-  // 6) 마우스 모드 활성화 (스크롤 이벤트를 tmux가 처리하도록)
-  //    alt buffer에서 xterm.js가 wheel을 화살표 키로 변환하는 문제 방지
+  // 6) 마우스 모드 활성화 (copy-mode에서 스크롤이 동작하려면 필요)
+  //    휠 이벤트 자체는 렌더러에서 IPC로 전달하여 copy-mode 명령으로 변환
   if (execTmux(tmuxPath, ['set-option', '-t', name, 'mouse', 'on']) === null) {
     console.warn('[tmux-utils] set mouse failed')
   }
@@ -188,9 +188,8 @@ export function createTmuxSession(
   execTmux(tmuxPath, ['set-option', '-t', name, 'allow-passthrough', 'on'])
 
   // 8) extended-keys: CSI u (kitty keyboard protocol) 지원
-  //    Claude Code가 Shift+Enter(\x1b[13;2u]) 등 수식키 조합을 인식하려면
-  //    tmux가 CSI u 형식으로 내부 프로그램에 전달해야 함.
-  //    이 옵션 없이는 Shift+Enter가 일반 Enter(\r)로 변환됨.
+  //    수식키 조합(Ctrl+방향키 등)을 내부 프로그램에 정확히 전달.
+  //    Shift+Enter 줄바꿈은 \n(LF) 직접 전송으로 처리하므로 'on'으로 충분.
   execTmux(tmuxPath, ['set-option', '-t', name, 'extended-keys', 'on'])
 }
 
@@ -627,4 +626,32 @@ export async function resizeTmuxWindowAsync(
   try {
     await execFileAsync(tmuxPath, ['-u', 'refresh-client', '-t', name], { timeout: TMUX_EXEC_TIMEOUT })
   } catch { /* 무시 */ }
+}
+
+/**
+ * tmux copy-mode 스크롤.
+ *
+ * 렌더러의 휠 이벤트를 IPC로 받아 tmux 명령으로 변환합니다.
+ * 글로벌 bind-key를 건드리지 않고, tmux 명령을 직접 실행하여
+ * copy-mode 진입 + N줄 스크롤합니다.
+ * - scroll-up: copy-mode 진입(-e: 하단 도달 시 자동 종료) 후 위로
+ * - scroll-down: 이미 copy-mode일 때만 아래로 (아니면 무시)
+ *
+ * @param tmuxPath - tmux 실행 파일 경로
+ * @param sessionName - tmux 세션명
+ * @param direction - 스크롤 방향
+ * @param lines - 스크롤할 줄 수 (기본 1)
+ */
+export async function scrollTmuxPaneAsync(
+  tmuxPath: string,
+  sessionName: string,
+  direction: 'up' | 'down',
+  lines = 1
+): Promise<void> {
+  const target = `${sessionName}:0.0`
+  if (direction === 'up') {
+    await execTmuxAsync(tmuxPath, ['copy-mode', '-e', '-t', target])
+  }
+  const cmd = direction === 'up' ? 'scroll-up' : 'scroll-down'
+  await execTmuxAsync(tmuxPath, ['send-keys', '-t', target, '-X', '-N', String(lines), cmd])
 }

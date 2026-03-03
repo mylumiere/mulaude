@@ -36,7 +36,8 @@ import {
   listTmuxPanesAsync,
   captureTmuxPaneAsync,
   captureFullScrollbackAsync,
-  setAutoBreakPaneHook
+  setAutoBreakPaneHook,
+  scrollTmuxPaneAsync
 } from './tmux-utils'
 import { ChildPaneStreamer } from './child-pane-streamer'
 import { cleanupAgentState } from './agent-matcher'
@@ -540,9 +541,12 @@ export class SessionManager {
     if (!session?.tmuxSessionName) return null
     // cols/rows가 제공되면 tmux resize를 먼저 await (atomic resize+capture)
     if (cols !== undefined && rows !== undefined) {
+      console.log(`[captureScreen] ${id}: resize ${cols}x${rows} before capture`)
       await resizeTmuxWindowAsync(this.tmuxPath, session.tmuxSessionName, cols, rows)
     }
-    return captureFullScrollbackAsync(this.tmuxPath, session.tmuxSessionName, 0)
+    const result = await captureFullScrollbackAsync(this.tmuxPath, session.tmuxSessionName, 0)
+    console.log(`[captureScreen] ${id}: captured ${result ? `${result.length} chars` : 'NULL'}`)
+    return result
   }
 
   /**
@@ -575,6 +579,16 @@ export class SessionManager {
         resizeTmuxWindowAsync(this.tmuxPath, session.tmuxSessionName, cols, rows).catch(() => {})
       }
     }
+  }
+
+  /**
+   * tmux copy-mode 스크롤 (1줄 단위, fire-and-forget).
+   */
+  scroll(id: string, direction: 'up' | 'down', lines = 1): void {
+    if (!this.tmuxPath) return
+    const session = this.sessions.get(id)
+    if (!session?.tmuxSessionName) return
+    scrollTmuxPaneAsync(this.tmuxPath, session.tmuxSessionName, direction, lines).catch(() => {})
   }
 
   /**

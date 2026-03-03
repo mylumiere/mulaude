@@ -219,6 +219,11 @@ export function registerIpcHandlers(
     sessionManager.resize(id, cols, rows)
   })
 
+  // tmux copy-mode 스크롤 (1줄 단위)
+  ipcMain.on('session:scroll', (_event, id: string, direction: 'up' | 'down', lines: number) => {
+    sessionManager.scroll(id, direction, lines)
+  })
+
   // 폴더 선택 다이얼로그
   ipcMain.handle('dialog:openDirectory', async () => {
     const result = await dialog.showOpenDialog({

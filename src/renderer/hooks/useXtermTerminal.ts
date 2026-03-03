@@ -3,6 +3,16 @@
  *
  * TerminalView와 AgentTerminal에서 공유하는 xterm 초기화, 테마 적용,
  * 리사이즈 감지 로직을 통합합니다.
+ *
+ * 스크롤백 동기화:
+ * Claude Code TUI는 커서 포지셔닝으로 뷰포트를 제자리 갱신하므로,
+ * xterm.js 스크롤백에 새 내용이 자연스럽게 쌓이지 않습니다.
+ * tmux는 자체 스크롤백을 관리하므로, cols 변경 시 tmux에서 전체 캡처하여
+ * xterm 버퍼를 교체(recapture)합니다.
+ *
+ * recapture 중 PTY 데이터 처리:
+ * reset() + write(captured) 사이에 PTY 데이터가 끼어들면 화면이 깨지므로,
+ * recapture 중 PTY 데이터를 버퍼에 쌓아두고 완료 후 일괄 재생합니다.
  */
 
 import { useEffect, useRef } from 'react'
@@ -34,6 +44,9 @@ interface UseXtermTerminalParams {
   /** cols 변경 시 스크롤백 재캡처 콜백 (tmux reflow된 내용 복원)
    *  cols/rows를 전달하면 main에서 tmux resize를 await한 후 캡처 (atomic) */
   onRecapture?: (cols: number, rows: number) => Promise<string | null>
+  /** 마우스 휠 스크롤 콜백 (tmux copy-mode 스크롤용)
+   *  제공 시 휠 이벤트를 가로채서 이 콜백 호출, 미제공 시 xterm 기본 처리 */
+  onScroll?: (direction: 'up' | 'down', lines: number) => void
   /** 초기 내용 (마운트 직후 write) */
   initialContent?: string
   /** 터미널 비활성화 (pending 상태 등에서 xterm 생성 방지) */
@@ -45,8 +58,10 @@ interface UseXtermTerminalParams {
 interface UseXtermTerminalReturn {
   terminalRef: React.MutableRefObject<Terminal | null>
   fitAddonRef: React.MutableRefObject<FitAddon | null>
-  /** 재캡처 진행 중 여부 — true일 때 PTY 데이터 쓰기를 억제해야 함 */
+  /** 재캡처 진행 중 여부 — true일 때 PTY 데이터를 pendingData에 버퍼링해야 함 */
   recapturingRef: React.MutableRefObject<boolean>
+  /** 재캡처 중 버퍼링된 PTY 데이터 */
+  pendingDataRef: React.MutableRefObject<string[]>
 }
 
 export function useXtermTerminal({
@@ -59,6 +74,7 @@ export function useXtermTerminal({
   onData,
   onResize,
   onRecapture,
+  onScroll,
   initialContent,
   disabled,
   deps = []
@@ -66,6 +82,7 @@ export function useXtermTerminal({
   const xtermRef = useRef<Terminal | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
   const recapturingRef = useRef(false)
+  const pendingDataRef = useRef<string[]>([])
 
   // 터미널 초기화
   useEffect(() => {
@@ -89,11 +106,22 @@ export function useXtermTerminal({
     terminal.loadAddon(fitAddon)
     terminal.open(containerRef.current)
 
-    // 마우스 트래킹 차단 — Claude Code가 보내는 mouse tracking enable 시퀀스를 무시
+    // 마우스 트래킹 + alternate screen 차단
+    // 마우스 트래킹을 차단하여 xterm.js 네이티브 텍스트 선택을 유지합니다.
+    // 휠 스크롤은 별도 wheel 리스너에서 IPC를 통해 tmux copy-mode로 전달.
+    // - 마우스 트래킹: 1000,1002,1003,1004,1006,1015,1016
+    // - alternate screen: 47,1047,1049
+    const blockedSetParams = [1000, 1002, 1003, 1004, 1006, 1015, 1016, 47, 1047, 1049]
     terminal.parser.registerCsiHandler({ prefix: '?', final: 'h' }, (params) => {
-      const mouseParams = [1000, 1002, 1003, 1004, 1006, 1015, 1016]
       for (let i = 0; i < params.length; i++) {
-        if (mouseParams.includes(params[i] as number)) return true
+        if (blockedSetParams.includes(params[i] as number)) return true
+      }
+      return false
+    })
+    const blockedResetParams = [47, 1047, 1049]
+    terminal.parser.registerCsiHandler({ prefix: '?', final: 'l' }, (params) => {
+      for (let i = 0; i < params.length; i++) {
+        if (blockedResetParams.includes(params[i] as number)) return true
       }
       return false
     })
@@ -102,23 +130,26 @@ export function useXtermTerminal({
     terminal.parser.registerCsiHandler({ prefix: '?', final: 'c' }, () => true) // DA1
     terminal.parser.registerCsiHandler({ final: 'R' }, () => true)              // CPR
 
+    // 스크롤백 보호: 파괴적 시퀀스 차단
+    terminal.parser.registerCsiHandler({ final: 'J' }, (params) => {
+      if (params[0] === 3) return true // \e[3J: clear scrollback
+      return false
+    })
+    terminal.parser.registerEscHandler({ final: 'c' }, () => true) // \ec: full reset
+
     // 키 이벤트 핸들러: 앱 단축키는 window로 전달, 나머지는 xterm 처리
     terminal.attachCustomKeyEventHandler((event: KeyboardEvent) => {
       // Cmd 조합은 앱 단축키 → window로 전달 (Cmd+Shift+Enter = 줌 토글 등)
       if (event.metaKey) return false
-      // Shift+Enter: keydown에서만 전송, keypress/keyup 모두 차단
-      // keypress까지 통과시키면 xterm이 \r도 보내서 줄바꿈+즉시제출 됨
+      // Shift+Enter → \n(LF) 전송으로 줄바꿈 (Enter는 xterm이 \r 전송 → 제출)
+      // keydown에서만 전송, keypress/keyup은 차단 (xterm이 \r 중복 전송 방지)
       if (event.key === 'Enter' && event.shiftKey) {
-        if (event.type === 'keydown') onData('\x1b[13;2u')
+        if (event.type === 'keydown') onData('\n')
         return false
       }
       if (event.type !== 'keydown') return true
       return true
     })
-
-    if (initialContent) {
-      terminal.write(initialContent)
-    }
 
     xtermRef.current = terminal
     fitAddonRef.current = fitAddon
@@ -127,6 +158,12 @@ export function useXtermTerminal({
     requestAnimationFrame(() => {
       if (!containerRef.current || containerRef.current.clientHeight === 0) return
       fitAddon.fit()
+
+      // initialContent를 먼저 표시 (빈 화면 방지)
+      if (initialContent) {
+        terminal.write(initialContent)
+      }
+
       onResize(terminal.cols, terminal.rows)
       if (isFocused !== false) terminal.focus()
     })
@@ -134,8 +171,6 @@ export function useXtermTerminal({
     const onDataDisposable = terminal.onData(onData)
 
     // 이미지 붙여넣기 지원
-    // Cmd+V 시 클립보드에 이미지만 있으면 temp 파일로 저장 후 경로를 PTY에 전달.
-    // Claude Code가 파일 경로를 인식하여 이미지를 처리함.
     const handleImagePaste = (e: KeyboardEvent): void => {
       if (!xtermRef.current || !containerRef.current) return
       if (!containerRef.current.contains(document.activeElement)) return
@@ -148,9 +183,32 @@ export function useXtermTerminal({
     }
     document.addEventListener('keydown', handleImagePaste)
 
+    // 마우스 휠 → tmux copy-mode 스크롤 (IPC 경유)
+    // onScroll 콜백이 제공되면 휠을 가로채서 tmux 명령으로 1줄씩 스크롤.
+    // capture phase로 등록: xterm.js가 먼저 소비하기 전에 가로챔.
+    const wheelContainer = containerRef.current
+    let wheelAccumulator = 0
+    const handleWheel = onScroll ? (e: WheelEvent): void => {
+      if (!xtermRef.current) return
+      e.preventDefault()
+      e.stopPropagation()
+      const term = xtermRef.current
+      const rect = wheelContainer.getBoundingClientRect()
+      const cellHeight = rect.height / term.rows
+      const delta = e.deltaMode === 1 ? e.deltaY * cellHeight : e.deltaY
+      wheelAccumulator += delta
+      const absAcc = Math.abs(wheelAccumulator)
+      const lines = Math.floor(absAcc / cellHeight)
+      if (lines < 1) return
+      const direction = wheelAccumulator < 0 ? 'up' : 'down'
+      wheelAccumulator = Math.sign(wheelAccumulator) * (absAcc - lines * cellHeight)
+      onScroll(direction, lines)
+    } : null
+    if (handleWheel) {
+      wheelContainer.addEventListener('wheel', handleWheel, { capture: true, passive: false })
+    }
+
     // 파일 드래그 앤 드롭 지원 (Finder → 터미널)
-    // capture phase로 등록: xterm 내부 요소가 이벤트를 소비하기 전에 가로챔
-    // Claude Code는 이미지, PDF, 텍스트/코드 등 다양한 파일 경로를 인식
     const handleFileDragOver = (e: DragEvent): void => {
       e.preventDefault()
     }
@@ -167,48 +225,61 @@ export function useXtermTerminal({
     document.addEventListener('drop', handleFileDrop, true)
 
     // ResizeObserver — 컨테이너 크기 변경 시 fit (유일한 리사이즈 소스)
-    // trailing-edge 디바운스: 최종 크기를 확실히 잡음
     let resizeTimer: ReturnType<typeof setTimeout> | null = null
     const resizeObserver = new ResizeObserver(() => {
       if (resizeTimer) clearTimeout(resizeTimer)
       resizeTimer = setTimeout(() => {
         resizeTimer = null
         if (!fitAddonRef.current || !xtermRef.current) return
+        if (!containerRef.current || containerRef.current.clientHeight === 0) return
         const prevCols = xtermRef.current.cols
         fitAddonRef.current.fit()
         const newCols = xtermRef.current.cols
         const newRows = xtermRef.current.rows
         onResize(newCols, newRows)
-        if (newCols !== prevCols) {
-          // cols 변경: tmux가 hard-wrap한 이전 스크롤백은 reflow 불가
-          // → xterm 스크롤백 비우고 tmux에서 reflow된 내용 재캡처
-          //
-          // 재캡처 중 PTY 데이터 억제:
-          // tmux 리사이즈 시 화면 재그리기 시퀀스가 PTY로 흘러들어오는데,
-          // 이걸 xterm에 쓰면 재캡처 내용과 중복되어 깨짐 발생.
-          // 재캡처 완료까지 PTY 쓰기를 막고, 캡처 내용으로 일괄 교체.
+
+        if (newCols !== prevCols && onRecapture) {
+          // cols 변경: tmux 스크롤백을 재캡처하여 xterm 버퍼 교체
+          // recapture 중 PTY 데이터는 pendingDataRef에 버퍼링 → 완료 후 재생
           recapturingRef.current = true
-          if (onRecapture) {
-            const term = xtermRef.current
-            // onRecapture에 cols/rows를 전달하여 main에서 tmux resize를
-            // await한 후 캡처 (atomic resize+capture — 타이밍 레이스 제거)
-            //
-            // reset()은 캡처 성공 후에만 실행:
-            // 캡처 실패(maxBuffer 초과 등) 시 xterm 자체 reflow 내용을 유지하여
-            // 스크롤백 소실을 방지합니다.
-            onRecapture(newCols, newRows).then((screen) => {
-              if (screen && term) {
-                term.reset()
-                term.write(screen)
-              }
-            }).catch(() => {}).finally(() => {
+          pendingDataRef.current = []
+          const term = xtermRef.current
+
+          onRecapture(newCols, newRows).then((screen) => {
+            if (screen && term) {
+              term.reset()
+              term.write(screen, () => {
+                // 캡처 내용이 완전히 파싱된 후 버퍼링된 PTY 데이터 재생
+                const pending = pendingDataRef.current
+                pendingDataRef.current = []
+                recapturingRef.current = false
+                for (const data of pending) {
+                  term.write(data)
+                }
+                term.refresh(0, term.rows - 1)
+              })
+            } else {
+              // 캡처 실패: 버퍼링된 PTY 데이터 재생 후 xterm reflow 유지
+              const pending = pendingDataRef.current
+              pendingDataRef.current = []
               recapturingRef.current = false
-              if (term) term.refresh(0, term.rows - 1)
-            })
-          } else {
+              if (term) {
+                for (const data of pending) {
+                  term.write(data)
+                }
+                term.refresh(0, term.rows - 1)
+              }
+            }
+          }).catch(() => {
+            const pending = pendingDataRef.current
+            pendingDataRef.current = []
             recapturingRef.current = false
-            xtermRef.current.refresh(0, newRows - 1)
-          }
+            if (term) {
+              for (const data of pending) {
+                term.write(data)
+              }
+            }
+          })
         } else {
           xtermRef.current.refresh(0, newRows - 1)
         }
@@ -221,6 +292,7 @@ export function useXtermTerminal({
 
     return () => {
       if (resizeTimer) clearTimeout(resizeTimer)
+      if (handleWheel) wheelContainer.removeEventListener('wheel', handleWheel, { capture: true })
       document.removeEventListener('keydown', handleImagePaste)
       document.removeEventListener('dragover', handleFileDragOver, true)
       document.removeEventListener('drop', handleFileDrop, true)
@@ -267,5 +339,5 @@ export function useXtermTerminal({
     return () => window.removeEventListener('focus', handleWindowFocus)
   }, [isFocused, isActive])
 
-  return { terminalRef: xtermRef, fitAddonRef, recapturingRef }
+  return { terminalRef: xtermRef, fitAddonRef, recapturingRef, pendingDataRef }
 }

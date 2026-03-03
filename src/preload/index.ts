@@ -56,6 +56,10 @@ const api = {
   resizeSession: (id: string, cols: number, rows: number): void =>
     ipcRenderer.send('session:resize', id, cols, rows),
 
+  /** tmux copy-mode 스크롤 (fire-and-forget) */
+  scrollSession: (id: string, direction: 'up' | 'down', lines?: number): void =>
+    ipcRenderer.send('session:scroll', id, direction, lines ?? 1),
+
   /** 전체 세션 데이터 이벤트를 수신합니다 (상태 파싱용 글로벌 리스너) */
   onSessionData: (callback: (id: string, data: string) => void): (() => void) => {
     globalDataCallbacks.add(callback)

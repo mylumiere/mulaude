@@ -1,5 +1,32 @@
 # Changelog
 
+## [1.1.20] - 2026-03-04
+
+### 터미널 안정성 대폭 개선
+
+v1.1.14~19 핫픽스들을 통합한 안정화 릴리스입니다.
+
+#### 스크롤백 시스템 재설계
+- **IPC 기반 tmux copy-mode 스크롤**: 마우스 휠로 tmux 스크롤백에 접근 가능
+  - 글로벌 tmux 바인딩을 건드리지 않고, tmux 명령을 직접 실행 (copy-mode + send-keys -X -N scroll-up/down)
+  - 휠 delta에 비례한 자연스러운 스크롤 속도 (cellHeight 단위 누적)
+  - xterm.js 네이티브 텍스트 선택(드래그 복사) 유지
+- **파괴적 시퀀스 차단**: `\e[3J` (clear scrollback), `\ec` (full reset) 차단으로 스크롤백 보호
+- **PTY 응답 소비**: DA1/CPR 응답이 raw 텍스트로 출력되지 않도록 파서 핸들러 등록
+
+#### 리사이즈 안정화
+- **Atomic resize+capture**: cols 변경 시 tmux resize를 await한 후 캡처 (경쟁 조건 제거)
+- **PTY 데이터 버퍼링**: recapture 중(reset+write) PTY 데이터를 pendingDataRef에 버퍼링 → 완료 후 순차 재생
+- **maxBuffer: Infinity**: 긴 대화 세션에서 캡처 사이즈 초과 에러 방지
+
+#### 줌 토글 안정화
+- **CSS zoom 방식**: TerminalGrid에서 `display: none` 전환으로 xterm 인스턴스 유지 (언마운트 없음)
+- Cmd+Shift+Enter 줌 토글 시 스크롤백과 터미널 상태 완전 보존
+
+#### 기타
+- **Shift+Enter 줄바꿈 수정**: `\n`(LF) 직접 전송 방식으로 변경 (CSI u 프로토콜 의존 제거, tmux 설정 무관하게 동작)
+- 새 IPC 채널: `session:scroll` (R→M, tmux copy-mode 스크롤)
+
 ## [1.1.12] - 2026-03-02
 
 ### 신규 기능

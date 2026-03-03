@@ -290,6 +290,13 @@ export default function TerminalGrid({
     )
   }
 
+  /** 노드가 줌된 패인을 포함하는지 확인 (재귀) */
+  const containsZoomedPane = (node: PaneNode): boolean => {
+    if (!tree.zoomedPaneId) return true
+    if (node.type === 'leaf') return node.id === tree.zoomedPaneId
+    return (node as PaneBranch).children.some(c => containsZoomedPane(c))
+  }
+
   /** 브랜치 렌더링 (재귀) */
   const renderBranch = (branch: PaneBranch): JSX.Element => {
     const isHorizontal = branch.direction === 'horizontal'
@@ -298,23 +305,28 @@ export default function TerminalGrid({
         className={`terminal-grid-branch terminal-grid-branch--${branch.direction}`}
         data-branch-id={branch.id}
       >
-        {branch.children.map((child, i) => (
-          <div key={child.id} style={{ display: 'contents' }}>
-            <div
-              className="terminal-grid-branch-child"
-              style={{ flex: branch.ratios[i] }}
-            >
-              {renderNode(child)}
-            </div>
-            {/* 리사이즈 핸들 (마지막 자식 제외) */}
-            {i < branch.children.length - 1 && (
+        {branch.children.map((child, i) => {
+          const hiddenByZoom = !!tree.zoomedPaneId && !containsZoomedPane(child)
+          return (
+            <div key={child.id} style={{ display: 'contents' }}>
               <div
-                className={`terminal-grid-handle terminal-grid-handle--${isHorizontal ? 'col' : 'row'}`}
-                onMouseDown={onResize(branch.id, i)}
-              />
-            )}
-          </div>
-        ))}
+                className="terminal-grid-branch-child"
+                style={hiddenByZoom
+                  ? { display: 'none' }
+                  : { flex: tree.zoomedPaneId ? 1 : branch.ratios[i] }}
+              >
+                {renderNode(child)}
+              </div>
+              {/* 리사이즈 핸들 (마지막 자식 제외, 줌 시 숨김) */}
+              {i < branch.children.length - 1 && !tree.zoomedPaneId && (
+                <div
+                  className={`terminal-grid-handle terminal-grid-handle--${isHorizontal ? 'col' : 'row'}`}
+                  onMouseDown={onResize(branch.id, i)}
+                />
+              )}
+            </div>
+          )
+        })}
       </div>
     )
   }
@@ -325,43 +337,19 @@ export default function TerminalGrid({
     return renderBranch(node as PaneBranch)
   }
 
-  /** 줌 모드: 포커스된 리프만 전체 표시 */
-  const renderZoomed = (): JSX.Element | null => {
-    if (!tree.zoomedPaneId) return null
-    const findLeaf = (n: PaneNode): PaneLeaf | null => {
-      if (n.type === 'leaf') return n.id === tree.zoomedPaneId ? n : null
-      for (const c of n.children) {
-        const found = findLeaf(c)
-        if (found) return found
-      }
-      return null
-    }
-    const leaf = findLeaf(tree.root)
-    if (!leaf) return null
-    return (
-      <div className="terminal-grid terminal-grid--zoomed">
-        {renderLeaf(leaf)}
-      </div>
-    )
-  }
-
   return (
     <>
-      {tree.zoomedPaneId ? (
-        renderZoomed()
-      ) : (
-        <div
-          className={`terminal-grid${isDragging ? ' terminal-grid--dragging' : ''}`}
-          onDragEnter={(e) => {
-            // 외부 파일 드래그(Finder)일 때는 pointer-events 차단 안 함
-            if (e.dataTransfer.types.includes('Files')) return
-            if (!isDragging) setIsDragging(true)
-          }}
-          onDragEnd={() => setIsDragging(false)}
-        >
-          {renderNode(tree.root)}
-        </div>
-      )}
+      <div
+        className={`terminal-grid${tree.zoomedPaneId ? ' terminal-grid--zoomed' : ''}${isDragging ? ' terminal-grid--dragging' : ''}`}
+        onDragEnter={(e) => {
+          // 외부 파일 드래그(Finder)일 때는 pointer-events 차단 안 함
+          if (e.dataTransfer.types.includes('Files')) return
+          if (!isDragging) setIsDragging(true)
+        }}
+        onDragEnd={() => setIsDragging(false)}
+      >
+        {renderNode(tree.root)}
+      </div>
 
       {/* 비활성 세션은 언마운트 (성능 최적화) — 전환 시 tmux 화면 캡처로 복원 */}
 
