@@ -30,7 +30,7 @@ export const ROADMAP: Milestone[] = [
       { title: 'Multi-Session Terminal', desc: 'tmux 기반 다중 Claude Code 세션 동시 관리', status: 'done' },
       { title: 'Project Groups', desc: '프로젝트 → 세션 계층 구조로 사이드바 정리', status: 'done' },
       { title: 'Session Persistence', desc: '앱 재시작 시 세션 자동 복원 (~/.mulaude/sessions.json)', status: 'done' },
-      { title: 'Terminal Grid Split', desc: '이진 트리 기반 수평/수직 자유 분할 (최대 6패인)', status: 'done' },
+      { title: 'Terminal Grid Split', desc: '이진 트리 기반 수평/수직 자유 분할 (최대 10패인)', status: 'done' },
       { title: 'Grid Drag & Drop', desc: '패인 드래그로 위치 교환 및 재배치', status: 'done' },
       { title: 'Pane Zoom', desc: '포커스된 패인 전체 확대/복원 (⌘⇧↵)', status: 'done' },
       { title: 'Agent Pane Detection', desc: 'Claude Code 에이전트 자동 감지 + 전용 패널 표시', status: 'done' },

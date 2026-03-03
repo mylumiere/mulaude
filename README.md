@@ -7,7 +7,7 @@
 ## Key Features
 
 - **Multi-session**: Run independent Claude Code sessions across multiple projects simultaneously
-- **Terminal Grid Split**: Binary tree-based horizontal/vertical free splitting (up to 6 panes), drag to swap/reorder panes
+- **Terminal Grid Split**: Binary tree-based horizontal/vertical free splitting (up to 10 panes), drag to swap/reorder panes
 - **Session Persistence**: tmux-based — sessions survive app exit and auto-restore on restart
 - **Agent/Team View**: When Claude's team mode is active, monitor sub-agents in real-time via split panes
 - **Hook Integration**: Accurate state tracking (idle, thinking, tool, permission, etc.) via Claude Code Hooks system

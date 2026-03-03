@@ -107,7 +107,7 @@ export const SHELL_COMMANDS = ['zsh', 'bash', 'sh', 'fish'] as const
 /* ═══════ 터미널 레이아웃 ═══════ */
 
 /** 최대 동시 패인 수 */
-export const MAX_PANES = 6
+export const MAX_PANES = 10
 /** 패인 최소 비율 */
 export const MIN_PANE_RATIO = 0.1
 /** 중복 세션 알림 표시 시간 (ms) */

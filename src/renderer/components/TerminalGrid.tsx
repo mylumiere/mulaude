@@ -26,6 +26,7 @@ import type {
   DropPosition
 } from '../hooks/useTerminalLayout'
 import { t, type Locale } from '../i18n'
+import { MAX_PANES } from '../../shared/constants'
 import './TerminalGrid.css'
 
 interface TerminalGridProps {
@@ -62,6 +63,8 @@ interface TerminalGridProps {
   onToggleZoom?: () => void
   /** 중복 세션 알림 메시지 */
   duplicateAlert?: string | null
+  /** 그리드 알림 메시지 키 (패인 초과 등) */
+  gridAlert?: string | null
   /** 튜토리얼 드래그 스텝 — center 드롭 차단 */
   blockCenterDrop?: boolean
 }
@@ -93,6 +96,7 @@ export default function TerminalGrid({
   onMovePane,
   onToggleZoom,
   duplicateAlert,
+  gridAlert,
   blockCenterDrop
 }: TerminalGridProps): JSX.Element {
   const [dropTarget, setDropTarget] = useState<{
@@ -353,10 +357,15 @@ export default function TerminalGrid({
 
       {/* 비활성 세션은 언마운트 (성능 최적화) — 전환 시 tmux 화면 캡처로 복원 */}
 
-      {/* 중복 세션 알림 토스트 */}
+      {/* 중복 세션 / 패인 초과 알림 토스트 */}
       {duplicateAlert && (
         <div className="terminal-grid-toast">
           {t(locale, 'grid.duplicateSession')}
+        </div>
+      )}
+      {gridAlert && !duplicateAlert && (
+        <div className="terminal-grid-toast">
+          {t(locale, gridAlert).replace('{count}', String(MAX_PANES))}
         </div>
       )}
     </>

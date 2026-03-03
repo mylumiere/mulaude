@@ -42,6 +42,8 @@ export interface UseTerminalLayoutReturn {
   isGridMode: boolean
   /** 중복 세션 알림 메시지 (일정 시간 후 자동 소멸) */
   duplicateAlert: string | null
+  /** 그리드 알림 메시지 키 (duplicateAlert과 별도, 패인 초과 등) */
+  gridAlert: string | null
   splitHorizontal: () => void
   splitVertical: () => void
   closePane: () => void
@@ -186,6 +188,20 @@ export function useTerminalLayout({
     return () => { if (duplicateTimerRef.current) clearTimeout(duplicateTimerRef.current) }
   }, [])
 
+  // 그리드 알림 (패인 초과 등)
+  const [gridAlert, setGridAlert] = useState<string | null>(null)
+  const gridAlertTimerRef = useRef<ReturnType<typeof setTimeout>>()
+
+  const showGridAlert = useCallback((messageKey: string) => {
+    setGridAlert(messageKey)
+    if (gridAlertTimerRef.current) clearTimeout(gridAlertTimerRef.current)
+    gridAlertTimerRef.current = setTimeout(() => setGridAlert(null), DUPLICATE_ALERT_TIMEOUT)
+  }, [])
+
+  useEffect(() => {
+    return () => { if (gridAlertTimerRef.current) clearTimeout(gridAlertTimerRef.current) }
+  }, [])
+
   /** 그리드에 없는 다음 세션 찾기 */
   const findNextSession = useCallback((): string | null => {
     const usedIds = new Set(getAllLeaves(tree.root).map((l) => l.sessionId))
@@ -195,7 +211,10 @@ export function useTerminalLayout({
   /* ──── 수평 분할 (좌/우) ──── */
   const splitHorizontal = useCallback(() => {
     setTree((prev) => {
-      if (countLeaves(prev.root) >= MAX_PANES) return prev
+      if (countLeaves(prev.root) >= MAX_PANES) {
+        showGridAlert('grid.maxPanes')
+        return prev
+      }
       const usedIds = new Set(getAllLeaves(prev.root).map((l) => l.sessionId))
       const nextId = sessions.find((s) => !usedIds.has(s.id))?.id
       if (!nextId) return prev
@@ -203,12 +222,15 @@ export function useTerminalLayout({
       const newRoot = splitLeaf(prev.root, prev.focusedPaneId, 'horizontal', newLeaf)
       return { ...prev, root: newRoot, focusedPaneId: newLeaf.id, zoomedPaneId: null }
     })
-  }, [sessions])
+  }, [sessions, showGridAlert])
 
   /* ──── 수직 분할 (상/하) ──── */
   const splitVertical = useCallback(() => {
     setTree((prev) => {
-      if (countLeaves(prev.root) >= MAX_PANES) return prev
+      if (countLeaves(prev.root) >= MAX_PANES) {
+        showGridAlert('grid.maxPanes')
+        return prev
+      }
       const usedIds = new Set(getAllLeaves(prev.root).map((l) => l.sessionId))
       const nextId = sessions.find((s) => !usedIds.has(s.id))?.id
       if (!nextId) return prev
@@ -216,7 +238,7 @@ export function useTerminalLayout({
       const newRoot = splitLeaf(prev.root, prev.focusedPaneId, 'vertical', newLeaf)
       return { ...prev, root: newRoot, focusedPaneId: newLeaf.id, zoomedPaneId: null }
     })
-  }, [sessions])
+  }, [sessions, showGridAlert])
 
   /* ──── 포커스된 패인 닫기 ──── */
   const closePane = useCallback(() => {
@@ -344,7 +366,10 @@ export function useTerminalLayout({
         return { ...prev, root: replaceNode(prev.root, targetPaneId, newLeaf), focusedPaneId: targetPaneId }
       }
 
-      if (countLeaves(prev.root) >= MAX_PANES) return prev
+      if (countLeaves(prev.root) >= MAX_PANES) {
+        showGridAlert('grid.maxPanes')
+        return prev
+      }
 
       const direction: 'horizontal' | 'vertical' =
         position === 'left' || position === 'right' ? 'horizontal' : 'vertical'
@@ -364,7 +389,7 @@ export function useTerminalLayout({
       const newRoot = splitLeaf(prev.root, targetPaneId, direction, newLeaf)
       return { ...prev, root: newRoot, focusedPaneId: newLeaf.id }
     })
-  }, [showDuplicateAlert])
+  }, [showDuplicateAlert, showGridAlert])
 
   /* ──── 포커스된 세션 ID ──── */
   const getFocusedSessionId = useCallback((): string | null => {
@@ -442,6 +467,7 @@ export function useTerminalLayout({
     tree,
     isGridMode,
     duplicateAlert,
+    gridAlert,
     splitHorizontal,
     splitVertical,
     closePane,

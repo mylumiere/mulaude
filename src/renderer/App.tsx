@@ -202,6 +202,7 @@ export default function App(): JSX.Element {
               onMovePane={terminalLayout.movePane}
               onToggleZoom={terminalLayout.toggleZoom}
               duplicateAlert={terminalLayout.duplicateAlert}
+              gridAlert={terminalLayout.gridAlert}
               blockCenterDrop={tutorial.phase === 'steps' && tutorial.steps[tutorial.currentStep]?.action === 'drag'}
             />
           ) : (
