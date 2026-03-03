@@ -94,6 +94,8 @@ export const HUD_POLL_INTERVAL = 30000
 
 /** tmux 스크롤백 버퍼 줄 수 */
 export const TMUX_HISTORY_LIMIT = 50000
+/** tmux capture-pane 최대 stdout 버퍼 (무제한 — capture-pane 출력은 history-limit에 의해 제한됨) */
+export const TMUX_CAPTURE_MAX_BUFFER = Infinity
 /** pane 캡처 줄 수 (에이전트 패널용) */
 export const PANE_CAPTURE_LINES = 8
 

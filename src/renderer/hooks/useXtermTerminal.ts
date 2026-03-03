@@ -188,16 +188,16 @@ export function useXtermTerminal({
           // 이걸 xterm에 쓰면 재캡처 내용과 중복되어 깨짐 발생.
           // 재캡처 완료까지 PTY 쓰기를 막고, 캡처 내용으로 일괄 교체.
           recapturingRef.current = true
-          // 재캡처 대기 중 빈 화면 표시
-          xtermRef.current.reset()
           if (onRecapture) {
             const term = xtermRef.current
             // onRecapture에 cols/rows를 전달하여 main에서 tmux resize를
             // await한 후 캡처 (atomic resize+capture — 타이밍 레이스 제거)
+            //
+            // reset()은 캡처 성공 후에만 실행:
+            // 캡처 실패(maxBuffer 초과 등) 시 xterm 자체 reflow 내용을 유지하여
+            // 스크롤백 소실을 방지합니다.
             onRecapture(newCols, newRows).then((screen) => {
               if (screen && term) {
-                // reset()은 동기적으로 모든 버퍼(뷰포트+스크롤백)를 완전 클리어
-                // ESC 시퀀스와 달리 write 큐와의 경합 없음
                 term.reset()
                 term.write(screen)
               }

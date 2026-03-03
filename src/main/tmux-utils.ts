@@ -11,7 +11,7 @@
 
 import { execSync, execFileSync, execFile } from 'child_process'
 import { promisify } from 'util'
-import { TMUX_EXEC_TIMEOUT, SHELL_ENV_TIMEOUT, TMUX_VERSION_TIMEOUT, TMUX_SESSION_CREATE_TIMEOUT, TMUX_HISTORY_LIMIT, TMUX_SEND_KEYS_TIMEOUT } from '../shared/constants'
+import { TMUX_EXEC_TIMEOUT, SHELL_ENV_TIMEOUT, TMUX_VERSION_TIMEOUT, TMUX_SESSION_CREATE_TIMEOUT, TMUX_HISTORY_LIMIT, TMUX_SEND_KEYS_TIMEOUT, TMUX_CAPTURE_MAX_BUFFER } from '../shared/constants'
 
 const execFileAsync = promisify(execFile)
 
@@ -576,13 +576,27 @@ export async function captureTmuxPaneAsync(
 /**
  * tmux pane의 전체 스크롤백 + 현재 화면을 ANSI 이스케이프 포함하여 캡처합니다.
  * `-S -` 로 스크롤백 시작점부터 전체를 가져옵니다.
+ *
+ * ANSI 이스케이프 포함 대용량 캡처이므로 TMUX_CAPTURE_MAX_BUFFER(50MB)를 사용합니다.
+ * Node.js execFile 기본 maxBuffer(1MB)로는 긴 대화 세션 캡처 시 초과 에러 발생.
  */
 export async function captureFullScrollbackAsync(
   tmuxPath: string,
   sessionName: string,
   paneIndex: number
 ): Promise<string> {
-  const raw = (await execTmuxAsync(tmuxPath, ['capture-pane', '-t', `${sessionName}.${paneIndex}`, '-e', '-p', '-S', '-'])) ?? ''
+  let raw: string
+  try {
+    const { stdout } = await execFileAsync(
+      tmuxPath,
+      ['-u', 'capture-pane', '-t', `${sessionName}.${paneIndex}`, '-e', '-p', '-S', '-'],
+      { encoding: 'utf-8', timeout: TMUX_EXEC_TIMEOUT, maxBuffer: TMUX_CAPTURE_MAX_BUFFER }
+    )
+    raw = stdout.trim()
+  } catch (err) {
+    console.error('[tmux-utils] captureFullScrollbackAsync failed:', (err as Error).message?.substring(0, 200))
+    return ''
+  }
   // tmux capture-pane -p 는 줄 구분자로 \n(LF)만 사용하지만,
   // xterm.js는 convertEol: false가 기본이라 \r\n(CR+LF)이 필요함.
   // \n만 보내면 커서가 col 0으로 복귀하지 않아 내용이 오른쪽으로 밀림.
