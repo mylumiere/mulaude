@@ -171,6 +171,7 @@ export default function App(): JSX.Element {
           teamAgents={teamAgents}
           hookAgents={hookAgents}
           claudeSessionIds={claudeSessionIds}
+          isGridMode={terminalLayout.isGridMode}
           gridSessionIds={gridSessionIds}
           onRestartTutorial={tutorial.restart}
           shortcutsOpen={shortcutsOpen}

@@ -835,6 +835,56 @@
   box-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
 }
 
+/* ─── Split Nudge (컨텍스트 넛지) ─── */
+.split-nudge {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 10px 4px;
+  padding: 6px 8px;
+  background: color-mix(in srgb, var(--accent-secondary) 10%, var(--bg-glass));
+  border: 1px solid color-mix(in srgb, var(--accent-secondary) 25%, var(--border-subtle));
+  border-radius: var(--radius-sm);
+  animation: nudge-in 0.25s ease;
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes nudge-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.split-nudge-text {
+  flex: 1;
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.split-nudge-close {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  padding: 0;
+  transition: all var(--transition-fast);
+}
+
+.split-nudge-close:hover {
+  color: var(--text-secondary);
+  background: var(--bg-glass-hover);
+}
+
 /* ─── Usage Gauge ─── */
 .sidebar-usage {
   flex-shrink: 0;

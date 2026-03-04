@@ -442,6 +442,71 @@
   100% { opacity: 0; }
 }
 
+/* --- 드래그 코칭 오버레이 (처음 2회) --- */
+.drag-coach-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 50;
+  animation: drag-coach-in 0.2s ease;
+}
+
+@keyframes drag-coach-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.drag-coach-zone {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-sm);
+  letter-spacing: 0.5px;
+}
+
+.drag-coach-zone--top {
+  top: 4px;
+  left: 35%;
+  right: 35%;
+  height: 28px;
+}
+
+.drag-coach-zone--bottom {
+  bottom: 4px;
+  left: 35%;
+  right: 35%;
+  height: 28px;
+}
+
+.drag-coach-zone--left {
+  left: 4px;
+  top: 35%;
+  bottom: 35%;
+  width: 80px;
+}
+
+.drag-coach-zone--right {
+  right: 4px;
+  top: 35%;
+  bottom: 35%;
+  width: 80px;
+}
+
+.drag-coach-zone--center {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 72px;
+  height: 28px;
+}
+
 /* --- 숨겨진 세션 컨테이너 --- */
 .terminal-grid-hidden {
   position: absolute;

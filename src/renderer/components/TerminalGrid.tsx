@@ -105,6 +105,21 @@ export default function TerminalGrid({
   /** 드래그 진행 중 여부 — true일 때 xterm 캔버스의 pointer-events 차단 */
   const [isDragging, setIsDragging] = useState(false)
 
+  /** 드래그 코칭 오버레이 — 처음 2회만 표시 */
+  const [dragCoachCount, setDragCoachCount] = useState(() => {
+    try {
+      return parseInt(localStorage.getItem('mulaude-drag-coach-count') ?? '0', 10) || 0
+    } catch { return 0 }
+  })
+  const showDragCoach = isDragging && dragCoachCount < 2
+  const incrementCoach = useCallback(() => {
+    setDragCoachCount(prev => {
+      const next = prev + 1
+      try { localStorage.setItem('mulaude-drag-coach-count', String(next)) } catch {}
+      return next
+    })
+  }, [])
+
   // sessions.find() → O(1) Map 조회
   const sessionMap = useMemo(() => {
     const map = new Map<string, SessionInfo>()
@@ -160,6 +175,7 @@ export default function TerminalGrid({
     e.preventDefault()
     setDropTarget(null)
     setIsDragging(false)
+    if (dragCoachCount < 2) incrementCoach()
 
     let position = calcDropPosition(e)
     if (blockCenterDrop && position === 'center') position = 'right'
@@ -176,7 +192,7 @@ export default function TerminalGrid({
     if (!sessionId) return
 
     onDropSession(sessionId, targetPaneId, position)
-  }, [onDropSession, onMovePane, blockCenterDrop])
+  }, [onDropSession, onMovePane, blockCenterDrop, dragCoachCount, incrementCoach])
 
   /** 리프 렌더링 */
   const renderLeaf = (leaf: PaneLeaf): JSX.Element => {
@@ -350,9 +366,18 @@ export default function TerminalGrid({
           if (e.dataTransfer.types.includes('Files')) return
           if (!isDragging) setIsDragging(true)
         }}
-        onDragEnd={() => setIsDragging(false)}
+        onDragEnd={() => { setIsDragging(false); if (dragCoachCount < 2) incrementCoach() }}
       >
         {renderNode(tree.root)}
+        {showDragCoach && (
+          <div className="drag-coach-overlay">
+            <div className="drag-coach-zone drag-coach-zone--top">{t(locale, 'drag.coach.vertSplit')} ↑</div>
+            <div className="drag-coach-zone drag-coach-zone--bottom">↓ {t(locale, 'drag.coach.vertSplit')}</div>
+            <div className="drag-coach-zone drag-coach-zone--left">← {t(locale, 'drag.coach.horizSplit')}</div>
+            <div className="drag-coach-zone drag-coach-zone--right">{t(locale, 'drag.coach.horizSplit')} →</div>
+            <div className="drag-coach-zone drag-coach-zone--center">{t(locale, 'drag.coach.replace')}</div>
+          </div>
+        )}
       </div>
 
       {/* 비활성 세션은 언마운트 (성능 최적화) — 전환 시 tmux 화면 캡처로 복원 */}

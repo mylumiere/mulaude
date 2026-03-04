@@ -9,8 +9,8 @@
  *   - StatusLegend: 상태 범례
  */
 
-import { useState, useEffect } from 'react'
-import { Settings, Plus, BookOpen, Route, Keyboard, MessageSquareWarning } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { Settings, Plus, BookOpen, Route, Keyboard, MessageSquareWarning, X } from 'lucide-react'
 import type { ProjectGroup, SessionStatus, UsageData, AgentInfo } from '../../shared/types'
 import { type Locale, t } from '../i18n'
 import ProjectHeader from './sidebar/ProjectHeader'
@@ -46,6 +46,8 @@ interface SidebarProps {
   claudeSessionIds?: Record<string, string>
   /** 그리드에 현재 열려있는 세션 ID 셋 */
   gridSessionIds?: Set<string>
+  /** 그리드 모드 여부 (분할 넛지용) */
+  isGridMode?: boolean
   /** 튜토리얼 다시보기 */
   onRestartTutorial?: () => void
   /** 외부에서 단축키 모달 열기 (⌘/) */
@@ -74,6 +76,7 @@ export default function Sidebar({
   claudeSessionIds,
   sidebarFocused,
   sidebarCursorId,
+  isGridMode,
   gridSessionIds,
   onRestartTutorial,
   shortcutsOpen,
@@ -83,6 +86,26 @@ export default function Sidebar({
   const [collapsedAgents, setCollapsedAgents] = useState<Set<string>>(new Set())
   const [showRoadmap, setShowRoadmap] = useState(false)
   const [showShortcuts, setShowShortcuts] = useState(false)
+  const [nudgeDismissed, setNudgeDismissed] = useState(() => {
+    try { return localStorage.getItem('mulaude-split-nudge-dismissed') === '1' } catch { return false }
+  })
+
+  // 분할 성공(isGridMode) 시 자동 dismiss
+  useEffect(() => {
+    if (isGridMode && !nudgeDismissed) {
+      setNudgeDismissed(true)
+      try { localStorage.setItem('mulaude-split-nudge-dismissed', '1') } catch {}
+    }
+  }, [isGridMode, nudgeDismissed])
+
+  const dismissNudge = useCallback(() => {
+    setNudgeDismissed(true)
+    try { localStorage.setItem('mulaude-split-nudge-dismissed', '1') } catch {}
+  }, [])
+
+  // 전체 세션 수 계산
+  const totalSessions = projects.reduce((sum, p) => sum + p.sessions.length, 0)
+  const showNudge = totalSessions >= 2 && !isGridMode && !nudgeDismissed
 
   // 외부에서 ⌘/ 로 단축키 모달 열기
   useEffect(() => {
@@ -197,6 +220,12 @@ export default function Sidebar({
         )}
       </div>
 
+      {showNudge && (
+        <div className="split-nudge">
+          <span className="split-nudge-text">{t(locale, 'nudge.splitTip')}</span>
+          <button className="split-nudge-close" onClick={dismissNudge}><X size={12} /></button>
+        </div>
+      )}
       <UsageGauge usageData={usageData} locale={locale} />
       <StatusLegend locale={locale} />
 
