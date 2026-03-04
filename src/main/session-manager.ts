@@ -17,6 +17,7 @@
 
 import * as pty from 'node-pty'
 import { basename } from 'path'
+import { existsSync, statSync } from 'fs'
 import type { SessionInfo, TmuxPaneInfo } from '../shared/types'
 import { DEFAULT_COLS, DEFAULT_ROWS, LEGACY_SHELL_INIT_DELAY, PANE_CAPTURE_LINES } from '../shared/constants'
 import { getShellEnv, findClaudePath } from './env-resolver'
@@ -98,6 +99,9 @@ export class SessionManager {
     this.sessionStore = new SessionStore()
 
     console.log('[SessionManager] claude path:', this.claudePath)
+    if (this.claudePath === 'claude') {
+      console.warn('[SessionManager] Claude CLI resolved to bare "claude" — it may not be found at runtime. Install Claude CLI or check your PATH.')
+    }
     if (this.tmuxPath) {
       const version = getTmuxVersion(this.tmuxPath)
       console.log(`[SessionManager] tmux found: ${this.tmuxPath} (${version})`)
@@ -150,6 +154,11 @@ export class SessionManager {
    * @returns 생성된 세션 정보
    */
   createSession(workingDir: string): SessionInfo {
+    // workingDir 유효성 검증
+    if (!existsSync(workingDir) || !statSync(workingDir).isDirectory()) {
+      throw new Error(`Invalid working directory: "${workingDir}" does not exist or is not a directory`)
+    }
+
     const id = `session-${this.nextId++}`
     const name = basename(workingDir)
     const now = new Date().toISOString()
@@ -208,8 +217,9 @@ export class SessionManager {
     //    초기 셸에는 send-keys로 직접 export해야 합니다.
     try {
       const unsetNested = 'unset CLAUDECODE CLAUDE_CODE; '
+      const safeIpcDir = this.ipcDir.replace(/'/g, "'\\''")
       const envExport = this.ipcDir
-        ? `export MULAUDE_SESSION_ID='${id}' MULAUDE_IPC_DIR='${this.ipcDir}'; `
+        ? `export MULAUDE_SESSION_ID='${id}' MULAUDE_IPC_DIR='${safeIpcDir}'; `
         : ''
       sendKeysToTmux(tmuxPath, tmuxName, unsetNested + envExport + this.claudePath)
     } catch (err) {
@@ -427,8 +437,8 @@ export class SessionManager {
       // PTY 종료
       try {
         session.ptyProcess.kill()
-      } catch {
-        // 이미 종료된 프로세스 무시
+      } catch (err) {
+        console.warn(`[SessionManager] PTY kill failed for ${id}:`, (err as Error).message)
       }
 
       // tmux 세션 종료
@@ -471,8 +481,8 @@ export class SessionManager {
     for (const [, session] of this.sessions) {
       try {
         session.ptyProcess.kill()
-      } catch {
-        // 이미 종료된 프로세스 무시
+      } catch (err) {
+        console.warn(`[SessionManager] PTY kill failed for ${session.id}:`, (err as Error).message)
       }
     }
     this.sessions.clear()
@@ -577,7 +587,9 @@ export class SessionManager {
 
       // tmux 내부 윈도우도 리사이즈 (fire-and-forget 비동기)
       if (session.tmuxSessionName && this.tmuxPath) {
-        resizeTmuxWindowAsync(this.tmuxPath, session.tmuxSessionName, cols, rows).catch(() => {})
+        resizeTmuxWindowAsync(this.tmuxPath, session.tmuxSessionName, cols, rows).catch((err) => {
+          console.warn(`[SessionManager] tmux resize failed for ${id}:`, (err as Error).message)
+        })
       }
     }
   }
@@ -589,7 +601,9 @@ export class SessionManager {
     if (!this.tmuxPath) return
     const session = this.sessions.get(id)
     if (!session?.tmuxSessionName) return
-    scrollTmuxPaneAsync(this.tmuxPath, session.tmuxSessionName, direction, lines).catch(() => {})
+    scrollTmuxPaneAsync(this.tmuxPath, session.tmuxSessionName, direction, lines).catch((err) => {
+      console.warn(`[SessionManager] tmux scroll failed for ${id}:`, (err as Error).message)
+    })
   }
 
   /**

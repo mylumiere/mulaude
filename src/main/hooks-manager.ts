@@ -39,7 +39,11 @@ export class HooksManager {
 
   constructor() {
     this.ipcDir = join(tmpdir(), `mulaude-hooks-${process.pid}`)
-    mkdirSync(this.ipcDir, { recursive: true })
+    try {
+      mkdirSync(this.ipcDir, { recursive: true })
+    } catch (err) {
+      console.error('[HooksManager] Failed to create IPC directory:', err)
+    }
   }
 
   /** IPC 디렉토리 경로 (세션 env에 전달용) */
@@ -98,7 +102,11 @@ export class HooksManager {
       + 'echo "$INPUT" > "$MULAUDE_IPC_DIR/${MULAUDE_SESSION_ID}_$$_${RANDOM}.json"\n'
       + 'exit 0\n'
     writeFileSync(scriptPath, script, 'utf-8')
-    chmodSync(scriptPath, '755')
+    try {
+      chmodSync(scriptPath, '755')
+    } catch (err) {
+      console.warn('[HooksManager] Failed to chmod hook script:', err)
+    }
     console.log('[HooksManager] hook script installed:', scriptPath)
   }
 
@@ -115,12 +123,13 @@ export class HooksManager {
     if (existsSync(settingsPath)) {
       try {
         settings = JSON.parse(readFileSync(settingsPath, 'utf-8'))
-      } catch {
-        settings = {}
+      } catch (err) {
+        console.warn('[HooksManager] settings.json parse failed, skipping hook config to avoid data loss:', err)
+        return
       }
     }
 
-    const hookCommand = `bash ${join(homedir(), '.claude', HOOK_SCRIPT_NAME)}`
+    const hookCommand = `bash "${join(homedir(), '.claude', HOOK_SCRIPT_NAME)}"`
     const mulaudeHookGroup = {
       matcher: '',
       hooks: [{
@@ -201,8 +210,8 @@ export class HooksManager {
           }
           // 처리 후 파일 삭제
           try { unlinkSync(filePath) } catch { /* ignore */ }
-        } catch {
-          // JSON 파싱 실패 무시
+        } catch (err) {
+          console.warn(`[HooksManager] Failed to read/parse IPC file ${filename}:`, err)
         }
       }, HOOK_FILE_READ_DELAY)
     })

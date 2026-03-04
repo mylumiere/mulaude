@@ -27,7 +27,8 @@ export function getShellEnv(): Record<string, string> {
       }
     }
     return env
-  } catch {
+  } catch (err) {
+    console.warn('[env-resolver] Failed to get shell env, using process.env:', (err as Error).message)
     return process.env as Record<string, string>
   }
 }
@@ -50,8 +51,8 @@ export function findClaudePath(env: Record<string, string>): string {
       env
     }).trim()
     if (result) return result
-  } catch {
-    // fallback
+  } catch (err) {
+    console.warn('[env-resolver] "which claude" failed, trying common paths:', (err as Error).message)
   }
 
   // 일반적인 설치 경로 시도
@@ -72,5 +73,6 @@ export function findClaudePath(env: Record<string, string>): string {
     }
   }
 
+  console.warn('[env-resolver] Claude CLI not found in any known path, falling back to bare "claude" command')
   return 'claude'
 }

@@ -152,7 +152,9 @@ export class ChildPaneStreamer {
     //    리사이즈 후 짧은 대기로 프로세스가 새 크기에 맞춰 다시 렌더링하도록 함
     try {
       resizeTmuxPane(this.tmuxPath, paneId, CHILD_PANE_DEFAULT_COLS, CHILD_PANE_DEFAULT_ROWS)
-    } catch { /* pane이 아직 준비 안 됐을 수 있음 */ }
+    } catch (err) {
+      console.warn(`[ChildPaneStreamer] resize failed for ${paneId}:`, (err as Error).message)
+    }
 
     // 1) 초기 화면 캡처 — 리사이즈 직후이므로 약간의 지연 후 캡처
     //    (프로세스가 SIGWINCH 처리 후 화면을 다시 그릴 시간 확보)
@@ -160,7 +162,9 @@ export class ChildPaneStreamer {
     try {
       // 즉시 캡처 시도 (대부분 괜찮음)
       initialContent = captureTmuxPaneWithAnsi(this.tmuxPath, paneId)
-    } catch { /* ignore */ }
+    } catch (err) {
+      console.warn(`[ChildPaneStreamer] initial capture failed for ${paneId}:`, (err as Error).message)
+    }
 
     // 2) pipe-pane 출력 파일 준비
     const safePaneId = paneId.replace(/[^a-zA-Z0-9]/g, '')
@@ -223,7 +227,9 @@ export class ChildPaneStreamer {
             cb(sessionId, paneIndex, '\x1b[2J\x1b[H' + refreshed)
           }
         }
-      } catch { /* pane이 사라졌을 수 있음 */ }
+      } catch (err) {
+        console.warn(`[ChildPaneStreamer] recapture failed for ${paneId}:`, (err as Error).message)
+      }
     }, PANE_RECAPTURE_DELAY)
   }
 
@@ -346,7 +352,9 @@ export class ChildPaneStreamer {
     const sessionStreams = this.streams.get(sessionId)
     if (!sessionStreams) return
 
-    for (const [paneId] of sessionStreams) {
+    // 키 배열 복사 (iteration 중 Map 변경 방지)
+    const paneIds = [...sessionStreams.keys()]
+    for (const paneId of paneIds) {
       this.stopPaneStream(sessionId, paneId)
     }
     this.streams.delete(sessionId)
@@ -356,7 +364,9 @@ export class ChildPaneStreamer {
    * 모든 세션의 스트림을 정리합니다.
    */
   cleanupAll(): void {
-    for (const [sessionId] of this.streams) {
+    // 키 배열 복사 (iteration 중 Map 변경 방지)
+    const sessionIds = [...this.streams.keys()]
+    for (const sessionId of sessionIds) {
       this.cleanupSession(sessionId)
     }
     if (this.globalPollTimer) {

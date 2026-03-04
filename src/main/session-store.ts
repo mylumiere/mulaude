@@ -14,7 +14,7 @@
  *   - 쓰기 실패 시 에러를 로깅하되 앱 동작에 영향을 주지 않음
  */
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs'
+import { readFileSync, writeFileSync, mkdirSync, existsSync, renameSync } from 'fs'
 import { join } from 'path'
 import { homedir } from 'os'
 import { SESSION_STORE_SAVE_DEBOUNCE } from '../shared/constants'
@@ -84,15 +84,33 @@ export class SessionStore {
         const parsed = JSON.parse(raw)
         if (Array.isArray(parsed)) {
           this.sessions = parsed
-        } else {
-          console.warn('[SessionStore] sessions.json is not an array, resetting')
-          this.sessions = []
+          return
         }
+        console.warn('[SessionStore] sessions.json is not an array, trying .tmp recovery')
       }
     } catch (err) {
-      console.warn('[SessionStore] Failed to load sessions.json, starting fresh:', err)
-      this.sessions = []
+      console.warn('[SessionStore] Failed to load sessions.json, trying .tmp recovery:', err)
     }
+
+    // .tmp 파일에서 복구 시도 (atomic write 중 크래시 시)
+    const tmpPath = this.filePath + '.tmp'
+    try {
+      if (existsSync(tmpPath)) {
+        const raw = readFileSync(tmpPath, 'utf-8')
+        const parsed = JSON.parse(raw)
+        if (Array.isArray(parsed)) {
+          this.sessions = parsed
+          // 복구 성공 시 .tmp → 본 파일로 승격
+          try { renameSync(tmpPath, this.filePath) } catch { /* ignore */ }
+          console.warn('[SessionStore] Recovered from .tmp file')
+          return
+        }
+      }
+    } catch {
+      // .tmp 파일도 실패 → 빈 상태로 시작
+    }
+
+    this.sessions = []
   }
 
   /**
@@ -122,7 +140,10 @@ export class SessionStore {
       if (!existsSync(this.dirPath)) {
         mkdirSync(this.dirPath, { recursive: true })
       }
-      writeFileSync(this.filePath, JSON.stringify(this.sessions, null, 2), 'utf-8')
+      // Atomic write: .tmp에 먼저 쓰고 renameSync로 교체 (POSIX atomic rename)
+      const tmpPath = this.filePath + '.tmp'
+      writeFileSync(tmpPath, JSON.stringify(this.sessions, null, 2), 'utf-8')
+      renameSync(tmpPath, this.filePath)
     } catch (err) {
       console.error('[SessionStore] Failed to save sessions.json:', err)
     }

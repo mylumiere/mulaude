@@ -31,7 +31,11 @@ const execFileAsync = promisify(execFile)
 export function execTmux(tmuxPath: string, args: string[], timeout = TMUX_EXEC_TIMEOUT): string | null {
   try {
     return execFileSync(tmuxPath, ['-u', ...args], { encoding: 'utf-8', timeout }).trim()
-  } catch {
+  } catch (err) {
+    const e = err as NodeJS.ErrnoException
+    if (e.code === 'ETIMEDOUT' || e.code === 'EACCES' || e.code === 'ENOENT') {
+      console.warn(`[tmux-utils] execTmux failed (${e.code}): tmux ${args[0]}`)
+    }
     return null
   }
 }
@@ -49,7 +53,11 @@ export async function execTmuxAsync(tmuxPath: string, args: string[], timeout = 
   try {
     const { stdout } = await execFileAsync(tmuxPath, ['-u', ...args], { encoding: 'utf-8', timeout })
     return stdout.trim()
-  } catch {
+  } catch (err) {
+    const e = err as NodeJS.ErrnoException
+    if (e.code === 'ETIMEDOUT' || e.code === 'EACCES' || e.code === 'ENOENT') {
+      console.warn(`[tmux-utils] execTmuxAsync failed (${e.code}): tmux ${args[0]}`)
+    }
     return null
   }
 }
@@ -69,8 +77,8 @@ export function findTmuxPath(env: Record<string, string>): string | null {
       env
     }).trim()
     if (result) return result
-  } catch {
-    // fallback: PATH에서 직접 탐색
+  } catch (err) {
+    console.warn('[tmux-utils] "which tmux" failed:', (err as Error).message)
   }
   // 일반적인 설치 경로 시도
   const commonPaths = ['/opt/homebrew/bin/tmux', '/usr/local/bin/tmux', '/usr/bin/tmux']
@@ -423,7 +431,8 @@ export function startPipePane(
   outputPath: string
 ): void {
   // dd는 cat과 달리 stdio full buffering 없이 즉시 쓰기
-  if (execTmux(tmuxPath, ['pipe-pane', '-t', paneId, `dd bs=4096 >> '${outputPath}' 2>/dev/null`]) === null) {
+  const safePath = outputPath.replace(/'/g, "'\\''")
+  if (execTmux(tmuxPath, ['pipe-pane', '-t', paneId, `dd bs=4096 >> '${safePath}' 2>/dev/null`]) === null) {
     console.warn(`[tmux-utils] startPipePane failed for ${paneId}`)
   }
 }
@@ -457,7 +466,10 @@ export function sendKeysToPane(
   const hexBytes = Buffer.from(data, 'utf-8')
     .toString('hex')
     .match(/.{1,2}/g)
-  if (!hexBytes || hexBytes.length === 0) return
+  if (!hexBytes || hexBytes.length === 0) {
+    console.warn(`[tmux-utils] sendKeysToPane: empty data for ${paneId}`)
+    return
+  }
   execTmux(tmuxPath, ['send-keys', '-t', paneId, '-H', ...hexBytes])
 }
 

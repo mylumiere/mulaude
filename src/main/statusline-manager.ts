@@ -27,7 +27,8 @@ import {
 } from 'fs'
 import { join } from 'path'
 import { homedir } from 'os'
-import { exec, execSync } from 'child_process'
+import { exec, execFile } from 'child_process'
+import { promisify } from 'util'
 import { logger } from './logger'
 import { STATUSLINE_CTX_POLL_INTERVAL, USAGE_API_POLL_INTERVAL } from '../shared/constants'
 import type { UsageData } from '../shared/types'
@@ -38,6 +39,8 @@ const STATUSLINE_SCRIPT_PATH = join(MULAUDE_DIR, 'statusline.mjs')
 const PROXY_CMD_PATH = join(MULAUDE_DIR, 'proxy-cmd')
 const CLAUDE_SETTINGS_PATH = join(homedir(), '.claude', 'settings.json')
 const HUD_CACHE_PATH = join(homedir(), '.claude', 'plugins', 'claude-hud', '.usage-cache.json')
+
+const execFileAsync = promisify(execFile)
 
 /** HUD 백그라운드 폴링 간격 (ms) — HUD 숨김 시 claude-hud 캐시 갱신용 */
 const HUD_POLL_INTERVAL = 30000
@@ -105,7 +108,11 @@ function installStatusline(): void {
     let settings: Record<string, unknown> = {}
     try {
       settings = JSON.parse(readFileSync(CLAUDE_SETTINGS_PATH, 'utf-8'))
-    } catch {
+    } catch (err) {
+      if (existsSync(CLAUDE_SETTINGS_PATH)) {
+        logger.warn('Statusline', 'settings.json parse failed, skipping to avoid data loss', err)
+        return
+      }
       mkdirSync(join(homedir(), '.claude'), { recursive: true })
     }
 
@@ -231,11 +238,14 @@ function readHudCacheData(): UsageData | null {
  */
 async function fetchUsageViaKeychain(): Promise<UsageData | null> {
   try {
-    const user = execSync('whoami', { timeout: 2000, encoding: 'utf-8' }).trim()
-    const raw = execSync(
-      `security find-generic-password -s "Claude Code-credentials" -a "${user}" -w 2>/dev/null`,
+    const { stdout: userOut } = await execFileAsync('whoami', [], { timeout: 2000, encoding: 'utf-8' })
+    const user = userOut.trim()
+    const { stdout: rawOut } = await execFileAsync(
+      'security',
+      ['find-generic-password', '-s', 'Claude Code-credentials', '-a', user, '-w'],
       { timeout: 5000, encoding: 'utf-8' }
-    ).trim()
+    )
+    const raw = rawOut.trim()
     if (!raw) return null
 
     const creds = JSON.parse(raw)
@@ -332,6 +342,10 @@ function stopHudPoller(): void {
 
 /** 모든 감시를 시작합니다 */
 export function startWatching(mainWindow: BrowserWindow, hideHud: boolean, useKeychain: boolean): void {
+  // 기존 타이머 정리 (중복 호출 방지)
+  if (ctxPollTimer) { clearInterval(ctxPollTimer); ctxPollTimer = null }
+  if (usagePollTimer) { clearInterval(usagePollTimer); usagePollTimer = null }
+
   mainWindowRef = mainWindow
   keychainEnabled = useKeychain
 
@@ -404,7 +418,9 @@ export function cleanup(): void {
       }
       writeFileSync(CLAUDE_SETTINGS_PATH, JSON.stringify(settings, null, 2), 'utf-8')
     }
-  } catch {}
+  } catch (err) {
+    logger.warn('Statusline', 'Failed to restore statusLine during cleanup', err)
+  }
 
   // ctx 디렉토리 정리
   try {

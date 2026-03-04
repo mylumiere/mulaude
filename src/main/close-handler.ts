@@ -185,8 +185,8 @@ export function setupCloseHandler(
           mainWindow.close()
         }
         // response === 2 -> 취소, 아무 것도 안 함
-      }).catch(() => {
-        // 다이얼로그 표시 실패 시 세션 유지하고 닫기
+      }).catch((err) => {
+        console.error('[close-handler] tmux dialog failed:', err)
         closeAction = 'keep'
         mainWindow.close()
       })
@@ -210,8 +210,8 @@ export function setupCloseHandler(
           closeAction = 'kill'
           mainWindow.close()
         }
-      }).catch(() => {
-        // 다이얼로그 표시 실패 시 종료 진행
+      }).catch((err) => {
+        console.error('[close-handler] legacy dialog failed:', err)
         closeAction = 'kill'
         mainWindow.close()
       })

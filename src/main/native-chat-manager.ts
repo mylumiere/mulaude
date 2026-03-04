@@ -16,6 +16,7 @@
 
 import { spawn, ChildProcess } from 'child_process'
 import { basename } from 'path'
+import { existsSync, statSync } from 'fs'
 import { SessionStore } from './session-store'
 import { NdjsonParser } from './ndjson-parser'
 import { getShellEnv, findClaudePath } from './env-resolver'
@@ -68,6 +69,11 @@ export class NativeChatManager {
   }
 
   createSession(workingDir: string): SessionInfo {
+    // workingDir 유효성 검증
+    if (!existsSync(workingDir) || !statSync(workingDir).isDirectory()) {
+      throw new Error(`Invalid working directory: "${workingDir}" does not exist or is not a directory`)
+    }
+
     const id = `session-${this.nextId++}`
     const name = basename(workingDir)
     const now = new Date().toISOString()
@@ -275,7 +281,9 @@ export class NativeChatManager {
 
   private killProcess(session: NativeSession): void {
     if (session.process) {
-      try { session.process.kill('SIGTERM') } catch { /* ignore */ }
+      try { session.process.kill('SIGTERM') } catch (err) {
+        console.warn(`[NativeChatManager] killProcess failed for ${session.id}:`, (err as Error).message)
+      }
       session.process = undefined
     }
   }
