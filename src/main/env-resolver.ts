@@ -50,7 +50,15 @@ export function findClaudePath(env: Record<string, string>): string {
       timeout: SHELL_ENV_TIMEOUT,
       env
     }).trim()
-    if (result) return result
+    if (result) {
+      // which 결과를 실제 실행하여 검증 (broken symlink/삭제된 바이너리 방지)
+      try {
+        execFileSync(result, ['--version'], { encoding: 'utf-8', timeout: CLAUDE_PATH_TIMEOUT })
+        return result
+      } catch {
+        console.warn(`[env-resolver] "which claude" returned ${result} but binary is not executable`)
+      }
+    }
   } catch (err) {
     console.warn('[env-resolver] "which claude" failed, trying common paths:', (err as Error).message)
   }

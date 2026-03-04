@@ -76,7 +76,9 @@ export function findTmuxPath(env: Record<string, string>): string | null {
       timeout: SHELL_ENV_TIMEOUT,
       env
     }).trim()
-    if (result) return result
+    // which 결과를 실제 실행하여 검증 (바이너리 미존재/broken symlink 방지)
+    if (result && execTmux(result, ['-V'], TMUX_VERSION_TIMEOUT) !== null) return result
+    if (result) console.warn(`[tmux-utils] "which tmux" returned ${result} but binary is not executable`)
   } catch (err) {
     console.warn('[tmux-utils] "which tmux" failed:', (err as Error).message)
   }

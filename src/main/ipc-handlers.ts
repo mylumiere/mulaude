@@ -217,8 +217,10 @@ export function registerIpcHandlers(
   })
 
   // 폴더 선택 다이얼로그
-  ipcMain.handle('dialog:openDirectory', async () => {
+  ipcMain.handle('dialog:openDirectory', async (event) => {
+    const parentWindow = BrowserWindow.fromWebContents(event.sender) ?? undefined
     const result = await dialog.showOpenDialog({
+      ...(parentWindow ? { parentWindow } : {}),
       properties: ['openDirectory'],
       title: dt('dialog.openDirectory')
     })
@@ -403,8 +405,10 @@ export function registerNativeIpcHandlers(
     setLocale(locale)
   })
 
-  ipcMain.handle('dialog:openDirectory', async () => {
+  ipcMain.handle('dialog:openDirectory', async (event) => {
+    const parentWindow = BrowserWindow.fromWebContents(event.sender) ?? undefined
     const result = await dialog.showOpenDialog({
+      ...(parentWindow ? { parentWindow } : {}),
       properties: ['openDirectory'],
       title: dt('dialog.openDirectory')
     })

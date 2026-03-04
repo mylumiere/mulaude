@@ -142,8 +142,13 @@ export function useSessionManager({
       window.api.updateSessionName(session.id, projectName)
     } catch (err) {
       console.error('[SessionManager] createSession failed:', err)
+      const msg = err instanceof Error ? err.message : String(err)
+      window.api.sendNotification(
+        t(locale, 'session.createFailed'),
+        msg
+      )
     }
-  }, [initSession])
+  }, [initSession, locale])
 
   const addSession = useCallback(
     async (workingDir: string) => {
@@ -158,9 +163,14 @@ export function useSessionManager({
         window.api.updateSessionName(session.id, projectName)
       } catch (err) {
         console.error('[SessionManager] addSession failed:', err)
+        const msg = err instanceof Error ? err.message : String(err)
+        window.api.sendNotification(
+          t(locale, 'session.createFailed'),
+          msg
+        )
       }
     },
-    [initSession]
+    [initSession, locale]
   )
 
   const destroySession = useCallback(

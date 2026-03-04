@@ -1,6 +1,6 @@
 {
   "name": "mulaude",
-  "version": "1.1.22",
+  "version": "1.1.23",
   "description": "멀티 세션 Claude Code 터미널 데스크톱 앱",
   "main": "./out/main/index.js",
   "scripts": {
