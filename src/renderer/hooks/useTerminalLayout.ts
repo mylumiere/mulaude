@@ -436,11 +436,34 @@ export function useTerminalLayout({
     position: DropPosition
   ) => {
     setTree((prev) => {
-      // 이미 트리에 같은 세션이 열려있으면 해당 패인으로 포커스 + 알림
+      // 이미 트리에 같은 세션이 열려있으면 해당 패인을 드롭 위치로 이동
       const existing = getAllLeaves(prev.root).find((l) => l.sessionId === sessionId)
       if (existing) {
-        showDuplicateAlert(sessionId)
-        return { ...prev, focusedPaneId: existing.id }
+        if (existing.id === targetPaneId) return prev // 자기 자신 위에 드롭 → 무시
+
+        if (position === 'center') {
+          // 중앙 드롭: 세션 교환
+          const targetLeaf = findLeaf(prev.root, targetPaneId)
+          if (!targetLeaf) return prev
+          let newRoot = replaceNode(prev.root, existing.id, { ...existing, sessionId: targetLeaf.sessionId })
+          newRoot = replaceNode(newRoot, targetPaneId, { ...targetLeaf, sessionId: existing.sessionId })
+          return { ...prev, root: newRoot, focusedPaneId: targetPaneId }
+        }
+
+        // 가장자리 드롭: 기존 패인 제거 → 타겟 위치에 분할 삽입
+        const afterRemove = removeLeaf(prev.root, existing.id)
+        if (!afterRemove) return prev
+        const direction: 'horizontal' | 'vertical' =
+          position === 'left' || position === 'right' ? 'horizontal' : 'vertical'
+        const newLeaf = makeLeaf(sessionId)
+        let newRoot: PaneNode
+        if (position === 'left' || position === 'top') {
+          newRoot = splitLeaf(afterRemove, targetPaneId, direction, newLeaf)
+          newRoot = swapLastTwo(newRoot, targetPaneId, newLeaf.id)
+        } else {
+          newRoot = splitLeaf(afterRemove, targetPaneId, direction, newLeaf)
+        }
+        return { ...prev, root: newRoot, focusedPaneId: newLeaf.id }
       }
 
       if (position === 'center') {
@@ -473,7 +496,7 @@ export function useTerminalLayout({
       const newRoot = splitLeaf(prev.root, targetPaneId, direction, newLeaf)
       return { ...prev, root: newRoot, focusedPaneId: newLeaf.id }
     })
-  }, [showDuplicateAlert, showGridAlert])
+  }, [showGridAlert])
 
   /* ──── 포커스된 세션 ID ──── */
   const getFocusedSessionId = useCallback((): string | null => {
