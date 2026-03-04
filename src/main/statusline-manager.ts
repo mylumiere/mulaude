@@ -38,7 +38,7 @@ const CTX_DIR = join(MULAUDE_DIR, 'ctx')
 const STATUSLINE_SCRIPT_PATH = join(MULAUDE_DIR, 'statusline.mjs')
 const PROXY_CMD_PATH = join(MULAUDE_DIR, 'proxy-cmd')
 const CLAUDE_SETTINGS_PATH = join(homedir(), '.claude', 'settings.json')
-const HUD_CACHE_PATH = join(homedir(), '.claude', 'plugins', 'claude-hud', '.usage-cache.json')
+const PLUGINS_DIR = join(homedir(), '.claude', 'plugins')
 
 const execFileAsync = promisify(execFile)
 
@@ -86,6 +86,16 @@ process.stdin.on('end', () => {
   process.stdout.write('');
 });
 `
+
+/** Keychain의 subscriptionType/rateLimitTier 문자열에서 플랜 이름을 추출합니다 */
+function derivePlanName(subscriptionType: string): string {
+  const lower = subscriptionType.toLowerCase()
+  if (lower.includes('max')) return 'Max'
+  if (lower.includes('team')) return 'Team'
+  if (lower.includes('pro')) return 'Pro'
+  if (!subscriptionType) return 'Pro'
+  return subscriptionType.charAt(0).toUpperCase() + subscriptionType.slice(1)
+}
 
 // ─── 상태 ───
 
@@ -205,10 +215,28 @@ function pollContextData(mainWindow: BrowserWindow): void {
 
 // ─── C. Rate Limit 데이터 ───
 
-/** claude-hud 캐시에서 사용량 데이터를 읽습니다 */
+/**
+ * ~/.claude/plugins/ 하위에서 .usage-cache.json 파일을 찾습니다.
+ * claude-hud, oh-my-open-claude 등 다양한 플러그인 대응.
+ */
+function findHudCachePath(): string | null {
+  try {
+    if (!existsSync(PLUGINS_DIR)) return null
+    const dirs = readdirSync(PLUGINS_DIR)
+    for (const dir of dirs) {
+      const cachePath = join(PLUGINS_DIR, dir, '.usage-cache.json')
+      if (existsSync(cachePath)) return cachePath
+    }
+  } catch {}
+  return null
+}
+
+/** HUD 플러그인 캐시에서 사용량 데이터를 읽습니다 */
 function readHudCacheData(): UsageData | null {
   try {
-    const raw = readFileSync(HUD_CACHE_PATH, 'utf-8')
+    const cachePath = findHudCachePath()
+    if (!cachePath) return null
+    const raw = readFileSync(cachePath, 'utf-8')
     const parsed = JSON.parse(raw)
     const d = parsed.data
     if (!d) return null
@@ -249,8 +277,12 @@ async function fetchUsageViaKeychain(): Promise<UsageData | null> {
     if (!raw) return null
 
     const creds = JSON.parse(raw)
-    const token = creds.claudeAiOauth?.accessToken
+    const oauth = creds.claudeAiOauth
+    const token = oauth?.accessToken
     if (!token) return null
+
+    // subscriptionType / rateLimitTier에서 플랜 이름 추출
+    const planName = derivePlanName(oauth?.subscriptionType || oauth?.rateLimitTier || '')
 
     const res = await fetch('https://api.anthropic.com/api/oauth/usage', {
       headers: {
@@ -270,7 +302,7 @@ async function fetchUsageViaKeychain(): Promise<UsageData | null> {
     const sevenDay = data.seven_day as { utilization?: number; resets_at?: string } | null
 
     return {
-      planName: 'Pro',
+      planName,
       fiveHour: fiveHour?.utilization ?? 0,
       sevenDay: sevenDay?.utilization ?? 0,
       fiveHourResetAt: fiveHour?.resets_at || '',
