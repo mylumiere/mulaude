@@ -115,7 +115,7 @@ function getLeafRects(
   return result
 }
 
-/** 방향 기반 인접 패인 찾기 (중심선 거리 기반) */
+/** 방향 기반 인접 패인 찾기 (전역 2D 중심점 거리 기반) */
 export function findAdjacentPane(
   root: PaneNode,
   currentId: string,
@@ -128,6 +128,12 @@ export function findAdjacentPane(
     direction === 'left' || direction === 'right' ? 'horizontal' : 'vertical'
   const goBack = direction === 'left' || direction === 'up'
 
+  // 전역 좌표계에서 모든 리프의 rect 계산
+  const globalRects = getLeafRects(root)
+  const currentRect = globalRects.get(currentId)!
+  const cx = currentRect.x + currentRect.w / 2
+  const cy = currentRect.y + currentRect.h / 2
+
   for (let i = path.length - 2; i >= 0; i--) {
     const entry = path[i]
     const node = entry.node as PaneBranch
@@ -136,28 +142,18 @@ export function findAdjacentPane(
     const targetIdx = goBack ? entry.childIndex - 1 : entry.childIndex + 1
     if (targetIdx < 0 || targetIdx >= node.children.length) continue
 
-    const sourceSubtree = node.children[entry.childIndex]
-    const targetSubtree = node.children[targetIdx]
-
-    // 소스 패인의 수직/수평 중심 계산
-    const sourceRects = getLeafRects(sourceSubtree)
-    const sourceRect = sourceRects.get(currentId)!
-    const sourceCenter = axis === 'horizontal'
-      ? sourceRect.y + sourceRect.h / 2   // 좌우 이동 → 수직 중심 비교
-      : sourceRect.x + sourceRect.w / 2   // 상하 이동 → 수평 중심 비교
-
-    // 대상 서브트리에서 중심이 가장 가까운 리프 선택
-    const targetRects = getLeafRects(targetSubtree)
+    // 대상 서브트리의 리프 중 현재 패인 중심점과 2D 거리가 가장 가까운 리프 선택
+    const targetLeaves = getAllLeaves(node.children[targetIdx])
     let bestId: string | null = null
     let bestDist = Infinity
-    for (const [id, rect] of targetRects) {
-      const center = axis === 'horizontal'
-        ? rect.y + rect.h / 2
-        : rect.x + rect.w / 2
-      const dist = Math.abs(center - sourceCenter)
+    for (const leaf of targetLeaves) {
+      const rect = globalRects.get(leaf.id)!
+      const dx = rect.x + rect.w / 2 - cx
+      const dy = rect.y + rect.h / 2 - cy
+      const dist = dx * dx + dy * dy
       if (dist < bestDist) {
         bestDist = dist
-        bestId = id
+        bestId = leaf.id
       }
     }
     return bestId
