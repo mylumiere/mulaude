@@ -45,6 +45,7 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
     titleKey: 'shortcuts.group.grid',
     items: [
       { keys: '⌘ W', labelKey: 'shortcuts.closePane' },
+      { keys: '⌘⇧ T', labelKey: 'shortcuts.reopenPane' },
       { keys: '⌘⇧ ↵', labelKey: 'shortcuts.zoomToggle' },
       { keys: '⌘ ← / →', labelKey: 'shortcuts.gridFocusCol' },
       { keys: '⌘ ↑ / ↓', labelKey: 'shortcuts.gridFocusRow' },

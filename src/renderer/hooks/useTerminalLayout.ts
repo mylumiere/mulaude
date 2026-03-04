@@ -11,7 +11,7 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { MAX_PANES, MIN_PANE_RATIO, DUPLICATE_ALERT_TIMEOUT } from '../../shared/constants'
+import { MAX_PANES, MIN_PANE_RATIO, DUPLICATE_ALERT_TIMEOUT, MAX_CLOSED_PANE_HISTORY } from '../../shared/constants'
 import {
   type PaneLeaf,
   type PaneBranch,
@@ -37,6 +37,14 @@ import { saveTreeToStorage, loadTreeFromStorage } from '../utils/pane-storage'
 export type { PaneLeaf, PaneBranch, PaneNode, PaneTreeState, DropPosition }
 export { getAllLeaves }
 
+/** 닫힌 패인의 위치 정보 (⌘⇧T 복원용) */
+interface ClosedPaneEntry {
+  sessionId: string
+  neighborPaneId: string
+  direction: 'horizontal' | 'vertical'
+  insertBefore: boolean
+}
+
 export interface UseTerminalLayoutReturn {
   tree: PaneTreeState
   isGridMode: boolean
@@ -47,6 +55,8 @@ export interface UseTerminalLayoutReturn {
   splitHorizontal: () => void
   splitVertical: () => void
   closePane: () => void
+  /** 닫은 패인 되살리기 (⌘⇧T) */
+  reopenClosedPane: () => void
   toggleZoom: () => void
   /** 패인 세션 변경. 중복 시 해당 패인으로 포커스 이동 + 알림 */
   setPaneSession: (paneId: string, sessionId: string) => void
@@ -188,6 +198,9 @@ export function useTerminalLayout({
     return () => { if (duplicateTimerRef.current) clearTimeout(duplicateTimerRef.current) }
   }, [])
 
+  // 닫힌 패인 히스토리 스택 (⌘⇧T 복원용)
+  const closedPanesRef = useRef<ClosedPaneEntry[]>([])
+
   // 그리드 알림 (패인 초과 등)
   const [gridAlert, setGridAlert] = useState<string | null>(null)
   const gridAlertTimerRef = useRef<ReturnType<typeof setTimeout>>()
@@ -244,6 +257,37 @@ export function useTerminalLayout({
   const closePane = useCallback(() => {
     setTree((prev) => {
       if (countLeaves(prev.root) <= 1) return prev
+
+      // 위치 정보 캡처: 부모 브랜치에서 형제 패인과의 관계 기록
+      const path = findPath(prev.root, prev.focusedPaneId)
+      if (path && path.length >= 2) {
+        const parentEntry = path[path.length - 2]
+        const parent = parentEntry.node
+        if (parent.type === 'branch' && parentEntry.childIndex !== undefined) {
+          const myIdx = parentEntry.childIndex
+          // 인접 형제: 내 앞 또는 뒤
+          const neighborIdx = myIdx > 0 ? myIdx - 1 : myIdx + 1
+          const neighbor = parent.children[neighborIdx]
+          const closedLeaf = findLeaf(prev.root, prev.focusedPaneId)
+          if (neighbor && closedLeaf) {
+            // neighbor가 브랜치일 수 있으므로, 그 안의 첫 번째 리프를 기준점으로 사용
+            const neighborLeafId = neighbor.type === 'leaf' ? neighbor.id : getAllLeaves(neighbor)[0]?.id
+            if (neighborLeafId) {
+              const entry: ClosedPaneEntry = {
+                sessionId: closedLeaf.sessionId,
+                neighborPaneId: neighborLeafId,
+                direction: parent.direction,
+                insertBefore: myIdx < neighborIdx
+              }
+              closedPanesRef.current = [
+                ...closedPanesRef.current.slice(-(MAX_CLOSED_PANE_HISTORY - 1)),
+                entry
+              ]
+            }
+          }
+        }
+      }
+
       const result = removeLeaf(prev.root, prev.focusedPaneId)
       if (!result) return prev
       const leaves = getAllLeaves(result)
@@ -251,6 +295,46 @@ export function useTerminalLayout({
       return { root: result, focusedPaneId: newFocused, zoomedPaneId: null }
     })
   }, [])
+
+  /* ──── 닫은 패인 되살리기 (⌘⇧T) ──── */
+  const reopenClosedPane = useCallback(() => {
+    setTree((prev) => {
+      const stack = closedPanesRef.current
+      if (stack.length === 0) return prev
+      if (countLeaves(prev.root) >= MAX_PANES) {
+        showGridAlert('grid.maxPanes')
+        return prev
+      }
+
+      // 스택에서 유효한 엔트리 찾기 (세션이 존재 + 그리드에 미표시)
+      const usedIds = new Set(getAllLeaves(prev.root).map((l) => l.sessionId))
+      let entry: ClosedPaneEntry | undefined
+      while (stack.length > 0) {
+        const candidate = stack.pop()!
+        // 세션이 아직 존재하고 그리드에 없는지 확인
+        if (sessions.some((s) => s.id === candidate.sessionId) && !usedIds.has(candidate.sessionId)) {
+          entry = candidate
+          break
+        }
+      }
+      if (!entry) return prev
+
+      const newLeaf = makeLeaf(entry.sessionId)
+
+      // neighbor가 트리에 아직 있으면 원래 위치에 복원
+      if (findLeaf(prev.root, entry.neighborPaneId)) {
+        let newRoot = splitLeaf(prev.root, entry.neighborPaneId, entry.direction, newLeaf)
+        if (entry.insertBefore) {
+          newRoot = swapLastTwo(newRoot, entry.neighborPaneId, newLeaf.id)
+        }
+        return { ...prev, root: newRoot, focusedPaneId: newLeaf.id, zoomedPaneId: null }
+      }
+
+      // neighbor가 없으면 현재 포커스 패인 분할
+      const newRoot = splitLeaf(prev.root, prev.focusedPaneId, entry.direction, newLeaf)
+      return { ...prev, root: newRoot, focusedPaneId: newLeaf.id, zoomedPaneId: null }
+    })
+  }, [sessions, showGridAlert])
 
   /* ──── 줌 토글 ──── */
   const toggleZoom = useCallback(() => {
@@ -471,6 +555,7 @@ export function useTerminalLayout({
     splitHorizontal,
     splitVertical,
     closePane,
+    reopenClosedPane,
     toggleZoom,
     setPaneSession,
     focusPane,

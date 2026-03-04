@@ -105,6 +105,7 @@ export default function App(): JSX.Element {
     getChildPaneIndices: (sessionId: string) => childPaneIndicesRef.current[sessionId] || [],
     sessionsWithPanes,
     closePane: terminalLayout.closePane,
+    reopenClosedPane: terminalLayout.reopenClosedPane,
     toggleZoom: terminalLayout.toggleZoom,
     focusDirection: terminalLayout.focusDirection,
     isGridMode: terminalLayout.isGridMode,

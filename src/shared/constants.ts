@@ -112,3 +112,5 @@ export const MAX_PANES = 10
 export const MIN_PANE_RATIO = 0.1
 /** 중복 세션 알림 표시 시간 (ms) */
 export const DUPLICATE_ALERT_TIMEOUT = 2000
+/** ⌘⇧T 닫은 패인 되살리기 히스토리 최대 개수 */
+export const MAX_CLOSED_PANE_HISTORY = 10
