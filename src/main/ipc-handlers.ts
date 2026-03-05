@@ -7,6 +7,7 @@
 
 import { ipcMain, dialog, Notification, clipboard, BrowserWindow } from 'electron'
 import { writeFile } from 'fs/promises'
+import { join } from 'path'
 import { tmpdir } from 'os'
 import type { SessionManager } from './session-manager'
 import type { NativeChatManager } from './native-chat-manager'
@@ -27,7 +28,6 @@ const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'ti
  */
 async function saveClipboardImageToFile(): Promise<string | null> {
   const formats = clipboard.availableFormats()
-  console.log('[clipboard] formats:', formats)
 
   // macOS Finder 파일 복사 감지: text/uri-list 포맷이 있으면 파일 경로 추출
   if (formats.includes('text/uri-list')) {
@@ -37,15 +37,11 @@ async function saveClipboardImageToFile(): Promise<string | null> {
         const buf = clipboard.readBuffer(fmt)
         if (buf.length > 0) {
           const raw = buf.toString('utf-8').replace(/\0/g, '').trim()
-          console.log(`[clipboard] ${fmt}:`, raw.substring(0, 300))
           // file:// URI에서 경로 추출
           if (raw.startsWith('file://')) {
             const filePath = decodeURIComponent(new URL(raw).pathname)
             const ext = filePath.toLowerCase().split('.').pop() || ''
-            if (IMAGE_EXTENSIONS.includes(ext)) {
-              console.log('[clipboard] Finder image path:', filePath)
-              return filePath
-            }
+            if (IMAGE_EXTENSIONS.includes(ext)) return filePath
           }
           // NSFilenamesPboardType: plist XML에서 경로 추출
           if (raw.includes('<string>')) {
@@ -53,15 +49,12 @@ async function saveClipboardImageToFile(): Promise<string | null> {
             if (match) {
               const filePath = match[1]
               const ext = filePath.toLowerCase().split('.').pop() || ''
-              if (IMAGE_EXTENSIONS.includes(ext)) {
-                console.log('[clipboard] Finder image path (plist):', filePath)
-                return filePath
-              }
+              if (IMAGE_EXTENSIONS.includes(ext)) return filePath
             }
           }
         }
-      } catch (e) {
-        console.log(`[clipboard] ${fmt} failed:`, e)
+      } catch {
+        // 포맷 읽기 실패 → 다음 포맷 시도
       }
     }
     // Finder 복사지만 이미지 파일이 아닌 경우 → null (일반 paste에 위임)
@@ -78,7 +71,6 @@ async function saveClipboardImageToFile(): Promise<string | null> {
   const pngBuffer = image.toPNG()
   const filePath = join(tmpdir(), `mulaude-paste-${Date.now()}.png`)
   await writeFile(filePath, pngBuffer)
-  console.log('[clipboard] saved screenshot to:', filePath)
   return filePath
 }
 

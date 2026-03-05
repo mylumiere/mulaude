@@ -140,7 +140,15 @@ export function useXtermTerminal({
     // 키 이벤트 핸들러: 앱 단축키는 window로 전달, 나머지는 xterm 처리
     terminal.attachCustomKeyEventHandler((event: KeyboardEvent) => {
       // Cmd 조합은 앱 단축키 → window로 전달 (Cmd+Shift+Enter = 줌 토글 등)
-      if (event.metaKey) return false
+      if (event.metaKey) {
+        // Cmd+V: 클립보드 이미지 붙여넣기 (xterm 포커스 상태에서만 호출됨)
+        if (event.code === 'KeyV' && event.type === 'keydown') {
+          window.api.saveClipboardImage().then((filePath) => {
+            if (filePath) onData(filePath)
+          }).catch(() => {})
+        }
+        return false
+      }
       // Shift+Enter → \n(LF) 전송으로 줄바꿈 (Enter는 xterm이 \r 전송 → 제출)
       // keydown에서만 전송, keypress/keyup은 차단 (xterm이 \r 중복 전송 방지)
       if (event.key === 'Enter' && event.shiftKey) {
@@ -169,19 +177,6 @@ export function useXtermTerminal({
     })
 
     const onDataDisposable = terminal.onData(onData)
-
-    // 이미지 붙여넣기 지원
-    const handleImagePaste = (e: KeyboardEvent): void => {
-      if (!xtermRef.current || !containerRef.current) return
-      if (!containerRef.current.contains(document.activeElement)) return
-      if (!(e.metaKey && e.code === 'KeyV')) return
-      window.api.saveClipboardImage().then((filePath) => {
-        if (filePath) {
-          onData(filePath)
-        }
-      }).catch(() => {})
-    }
-    document.addEventListener('keydown', handleImagePaste)
 
     // 마우스 휠 → tmux copy-mode 스크롤 (IPC 경유)
     // onScroll 콜백이 제공되면 휠을 가로채서 tmux 명령으로 1줄씩 스크롤.
@@ -293,7 +288,6 @@ export function useXtermTerminal({
     return () => {
       if (resizeTimer) clearTimeout(resizeTimer)
       if (handleWheel) wheelContainer.removeEventListener('wheel', handleWheel, { capture: true })
-      document.removeEventListener('keydown', handleImagePaste)
       document.removeEventListener('dragover', handleFileDragOver, true)
       document.removeEventListener('drop', handleFileDrop, true)
       onDataDisposable.dispose()
