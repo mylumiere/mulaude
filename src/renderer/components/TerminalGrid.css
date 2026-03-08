@@ -313,6 +313,46 @@
   gap: 2px;
 }
 
+/* 퍼미션 모드 칩 (패인 헤더 내) */
+.terminal-grid-mode-chip {
+  background: none;
+  border: 1px solid transparent;
+  font-family: var(--font-ui);
+  font-size: 0.55rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  padding: 0 4px;
+  line-height: 16px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: opacity var(--transition-fast), background var(--transition-fast);
+  opacity: 0.85;
+}
+
+.terminal-grid-mode-chip:hover {
+  opacity: 1;
+}
+
+.terminal-grid-mode-chip--acceptEdits {
+  color: var(--status-success, #06d6a0);
+  background: rgba(6, 214, 160, 0.1);
+  border-color: rgba(6, 214, 160, 0.25);
+}
+
+.terminal-grid-mode-chip--acceptEdits:hover {
+  background: rgba(6, 214, 160, 0.18);
+}
+
+.terminal-grid-mode-chip--plan {
+  color: var(--status-warning, #ffd166);
+  background: rgba(255, 209, 102, 0.1);
+  border-color: rgba(255, 209, 102, 0.25);
+}
+
+.terminal-grid-mode-chip--plan:hover {
+  background: rgba(255, 209, 102, 0.18);
+}
+
 /* 줌 복귀 버튼 */
 .terminal-grid-pane-zoom-exit {
   background: none;

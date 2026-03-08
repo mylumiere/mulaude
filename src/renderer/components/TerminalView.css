@@ -56,6 +56,40 @@
   box-shadow: 0 0 12px var(--accent-primary-glow), inset 0 0 8px rgba(124, 92, 252, 0.05);
 }
 
+/* ─── Mode Badge ─── */
+.terminal-mode-badge {
+  position: absolute;
+  top: 8px;
+  right: 80px;
+  font-family: var(--font-ui);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  z-index: 2;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+  opacity: 0.85;
+}
+
+.terminal-mode-badge:hover {
+  opacity: 1;
+}
+
+.terminal-mode-badge--acceptEdits {
+  color: var(--status-success, #06d6a0);
+  background: rgba(6, 214, 160, 0.15);
+  border: 1px solid rgba(6, 214, 160, 0.3);
+}
+
+.terminal-mode-badge--plan {
+  color: var(--status-warning, #ffd166);
+  background: rgba(255, 209, 102, 0.15);
+  border: 1px solid rgba(255, 209, 102, 0.3);
+}
+
 /* ─── Context Badge ─── */
 .terminal-context-badge {
   position: absolute;

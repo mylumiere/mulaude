@@ -20,6 +20,9 @@ import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import { useChildPaneManager } from './hooks/useChildPaneManager'
 import { useTerminalLayout, getAllLeaves } from './hooks/useTerminalLayout'
 import { useTutorial } from './hooks/useTutorial'
+import type { PermissionMode } from './components/TerminalView'
+
+const PERMISSION_CYCLE: PermissionMode[] = ['default', 'acceptEdits', 'plan']
 
 export default function App(): JSX.Element {
   const settings = useSettings()
@@ -84,6 +87,17 @@ export default function App(): JSX.Element {
 
   const tutorial = useTutorial(sessionManager.sessions.length)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
+
+  // 세션별 퍼미션 모드 상태
+  const [permissionModes, setPermissionModes] = useState<Record<string, PermissionMode>>({})
+  const cyclePermissionMode = useCallback((sessionId: string) => {
+    setPermissionModes(prev => {
+      const current = prev[sessionId] ?? 'default'
+      const idx = PERMISSION_CYCLE.indexOf(current)
+      const next = PERMISSION_CYCLE[(idx + 1) % PERMISSION_CYCLE.length]
+      return { ...prev, [sessionId]: next }
+    })
+  }, [])
 
   // 드래그 스텝: 그리드 모드 진입 시 자동 진행
   useEffect(() => {
@@ -206,6 +220,8 @@ export default function App(): JSX.Element {
               duplicateAlert={terminalLayout.duplicateAlert}
               gridAlert={terminalLayout.gridAlert}
               blockCenterDrop={tutorial.phase === 'steps' && tutorial.steps[tutorial.currentStep]?.action === 'drag'}
+              permissionModes={permissionModes}
+              onCycleMode={cyclePermissionMode}
             />
           ) : (
             <div className="empty-state">
