@@ -6,13 +6,14 @@
  */
 
 import { ipcMain, dialog, Notification, clipboard, BrowserWindow } from 'electron'
-import { writeFile } from 'fs/promises'
+import { writeFile, readFile } from 'fs/promises'
 import { join } from 'path'
 import { tmpdir } from 'os'
 import type { SessionManager } from './session-manager'
 import type { NativeChatManager } from './native-chat-manager'
 import { showOrphanDialog } from './close-handler'
 import { getCachedUsageData, setHideHud, setKeychainAccess } from './statusline-manager'
+import { launchPreview, stopPreview, writeLaunchConfig } from './preview-launcher'
 import type { UsageData } from '../shared/types'
 
 /** 이미지 파일 확장자 목록 */
@@ -256,6 +257,21 @@ export function registerIpcHandlers(
       console.error('[IPC] clipboard:save-paste-image failed:', err)
       return null
     }
+  })
+
+  // Preview: 프로젝트 감지 + dev 서버 프로세스 실행
+  ipcMain.handle('preview:launch', async (_event, sessionId: string, workingDir: string) => {
+    return launchPreview(sessionId, workingDir)
+  })
+
+  // Preview: 프로세스 종료
+  ipcMain.handle('preview:stop', async (_event, sessionId: string) => {
+    stopPreview(sessionId)
+  })
+
+  // Preview: 사용자 확인 후 launch.json 저장
+  ipcMain.handle('preview:save-config', async (_event, workingDir: string, config: { version?: string; configurations: { name: string; runtimeExecutable: string; runtimeArgs?: string[]; port?: number; cwd?: string }[] }) => {
+    await writeLaunchConfig(workingDir, config)
   })
 
   // 미연결 tmux 세션 감지 및 정리

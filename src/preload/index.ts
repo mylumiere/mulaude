@@ -288,6 +288,34 @@ const api = {
   checkOrphanSessions: (): Promise<{ found: number; cleaned: boolean }> =>
     ipcRenderer.invoke('session:check-orphans'),
 
+  /** Preview: .claude/launch.json 기반 dev 서버 실행 */
+  launchPreview: (sessionId: string, workingDir: string): Promise<{
+    config: { version?: string; configurations: { name: string; runtimeExecutable: string; runtimeArgs?: string[]; port?: number; cwd?: string }[] }
+    previewUrl: string
+    created: boolean
+  } | null> =>
+    ipcRenderer.invoke('preview:launch', sessionId, workingDir),
+
+  /** Preview: 프로세스 종료 */
+  stopPreview: (sessionId: string): Promise<void> =>
+    ipcRenderer.invoke('preview:stop', sessionId),
+
+  /** Preview: 사용자 확인 후 launch.json 저장 */
+  saveLaunchConfig: (workingDir: string, config: {
+    version?: string
+    configurations: { name: string; runtimeExecutable: string; runtimeArgs?: string[]; port?: number; cwd?: string }[]
+  }): Promise<void> =>
+    ipcRenderer.invoke('preview:save-config', workingDir, config),
+
+  /** Preview: 프로세스 로그 수신 */
+  onPreviewProcessLog: (cb: (sessionId: string, processName: string, stream: 'stdout' | 'stderr', data: string) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, sessionId: string, processName: string, stream: 'stdout' | 'stderr', data: string): void => {
+      cb(sessionId, processName, stream, data)
+    }
+    ipcRenderer.on('preview:process-log', handler)
+    return () => ipcRenderer.removeListener('preview:process-log', handler)
+  },
+
   /** Permission/Question 입력 요청 이벤트 수신 (main → 렌더러) */
   onNativeInputRequest: (cb: (sessionId: string, request: NativeInputRequest) => void): (() => void) => {
     const handler = (_event: Electron.IpcRendererEvent, sessionId: string, request: NativeInputRequest): void => {

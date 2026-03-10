@@ -123,6 +123,11 @@ body::after {
   z-index: 0;
 }
 
+/* 드래그 리사이즈 중 iframe 이벤트 가로채기 방지 */
+body.resizing iframe {
+  pointer-events: none !important;
+}
+
 /* --- App Layout --- */
 .app {
   display: flex;
@@ -236,6 +241,13 @@ body::after {
 }
 
 .terminal-split-agents {
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.terminal-split-preview {
   min-width: 200px;
   display: flex;
   flex-direction: column;

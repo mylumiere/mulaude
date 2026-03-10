@@ -114,3 +114,8 @@ export const MIN_PANE_RATIO = 0.1
 export const DUPLICATE_ALERT_TIMEOUT = 2000
 /** ⌘⇧T 닫은 패인 되살리기 히스토리 최대 개수 */
 export const MAX_CLOSED_PANE_HISTORY = 10
+
+/* ═══════ Preview ═══════ */
+
+/** 터미널:프리뷰 기본 비율 */
+export const PREVIEW_DEFAULT_RATIO = 0.5

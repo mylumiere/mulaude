@@ -643,6 +643,36 @@
   background: rgba(255, 92, 114, 0.1);
 }
 
+.sidebar-preview-btn {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 3px;
+  padding: 0;
+  transition: all var(--transition-fast);
+  opacity: 0;
+}
+
+.session-row:hover .sidebar-preview-btn,
+.sidebar-preview-btn--active {
+  opacity: 1;
+}
+
+.sidebar-preview-btn:hover {
+  color: var(--accent-primary);
+  background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
+}
+
+.sidebar-preview-btn--active {
+  color: var(--accent-primary);
+}
+
 /* ─── Agent Tree ─── */
 .session-agents {
   padding-left: 22px;
