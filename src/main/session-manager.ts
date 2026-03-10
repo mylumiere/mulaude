@@ -325,9 +325,8 @@ export class SessionManager {
 
     // 1) tmux 세션 생존 확인
     if (!isTmuxSessionAlive(tmuxPath, persisted.tmuxSessionName)) {
-      console.log(`[SessionManager] tmux session ${persisted.tmuxSessionName} is dead, skipping`)
-      this.sessionStore.removeSession(persisted.id)
-      return null
+      console.log(`[SessionManager] tmux session ${persisted.tmuxSessionName} is dead, attempting recreation`)
+      return this.recreateDeadSession(persisted)
     }
 
     // 2) 중첩 세션 방지: CLAUDECODE 환경변수 제거
@@ -398,6 +397,121 @@ export class SessionManager {
       name: persisted.name,
       workingDir: persisted.workingDir,
       tmuxSessionName: persisted.tmuxSessionName,
+      createdAt: persisted.createdAt,
+      restored: true
+    }
+  }
+
+  /**
+   * tmux 세션이 죽은(재부팅 등) 경우 새 tmux 세션을 생성하여 복원합니다.
+   *
+   * 기존 세션의 ID, 이름, 작업 디렉토리를 유지하면서
+   * 새 tmux 세션을 만들고 claude CLI를 실행합니다.
+   * workingDir이 더 이상 존재하지 않으면 세션을 제거합니다.
+   *
+   * @param persisted - 영속 저장소에서 로드된 세션 정보
+   * @returns 재생성된 세션 정보 또는 null (workingDir 없는 경우)
+   */
+  private recreateDeadSession(persisted: PersistedSession): SessionInfo | null {
+    if (!this.tmuxPath) return null
+
+    // workingDir이 없으면 복원 불가 → 제거
+    if (!existsSync(persisted.workingDir) || !statSync(persisted.workingDir).isDirectory()) {
+      console.log(`[SessionManager] workingDir gone: ${persisted.workingDir}, removing session`)
+      this.sessionStore.removeSession(persisted.id)
+      return null
+    }
+
+    const tmuxPath = this.tmuxPath
+    const tmuxName = persisted.tmuxSessionName
+
+    // CLAUDECODE 환경변수 제거 (중첩 방지)
+    const cleanEnv = { ...this.shellEnv }
+    delete cleanEnv['CLAUDECODE']
+    delete cleanEnv['CLAUDE_CODE']
+
+    // 1) 새 tmux 세션 생성
+    const envVars: Record<string, string> = {
+      TERM: 'xterm-256color',
+      COLORTERM: 'truecolor',
+      LANG: cleanEnv['LANG'] || 'en_US.UTF-8',
+      LC_ALL: cleanEnv['LC_ALL'] || cleanEnv['LANG'] || 'en_US.UTF-8'
+    }
+    if (this.ipcDir) {
+      envVars['MULAUDE_SESSION_ID'] = persisted.id
+      envVars['MULAUDE_IPC_DIR'] = this.ipcDir
+    }
+
+    try {
+      createTmuxSession(tmuxPath, tmuxName, persisted.workingDir, DEFAULT_COLS, DEFAULT_ROWS, envVars)
+    } catch (err) {
+      console.error(`[SessionManager] recreate tmux failed for ${tmuxName}:`, err)
+      this.sessionStore.removeSession(persisted.id)
+      return null
+    }
+
+    // 2) auto-break hook + claude CLI 실행
+    setAutoBreakPaneHook(tmuxPath, tmuxName)
+    try {
+      const unsetNested = 'unset CLAUDECODE CLAUDE_CODE; '
+      const safeIpcDir = this.ipcDir.replace(/'/g, "'\\''")
+      const envExport = this.ipcDir
+        ? `export MULAUDE_SESSION_ID='${persisted.id}' MULAUDE_IPC_DIR='${safeIpcDir}'; `
+        : ''
+      sendKeysToTmux(tmuxPath, tmuxName, unsetNested + envExport + this.claudePath)
+    } catch (err) {
+      console.error(`[SessionManager] recreate send-keys failed for ${tmuxName}:`, err)
+      killTmuxSession(tmuxPath, tmuxName)
+      this.sessionStore.removeSession(persisted.id)
+      return null
+    }
+
+    // 3) PTY attach
+    let ptyProcess: pty.IPty
+    try {
+      ptyProcess = pty.spawn(tmuxPath, ['-u', 'attach-session', '-t', tmuxName], {
+        name: 'xterm-256color',
+        cols: DEFAULT_COLS,
+        rows: DEFAULT_ROWS,
+        cwd: persisted.workingDir,
+        env: { ...cleanEnv, TERM: 'xterm-256color', COLORTERM: 'truecolor' }
+      })
+      console.log(`[SessionManager] recreated tmux ${tmuxName}, pid: ${ptyProcess.pid}`)
+    } catch (err) {
+      console.error(`[SessionManager] recreate PTY failed for ${tmuxName}:`, err)
+      killTmuxSession(tmuxPath, tmuxName)
+      this.sessionStore.removeSession(persisted.id)
+      return null
+    }
+
+    // 4) nextId 갱신
+    const match = persisted.id.match(/session-(\d+)/)
+    if (match) {
+      const num = parseInt(match[1], 10)
+      if (num >= this.nextId) this.nextId = num + 1
+    }
+
+    // 5) 세션 등록 + 이벤트 바인딩
+    const session: ManagedSession = {
+      id: persisted.id,
+      name: persisted.name,
+      workingDir: persisted.workingDir,
+      ptyProcess,
+      tmuxSessionName: tmuxName
+    }
+    this.sessions.set(persisted.id, session)
+    this.bindPtyEvents(persisted.id, ptyProcess)
+
+    // 6) store 갱신 (lastAccessedAt 업데이트)
+    this.sessionStore.touchSession(persisted.id)
+
+    console.log(`[SessionManager] session ${persisted.id} recreated (tmux was dead, new session created)`)
+
+    return {
+      id: persisted.id,
+      name: persisted.name,
+      workingDir: persisted.workingDir,
+      tmuxSessionName: tmuxName,
       createdAt: persisted.createdAt,
       restored: true
     }

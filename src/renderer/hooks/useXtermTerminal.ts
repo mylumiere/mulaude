@@ -51,6 +51,8 @@ interface UseXtermTerminalParams {
   initialContent?: string
   /** 터미널 비활성화 (pending 상태 등에서 xterm 생성 방지) */
   disabled?: boolean
+  /** Shift+Tab 감지 콜백 (퍼미션 모드 순환) */
+  onShiftTab?: () => void
   /** 의존성 키 배열 (터미널 재생성 트리거) */
   deps?: unknown[]
 }
@@ -77,6 +79,7 @@ export function useXtermTerminal({
   onScroll,
   initialContent,
   disabled,
+  onShiftTab,
   deps = []
 }: UseXtermTerminalParams): UseXtermTerminalReturn {
   const xtermRef = useRef<Terminal | null>(null)
@@ -148,6 +151,11 @@ export function useXtermTerminal({
           }).catch(() => {})
         }
         return false
+      }
+      // Shift+Tab → 퍼미션 모드 순환 감지 (xterm은 그대로 PTY로 전달)
+      if (event.key === 'Tab' && event.shiftKey && event.type === 'keydown') {
+        onShiftTab?.()
+        return true // xterm이 PTY로 전달
       }
       // Shift+Enter → \n(LF) 전송으로 줄바꿈 (Enter는 xterm이 \r 전송 → 제출)
       // keydown에서만 전송, keypress/keyup은 차단 (xterm이 \r 중복 전송 방지)

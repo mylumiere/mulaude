@@ -14,8 +14,11 @@
 import { useRef, useEffect, useState } from 'react'
 import { useXtermTerminal } from '../hooks/useXtermTerminal'
 import { TERMINAL_FONT_SIZE, TERMINAL_SCROLLBACK } from '../../shared/constants'
+import { t, type Locale } from '../i18n'
 import '@xterm/xterm/css/xterm.css'
 import './TerminalView.css'
+
+export type PermissionMode = 'default' | 'acceptEdits' | 'plan'
 
 interface TerminalViewProps {
   sessionId: string
@@ -26,9 +29,14 @@ interface TerminalViewProps {
   isFocused?: boolean
   /** 분할 모드에서 포커스 요청 콜백 */
   onFocusTerminal?: () => void
+  /** 현재 퍼미션 모드 */
+  permissionMode?: PermissionMode
+  /** 퍼미션 모드 순환 콜백 */
+  onCycleMode?: () => void
+  locale?: Locale
 }
 
-export default function TerminalView({ sessionId, isActive, themeId, contextPercent, isFocused, onFocusTerminal }: TerminalViewProps): JSX.Element {
+export default function TerminalView({ sessionId, isActive, themeId, contextPercent, isFocused, onFocusTerminal, permissionMode, onCycleMode, locale = 'en' }: TerminalViewProps): JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null)
   const [initialContent, setInitialContent] = useState<string | undefined>(undefined)
   const [ready, setReady] = useState(false)
@@ -57,6 +65,7 @@ export default function TerminalView({ sessionId, isActive, themeId, contextPerc
     onResize: (cols, rows) => window.api.resizeSession(sessionId, cols, rows),
     onRecapture: (cols, rows) => window.api.captureScreen(sessionId, cols, rows),
     onScroll: (direction, lines) => window.api.scrollSession(sessionId, direction, lines),
+    onShiftTab: onCycleMode,
     initialContent,
     disabled: !ready,
     deps: [sessionId, ready]
@@ -77,12 +86,28 @@ export default function TerminalView({ sessionId, isActive, themeId, contextPerc
     })
   }, [sessionId, terminalRef, recapturingRef, pendingDataRef])
 
+  const handleModeBadgeClick = (e: React.MouseEvent): void => {
+    e.stopPropagation()
+    onCycleMode?.()
+    // Shift+Tab 키스트로크를 PTY에 전송
+    window.api.writeSession(sessionId, '\x1b[Z')
+  }
+
   return (
     <div
       className={`terminal-view-container ${isFocused === true ? 'terminal-view-container--focused' : ''}`}
       onClick={() => onFocusTerminal?.()}
     >
       <div ref={containerRef} className="terminal-view" />
+      {permissionMode && permissionMode !== 'default' && (
+        <div
+          className={`terminal-mode-badge terminal-mode-badge--${permissionMode}`}
+          onClick={handleModeBadgeClick}
+          title={t(locale, 'mode.cycleTip')}
+        >
+          {t(locale, `mode.${permissionMode}`)}
+        </div>
+      )}
       {contextPercent !== null && (
         <div className={`terminal-context-badge ${contextPercent >= 80 ? 'terminal-context-badge--warn' : ''}`}>
           ctx {contextPercent}%

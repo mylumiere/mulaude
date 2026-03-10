@@ -16,6 +16,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import { X, Maximize2, Minimize2, Eye, EyeOff } from 'lucide-react'
 import TerminalView from './TerminalView'
+import type { PermissionMode } from './TerminalView'
 import AgentPanel from './AgentPanel'
 import PreviewPanel from './PreviewPanel'
 import type { SessionInfo, AgentInfo, SessionStatus } from '../../shared/types'
@@ -87,6 +88,10 @@ interface TerminalGridProps {
   } | null
   onSaveLaunchConfig?: () => void
   onSkipSaveLaunchConfig?: () => void
+  /** 세션별 퍼미션 모드 */
+  permissionModes?: Record<string, PermissionMode>
+  /** 퍼미션 모드 순환 콜백 */
+  onCycleMode?: (sessionId: string) => void
 }
 
 /** childPaneMap 폴백용 빈 Map (매 렌더링 새 인스턴스 방지) */
@@ -128,7 +133,9 @@ export default function TerminalGrid({
   previewAlert,
   pendingSaveConfig,
   onSaveLaunchConfig,
-  onSkipSaveLaunchConfig
+  onSkipSaveLaunchConfig,
+  permissionModes,
+  onCycleMode
 }: TerminalGridProps): JSX.Element {
   const [dropTarget, setDropTarget] = useState<{
     paneId: string; position: DropPosition
@@ -276,6 +283,19 @@ export default function TerminalGrid({
               {claudeId && !isShellStatus && <span className="terminal-grid-claude-chip">{claudeId.slice(0, 4)}</span>}
             </span>
             <div className="terminal-grid-pane-actions">
+              {permissionModes?.[leaf.sessionId] && permissionModes[leaf.sessionId] !== 'default' && (
+                <button
+                  className={`terminal-grid-mode-chip terminal-grid-mode-chip--${permissionModes[leaf.sessionId]}`}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onCycleMode?.(leaf.sessionId)
+                    window.api.writeSession(leaf.sessionId, '\x1b[Z')
+                  }}
+                  title={t(locale, 'mode.cycleTip')}
+                >
+                  {t(locale, `mode.${permissionModes[leaf.sessionId]}`)}
+                </button>
+              )}
               <button
                 className={`terminal-grid-pane-preview-toggle${previewSessions.has(leaf.sessionId) ? ' terminal-grid-pane-preview-toggle--active' : ''}`}
                 onClick={(e) => { e.stopPropagation(); onTogglePreview(leaf.sessionId) }}
@@ -322,6 +342,9 @@ export default function TerminalGrid({
                     contextPercent={contextPercents[leaf.sessionId] ?? null}
                     isFocused={isFocused && agentFocus === null}
                     onFocusTerminal={() => handleFocusParent(leaf.sessionId)}
+                    permissionMode={permissionModes?.[leaf.sessionId]}
+                    onCycleMode={() => onCycleMode?.(leaf.sessionId)}
+                    locale={locale}
                   />
                 </div>
                 <div
@@ -346,6 +369,9 @@ export default function TerminalGrid({
                 themeId={getSessionThemeId(leaf.sessionId)}
                 contextPercent={contextPercents[leaf.sessionId] ?? null}
                 isFocused={isFocused}
+                permissionMode={permissionModes?.[leaf.sessionId]}
+                onCycleMode={() => onCycleMode?.(leaf.sessionId)}
+                locale={locale}
               />
             )
 
