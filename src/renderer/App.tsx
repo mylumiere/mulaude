@@ -20,6 +20,8 @@ import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import { useChildPaneManager } from './hooks/useChildPaneManager'
 import { useTerminalLayout, getAllLeaves } from './hooks/useTerminalLayout'
 import { useTutorial } from './hooks/useTutorial'
+import { usePlanManager } from './hooks/usePlanManager'
+import { usePlanTrigger } from './hooks/usePlanTrigger'
 import type { PermissionMode } from './components/TerminalView'
 
 const PERMISSION_CYCLE: PermissionMode[] = ['default', 'acceptEdits', 'plan']
@@ -33,14 +35,24 @@ export default function App(): JSX.Element {
   const { sessionStatuses, contextPercents, teamAgents, hookAgents, claudeSessionIds, initSession, cleanupSession } =
     useSessionStatus({ locale: settings.locale, updateSessionSubtitleRef })
 
+  // Plan 관리
+  const planManager = usePlanManager()
+
   const sessionManager = useSessionManager({
     locale: settings.locale,
     initSession,
-    cleanupSession: (id) => { cleanupSession(id); settings.cleanupSessionTheme(id) }
+    cleanupSession: (id) => { cleanupSession(id); settings.cleanupSessionTheme(id); planManager.cleanupPlan(id) }
   })
 
   // ref 연결 (초기 렌더 완료 후 실제 함수 참조)
   updateSessionSubtitleRef.current = sessionManager.updateSessionSubtitle
+
+  // 터미널 출력에서 플랜 파일 경로 감지 → Plan 자동 열기
+  usePlanTrigger({
+    openPlan: planManager.openPlan,
+    planSessionsRef: planManager.planSessionsRef,
+    sessions: sessionManager.sessions
+  })
 
   // child pane 상태 관리
   const {
@@ -222,6 +234,12 @@ export default function App(): JSX.Element {
               blockCenterDrop={tutorial.phase === 'steps' && tutorial.steps[tutorial.currentStep]?.action === 'drag'}
               permissionModes={permissionModes}
               onCycleMode={cyclePermissionMode}
+              planSessions={planManager.planSessions}
+              planInfos={planManager.planInfos}
+              planRatios={planManager.planRatios}
+              onClosePlan={planManager.closePlan}
+              onPlanResize={planManager.handlePlanResize}
+              onSwitchPlanFile={planManager.switchFile}
             />
           ) : (
             <div className="empty-state">

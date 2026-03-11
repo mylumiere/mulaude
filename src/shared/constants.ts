@@ -110,6 +110,8 @@ export const SHELL_COMMANDS = ['zsh', 'bash', 'sh', 'fish'] as const
 export const MAX_PANES = 10
 /** 패인 최소 비율 */
 export const MIN_PANE_RATIO = 0.1
+/** Plan/Preview 패널 기본 분할 비율 */
+export const PREVIEW_DEFAULT_RATIO = 0.5
 /** 중복 세션 알림 표시 시간 (ms) */
 export const DUPLICATE_ALERT_TIMEOUT = 2000
 /** ⌘⇧T 닫은 패인 되살리기 히스토리 최대 개수 */

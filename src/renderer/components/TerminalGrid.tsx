@@ -18,6 +18,8 @@ import { X, Maximize2, Minimize2 } from 'lucide-react'
 import TerminalView from './TerminalView'
 import type { PermissionMode } from './TerminalView'
 import AgentPanel from './AgentPanel'
+import PlanPanel from './PlanPanel'
+import type { PlanInfo } from '../hooks/usePlanManager'
 import type { SessionInfo, AgentInfo, SessionStatus } from '../../shared/types'
 import type {
   PaneTreeState,
@@ -27,7 +29,7 @@ import type {
   DropPosition
 } from '../hooks/useTerminalLayout'
 import { t, type Locale } from '../i18n'
-import { MAX_PANES } from '../../shared/constants'
+import { MAX_PANES, PREVIEW_DEFAULT_RATIO } from '../../shared/constants'
 import './TerminalGrid.css'
 
 interface TerminalGridProps {
@@ -72,6 +74,14 @@ interface TerminalGridProps {
   permissionModes?: Record<string, PermissionMode>
   /** 퍼미션 모드 순환 콜백 */
   onCycleMode?: (sessionId: string) => void
+
+  // Plan 관련
+  planSessions?: Set<string>
+  planInfos?: Record<string, PlanInfo>
+  planRatios?: Record<string, number>
+  onClosePlan?: (sessionId: string) => void
+  onPlanResize?: (sessionId: string) => (e: React.MouseEvent) => void
+  onSwitchPlanFile?: (sessionId: string, filePath: string) => void
 }
 
 /** childPaneMap 폴백용 빈 Map (매 렌더링 새 인스턴스 방지) */
@@ -104,7 +114,13 @@ export default function TerminalGrid({
   gridAlert,
   blockCenterDrop,
   permissionModes,
-  onCycleMode
+  onCycleMode,
+  planSessions,
+  planInfos,
+  planRatios,
+  onClosePlan,
+  onPlanResize,
+  onSwitchPlanFile
 }: TerminalGridProps): JSX.Element {
   const [dropTarget, setDropTarget] = useState<{
     paneId: string; position: DropPosition
@@ -289,48 +305,79 @@ export default function TerminalGrid({
           </div>
         )}
         <div className="terminal-grid-pane-content">
-          {hasAgentPanes ? (
-            <div className="terminal-split">
-              <div className="terminal-split-parent" style={{ flex: `0 0 ${ratio * 100}%` }}>
-                <TerminalView
-                  sessionId={leaf.sessionId}
-                  isActive={true}
-                  themeId={getSessionThemeId(leaf.sessionId)}
-                  contextPercent={contextPercents[leaf.sessionId] ?? null}
-                  isFocused={isFocused && agentFocus === null}
-                  onFocusTerminal={() => handleFocusParent(leaf.sessionId)}
-                  permissionMode={permissionModes?.[leaf.sessionId]}
-                  onCycleMode={() => onCycleMode?.(leaf.sessionId)}
-                  locale={locale}
+          {(() => {
+            const hasPlan = planSessions?.has(leaf.sessionId) && planInfos?.[leaf.sessionId]
+            const planRatio = planRatios?.[leaf.sessionId] ?? PREVIEW_DEFAULT_RATIO
+
+            // Terminal + Agent 부분 렌더링
+            const terminalContent = hasAgentPanes ? (
+              <div className="terminal-split">
+                <div className="terminal-split-parent" style={{ flex: `0 0 ${ratio * 100}%` }}>
+                  <TerminalView
+                    sessionId={leaf.sessionId}
+                    isActive={true}
+                    themeId={getSessionThemeId(leaf.sessionId)}
+                    contextPercent={contextPercents[leaf.sessionId] ?? null}
+                    isFocused={isFocused && agentFocus === null}
+                    onFocusTerminal={() => handleFocusParent(leaf.sessionId)}
+                    permissionMode={permissionModes?.[leaf.sessionId]}
+                    onCycleMode={() => onCycleMode?.(leaf.sessionId)}
+                    locale={locale}
+                  />
+                </div>
+                <div
+                  className="terminal-split-handle"
+                  onMouseDown={handleSplitResize(leaf.sessionId)}
                 />
+                <div className="terminal-split-agents" style={{ flex: 1 }}>
+                  <AgentPanel
+                    sessionId={leaf.sessionId}
+                    themeId={getSessionThemeId(leaf.sessionId)}
+                    focusedPaneIndex={typeof agentFocus === 'number' ? agentFocus : null}
+                    onFocusPane={(paneIndex) => handleFocusPane(leaf.sessionId, paneIndex)}
+                    panes={childPaneMap[leaf.sessionId] || EMPTY_MAP}
+                    agents={sessionAgents[leaf.sessionId]}
+                  />
+                </div>
               </div>
-              <div
-                className="terminal-split-handle"
-                onMouseDown={handleSplitResize(leaf.sessionId)}
+            ) : (
+              <TerminalView
+                sessionId={leaf.sessionId}
+                isActive={true}
+                themeId={getSessionThemeId(leaf.sessionId)}
+                contextPercent={contextPercents[leaf.sessionId] ?? null}
+                isFocused={isFocused}
+                permissionMode={permissionModes?.[leaf.sessionId]}
+                onCycleMode={() => onCycleMode?.(leaf.sessionId)}
+                locale={locale}
               />
-              <div className="terminal-split-agents" style={{ flex: 1 }}>
-                <AgentPanel
-                  sessionId={leaf.sessionId}
-                  themeId={getSessionThemeId(leaf.sessionId)}
-                  focusedPaneIndex={typeof agentFocus === 'number' ? agentFocus : null}
-                  onFocusPane={(paneIndex) => handleFocusPane(leaf.sessionId, paneIndex)}
-                  panes={childPaneMap[leaf.sessionId] || EMPTY_MAP}
-                  agents={sessionAgents[leaf.sessionId]}
+            )
+
+            if (!hasPlan) return terminalContent
+
+            // 플랜 패널이 열려있으면 2분할 (터미널 + 플랜)
+            return (
+              <div className="terminal-split">
+                <div className="terminal-split-parent" style={{ flex: `0 0 ${planRatio * 100}%` }}>
+                  {terminalContent}
+                </div>
+                <div
+                  className="terminal-split-handle"
+                  onMouseDown={onPlanResize?.(leaf.sessionId)}
                 />
+                <div className="terminal-split-preview" style={{ flex: 1 }}>
+                  <PlanPanel
+                    sessionId={leaf.sessionId}
+                    filePath={planInfos![leaf.sessionId].filePath}
+                    content={planInfos![leaf.sessionId].content}
+                    locale={locale}
+                    onClose={() => onClosePlan?.(leaf.sessionId)}
+                    onSwitchFile={(sid, fp) => onSwitchPlanFile?.(sid, fp)}
+                  />
+                </div>
               </div>
-            </div>
-          ) : (
-            <TerminalView
-              sessionId={leaf.sessionId}
-              isActive={true}
-              themeId={getSessionThemeId(leaf.sessionId)}
-              contextPercent={contextPercents[leaf.sessionId] ?? null}
-              isFocused={isFocused}
-              permissionMode={permissionModes?.[leaf.sessionId]}
-              onCycleMode={() => onCycleMode?.(leaf.sessionId)}
-              locale={locale}
-            />
-          )}
+            )
+          })()}
         </div>
       </div>
     )

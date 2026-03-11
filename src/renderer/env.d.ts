@@ -52,5 +52,10 @@ interface Window {
     setHudHidden: (hide: boolean) => void
     setKeychainAccess: (enabled: boolean) => void
     checkOrphanSessions: () => Promise<{ found: number; cleaned: boolean }>
+    // Plan Viewer APIs
+    watchPlanFile: (sessionId: string, filePath: string) => void
+    unwatchPlanFile: (sessionId: string) => void
+    listPlanFiles: (sessionId: string) => Promise<{ name: string; path: string; mtime: number }[]>
+    onPlanContentUpdate: (cb: (sessionId: string, filePath: string, content: string) => void) => () => void
   }
 }

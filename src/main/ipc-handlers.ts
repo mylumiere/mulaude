@@ -12,6 +12,7 @@ import { tmpdir } from 'os'
 import type { SessionManager } from './session-manager'
 import type { NativeChatManager } from './native-chat-manager'
 import { showOrphanDialog } from './close-handler'
+import { watchPlanFile, unwatchPlanFile, listPlanFiles } from './plan-watcher'
 import { getCachedUsageData, setHideHud, setKeychainAccess } from './statusline-manager'
 import type { UsageData } from '../shared/types'
 
@@ -284,6 +285,25 @@ export function registerIpcHandlers(
       console.error('[IPC] session:check-orphans failed:', err)
       return { found: 0, cleaned: false }
     }
+  })
+
+  // ─── Plan Viewer IPC ───
+
+  // 플랜 파일 감시 시작
+  ipcMain.on('plan:watch-file', (_event, sessionId: string, filePath: string) => {
+    watchPlanFile(sessionId, filePath)
+  })
+
+  // 플랜 파일 감시 해제
+  ipcMain.on('plan:unwatch-file', (_event, sessionId: string) => {
+    unwatchPlanFile(sessionId)
+  })
+
+  // 플랜 파일 목록 조회
+  ipcMain.handle('plan:list-files', async (_event, sessionId: string) => {
+    const session = sessionManager.getSessionList().find(s => s.id === sessionId)
+    if (!session) return []
+    return listPlanFiles(session.workingDir)
   })
 }
 

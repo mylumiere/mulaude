@@ -295,6 +295,29 @@ const api = {
     }
     ipcRenderer.on('native:input-request', handler)
     return () => ipcRenderer.removeListener('native:input-request', handler)
+  },
+
+  // ─── Plan Viewer APIs ───
+
+  /** 플랜 파일 감시 시작 (main → fs.watch) */
+  watchPlanFile: (sessionId: string, filePath: string): void =>
+    ipcRenderer.send('plan:watch-file', sessionId, filePath),
+
+  /** 플랜 파일 감시 해제 */
+  unwatchPlanFile: (sessionId: string): void =>
+    ipcRenderer.send('plan:unwatch-file', sessionId),
+
+  /** 플랜 파일 목록 조회 (.claude/plans/*.md) */
+  listPlanFiles: (sessionId: string): Promise<{ name: string; path: string; mtime: number }[]> =>
+    ipcRenderer.invoke('plan:list-files', sessionId),
+
+  /** 플랜 파일 내용 업데이트 이벤트 수신 (실시간) */
+  onPlanContentUpdate: (cb: (sessionId: string, filePath: string, content: string) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, sessionId: string, filePath: string, content: string): void => {
+      cb(sessionId, filePath, content)
+    }
+    ipcRenderer.on('plan:content-update', handler)
+    return () => ipcRenderer.removeListener('plan:content-update', handler)
   }
 }
 
