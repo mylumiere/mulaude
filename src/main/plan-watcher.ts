@@ -8,7 +8,7 @@
 
 import { watch, readFile, readdir, stat, type FSWatcher } from 'fs'
 import { join, basename } from 'path'
-import { BrowserWindow } from 'electron'
+import { app, BrowserWindow } from 'electron'
 
 /* ─── Types ─── */
 
@@ -136,44 +136,95 @@ export function unwatchAllPlans(): void {
   }
 }
 
-/** .claude/plans/ 디렉토리의 .md 파일 목록 반환 */
+/**
+ * 프로젝트 내 .md 파일 목록 반환
+ * 검색 경로: {workingDir}/.claude/plans/ → {workingDir}/.claude/ → {workingDir}/
+ * 동일 파일명은 먼저 발견된 쪽 우선
+ */
 export async function listPlanFiles(workingDir: string): Promise<PlanFileInfo[]> {
-  const plansDir = join(workingDir, '.claude', 'plans')
+  const dirs = [
+    join(workingDir, '.claude', 'plans'),
+    join(workingDir, '.claude'),
+    workingDir
+  ]
 
+  const seen = new Set<string>()
+  const results: PlanFileInfo[] = []
+
+  for (const dir of dirs) {
+    try {
+      const files = await new Promise<string[]>((resolve, reject) => {
+        readdir(dir, (err, entries) => {
+          if (err) reject(err)
+          else resolve(entries)
+        })
+      })
+
+      const mdFiles = files.filter(f => f.endsWith('.md'))
+
+      for (const file of mdFiles) {
+        if (seen.has(file)) continue
+        seen.add(file)
+
+        const filePath = join(dir, file)
+        try {
+          const stats = await new Promise<import('fs').Stats>((resolve, reject) => {
+            stat(filePath, (err, s) => {
+              if (err) reject(err)
+              else resolve(s)
+            })
+          })
+          results.push({
+            name: file,
+            path: filePath,
+            mtime: stats.mtimeMs
+          })
+        } catch {
+          // 파일 접근 불가 → 스킵
+        }
+      }
+    } catch {
+      // 디렉토리 없음 → 다음
+    }
+  }
+
+  // 수정일 역순 정렬
+  results.sort((a, b) => b.mtime - a.mtime)
+  return results
+}
+
+/**
+ * 플랜 파일명으로 실제 경로를 찾아 반환
+ * 홈 디렉토리 → 프로젝트 디렉토리 순서로 검색
+ * 어디에도 없으면 홈 디렉토리 경로 반환 (watcher가 생성 대기)
+ */
+export async function resolvePlanPath(workingDir: string, fileName: string): Promise<string> {
+  const homeDir = app.getPath('home')
+  const homePath = join(homeDir, '.claude', 'plans', fileName)
+  const projectPath = join(workingDir, '.claude', 'plans', fileName)
+
+  // 홈 디렉토리 먼저 확인 (Claude Code 기본 저장 위치)
   try {
-    const files = await new Promise<string[]>((resolve, reject) => {
-      readdir(plansDir, (err, entries) => {
+    await new Promise<import('fs').Stats>((resolve, reject) => {
+      stat(homePath, (err, s) => {
         if (err) reject(err)
-        else resolve(entries)
+        else resolve(s)
       })
     })
+    return homePath
+  } catch { /* 없음 */ }
 
-    const mdFiles = files.filter(f => f.endsWith('.md'))
-    const results: PlanFileInfo[] = []
+  // 프로젝트 디렉토리 확인
+  try {
+    await new Promise<import('fs').Stats>((resolve, reject) => {
+      stat(projectPath, (err, s) => {
+        if (err) reject(err)
+        else resolve(s)
+      })
+    })
+    return projectPath
+  } catch { /* 없음 */ }
 
-    for (const file of mdFiles) {
-      const filePath = join(plansDir, file)
-      try {
-        const stats = await new Promise<import('fs').Stats>((resolve, reject) => {
-          stat(filePath, (err, s) => {
-            if (err) reject(err)
-            else resolve(s)
-          })
-        })
-        results.push({
-          name: file,
-          path: filePath,
-          mtime: stats.mtimeMs
-        })
-      } catch {
-        // 파일 접근 불가 → 스킵
-      }
-    }
-
-    // 수정일 역순 정렬
-    results.sort((a, b) => b.mtime - a.mtime)
-    return results
-  } catch {
-    return []
-  }
+  // 기본: 홈 디렉토리 경로 반환 (watcher가 파일 생성 대기)
+  return homePath
 }

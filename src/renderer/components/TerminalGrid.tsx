@@ -14,12 +14,13 @@
  */
 
 import { useCallback, useMemo, useState } from 'react'
-import { X, Maximize2, Minimize2 } from 'lucide-react'
+import { X, Maximize2, Minimize2, Eye, EyeOff, FileText } from 'lucide-react'
 import TerminalView from './TerminalView'
 import type { PermissionMode } from './TerminalView'
 import AgentPanel from './AgentPanel'
 import PlanPanel from './PlanPanel'
 import type { PlanInfo } from '../hooks/usePlanManager'
+import PreviewPanel from './PreviewPanel'
 import type { SessionInfo, AgentInfo, SessionStatus } from '../../shared/types'
 import type {
   PaneTreeState,
@@ -70,6 +71,25 @@ interface TerminalGridProps {
   gridAlert?: string | null
   /** 튜토리얼 드래그 스텝 — center 드롭 차단 */
   blockCenterDrop?: boolean
+
+  // Preview 관련
+  previewSessions: Set<string>
+  previewRatios: Record<string, number>
+  onTogglePreview: (sessionId: string) => void | Promise<void>
+  onClosePreview: (sessionId: string) => void
+  onPreviewResize: (sessionId: string) => (e: React.MouseEvent) => void
+  pendingUrls: Record<string, string>
+  consumePendingUrl: (sessionId: string) => string | null
+
+  // 세션별 토스트 알림
+  previewAlert?: { sessionId: string; message: string } | null
+  pendingSaveConfig?: {
+    sessionId: string
+    workingDir: string
+    config: { version?: string; configurations: { name: string; runtimeExecutable: string; runtimeArgs?: string[]; port?: number; cwd?: string }[] }
+  } | null
+  onSaveLaunchConfig?: () => void
+  onSkipSaveLaunchConfig?: () => void
   /** 세션별 퍼미션 모드 */
   permissionModes?: Record<string, PermissionMode>
   /** 퍼미션 모드 순환 콜백 */
@@ -79,6 +99,7 @@ interface TerminalGridProps {
   planSessions?: Set<string>
   planInfos?: Record<string, PlanInfo>
   planRatios?: Record<string, number>
+  onTogglePlan?: (sessionId: string) => void | Promise<void>
   onClosePlan?: (sessionId: string) => void
   onPlanResize?: (sessionId: string) => (e: React.MouseEvent) => void
   onSwitchPlanFile?: (sessionId: string, filePath: string) => void
@@ -113,11 +134,23 @@ export default function TerminalGrid({
   duplicateAlert,
   gridAlert,
   blockCenterDrop,
+  previewSessions,
+  previewRatios,
+  onTogglePreview,
+  onClosePreview,
+  onPreviewResize,
+  pendingUrls,
+  consumePendingUrl,
+  previewAlert,
+  pendingSaveConfig,
+  onSaveLaunchConfig,
+  onSkipSaveLaunchConfig,
   permissionModes,
   onCycleMode,
   planSessions,
   planInfos,
   planRatios,
+  onTogglePlan,
   onClosePlan,
   onPlanResize,
   onSwitchPlanFile
@@ -281,6 +314,20 @@ export default function TerminalGrid({
                   {t(locale, `mode.${permissionModes[leaf.sessionId]}`)}
                 </button>
               )}
+              <button
+                className={`terminal-grid-pane-preview-toggle${planSessions?.has(leaf.sessionId) ? ' terminal-grid-pane-preview-toggle--active' : ''}`}
+                onClick={(e) => { e.stopPropagation(); onTogglePlan?.(leaf.sessionId) }}
+                title={t(locale, 'plan.title')}
+              >
+                <FileText size={10} />
+              </button>
+              <button
+                className={`terminal-grid-pane-preview-toggle${previewSessions.has(leaf.sessionId) ? ' terminal-grid-pane-preview-toggle--active' : ''}`}
+                onClick={(e) => { e.stopPropagation(); onTogglePreview(leaf.sessionId) }}
+                title={t(locale, 'shortcuts.preview')}
+              >
+                {previewSessions.has(leaf.sessionId) ? <EyeOff size={10} /> : <Eye size={10} />}
+              </button>
               {isZoomed && (
                 <button
                   className="terminal-grid-pane-zoom-exit"
@@ -306,6 +353,8 @@ export default function TerminalGrid({
         )}
         <div className="terminal-grid-pane-content">
           {(() => {
+            const hasPreview = previewSessions.has(leaf.sessionId)
+            const previewRatio = previewRatios[leaf.sessionId] ?? PREVIEW_DEFAULT_RATIO
             const hasPlan = planSessions?.has(leaf.sessionId) && planInfos?.[leaf.sessionId]
             const planRatio = planRatios?.[leaf.sessionId] ?? PREVIEW_DEFAULT_RATIO
 
@@ -353,31 +402,80 @@ export default function TerminalGrid({
               />
             )
 
-            if (!hasPlan) return terminalContent
+            // 사이드 패널 수 계산 (preview + plan)
+            const sidePanels: JSX.Element[] = []
 
-            // 플랜 패널이 열려있으면 2분할 (터미널 + 플랜)
+            if (hasPreview) {
+              sidePanels.push(
+                <PreviewPanel
+                  key="preview"
+                  sessionId={leaf.sessionId}
+                  isFocused={isFocused}
+                  locale={locale}
+                  onClose={() => onClosePreview(leaf.sessionId)}
+                  pendingUrl={pendingUrls[leaf.sessionId] || null}
+                />
+              )
+            }
+
+            if (hasPlan) {
+              sidePanels.push(
+                <PlanPanel
+                  key="plan"
+                  sessionId={leaf.sessionId}
+                  filePath={planInfos![leaf.sessionId].filePath}
+                  content={planInfos![leaf.sessionId].content}
+                  locale={locale}
+                  onClose={() => onClosePlan?.(leaf.sessionId)}
+                  onSwitchFile={(sid, fp) => onSwitchPlanFile?.(sid, fp)}
+                />
+              )
+            }
+
+            if (sidePanels.length === 0) return terminalContent
+
+            // 사이드 패널이 있으면 분할 렌더링
+            const sideRatio = hasPreview ? previewRatio : planRatio
+
             return (
               <div className="terminal-split">
-                <div className="terminal-split-parent" style={{ flex: `0 0 ${planRatio * 100}%` }}>
+                <div className="terminal-split-parent" style={{ flex: `0 0 ${sideRatio * 100}%` }}>
                   {terminalContent}
                 </div>
                 <div
                   className="terminal-split-handle"
-                  onMouseDown={onPlanResize?.(leaf.sessionId)}
+                  onMouseDown={hasPreview ? onPreviewResize(leaf.sessionId) : onPlanResize?.(leaf.sessionId)}
                 />
-                <div className="terminal-split-preview" style={{ flex: 1 }}>
-                  <PlanPanel
-                    sessionId={leaf.sessionId}
-                    filePath={planInfos![leaf.sessionId].filePath}
-                    content={planInfos![leaf.sessionId].content}
-                    locale={locale}
-                    onClose={() => onClosePlan?.(leaf.sessionId)}
-                    onSwitchFile={(sid, fp) => onSwitchPlanFile?.(sid, fp)}
-                  />
+                <div className="terminal-split-preview" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  {sidePanels}
                 </div>
               </div>
             )
           })()}
+          {/* 세션별 토스트 알림 */}
+          {previewAlert && previewAlert.sessionId === leaf.sessionId && (
+            <div className="pane-toast">{previewAlert.message}</div>
+          )}
+          {pendingSaveConfig && pendingSaveConfig.sessionId === leaf.sessionId && (
+            <div className="pane-toast pane-toast--confirm">
+              <div className="toast-message">
+                {t(locale, 'preview.saveConfig')}
+                <div className="toast-detail">
+                  {t(locale, 'preview.saveConfigDetail', {
+                    processes: pendingSaveConfig.config.configurations.map(c => c.name).join(', ')
+                  })}
+                </div>
+              </div>
+              <div className="toast-actions">
+                <button className="toast-btn toast-btn--primary" onClick={(e) => { e.stopPropagation(); onSaveLaunchConfig?.() }}>
+                  {t(locale, 'preview.save')}
+                </button>
+                <button className="toast-btn toast-btn--secondary" onClick={(e) => { e.stopPropagation(); onSkipSaveLaunchConfig?.() }}>
+                  {t(locale, 'preview.skip')}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     )

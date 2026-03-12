@@ -6,7 +6,7 @@
  */
 
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
-import { X, ChevronDown } from 'lucide-react'
+import { X, ChevronDown, FolderOpen } from 'lucide-react'
 import { marked } from 'marked'
 import type { PlanFileInfo } from '../../main/plan-watcher'
 import type { Locale } from '../i18n'
@@ -102,6 +102,17 @@ export default function PlanPanel({
     setShowDropdown(false)
   }, [sessionId, onSwitchFile])
 
+  // 파일 열기 다이얼로그
+  const handleOpenFileDialog = useCallback(async () => {
+    setShowDropdown(false)
+    try {
+      const filePath = await window.api.openPlanFileDialog(sessionId)
+      if (filePath) {
+        onSwitchFile(sessionId, filePath)
+      }
+    } catch { /* 무시 */ }
+  }, [sessionId, onSwitchFile])
+
   // 드롭다운 외부 클릭 시 닫기
   useEffect(() => {
     if (!showDropdown) return
@@ -149,6 +160,13 @@ export default function PlanPanel({
                   </button>
                 ))
               )}
+              <button
+                className="plan-panel-dropdown-item plan-panel-dropdown-open"
+                onClick={handleOpenFileDialog}
+              >
+                <FolderOpen size={12} />
+                <span className="plan-panel-dropdown-name">{t(locale, 'plan.openFile')}</span>
+              </button>
             </div>
           )}
         </div>

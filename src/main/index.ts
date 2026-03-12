@@ -24,6 +24,7 @@ import { startWatching as startStatuslineWatching, cleanup as cleanupStatusline 
 import { setupCloseHandler, dt, setLocale, getCloseAction, resetCloseAction } from './close-handler'
 import { logger } from './logger'
 import { unwatchAllPlans } from './plan-watcher'
+import { stopAllPreviews } from './preview-launcher'
 import { SCREEN_VISIBILITY_MARGIN, WINDOW_SAVE_DEBOUNCE } from '../shared/constants'
 import type { AppMode } from '../shared/types'
 
@@ -227,6 +228,7 @@ app.whenReady().then(() => {
       nativeChatManager.destroyAll()
       nativeChatManager.getSessionStore().saveImmediate()
       unwatchAllPlans()
+      stopAllPreviews()
       hooksManager.cleanup()
       cleanupStatusline()
 
@@ -275,6 +277,7 @@ app.whenReady().then(() => {
       sessionManager.getSessionStore().saveImmediate()
       resetCloseAction()
       unwatchAllPlans()
+      stopAllPreviews()
       cleanupPanePolling()
       hooksManager.cleanup()
       cleanupStatusline()

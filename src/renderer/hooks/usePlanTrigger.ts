@@ -15,8 +15,6 @@ const PLAN_FILE_PATTERN = /\.claude\/plans\/([\w-]+\.md)/
 interface UsePlanTriggerParams {
   openPlan: (sessionId: string, filePath: string) => void
   planSessionsRef: React.MutableRefObject<Set<string>>
-  /** 세션 목록 (workingDir 조회용) */
-  sessions: { id: string; workingDir: string }[]
 }
 
 interface UsePlanTriggerReturn {
@@ -25,8 +23,7 @@ interface UsePlanTriggerReturn {
 
 export function usePlanTrigger({
   openPlan,
-  planSessionsRef,
-  sessions
+  planSessionsRef
 }: UsePlanTriggerParams): UsePlanTriggerReturn {
   const buffers = useRef<Record<string, string>>({})
   const cooldowns = useRef<Record<string, number>>({})
@@ -34,8 +31,6 @@ export function usePlanTrigger({
   const globalCooldownRef = useRef(Date.now() + 10_000)
   const openRef = useRef(openPlan)
   openRef.current = openPlan
-  const sessionsRef = useRef(sessions)
-  sessionsRef.current = sessions
 
   const notifyClose = useCallback((sessionId: string) => {
     buffers.current[sessionId] = ''
@@ -60,14 +55,14 @@ export function usePlanTrigger({
       if (!match) return
 
       const fileName = match[1]
-      const session = sessionsRef.current.find(s => s.id === sessionId)
-      if (!session) return
-
-      const filePath = `${session.workingDir}/.claude/plans/${fileName}`
 
       cooldowns.current[sessionId] = now
       buffers.current[sessionId] = ''
-      openRef.current(sessionId, filePath)
+
+      // 메인 프로세스에서 실제 파일 경로 해석 (홈/프로젝트 양쪽 검색)
+      window.api.resolvePlanPath(sessionId, fileName).then(filePath => {
+        openRef.current(sessionId, filePath)
+      }).catch(() => {})
     })
 
     return cleanup

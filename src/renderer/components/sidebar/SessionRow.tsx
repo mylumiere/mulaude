@@ -29,6 +29,7 @@ interface SessionRowProps {
   onSelect: () => void
   onDestroy: () => void
   onUpdateName: (name: string) => void
+  previewAction?: React.ReactNode
 }
 
 export default memo(function SessionRow({
@@ -44,7 +45,8 @@ export default memo(function SessionRow({
   locale,
   onSelect,
   onDestroy,
-  onUpdateName
+  onUpdateName,
+  previewAction
 }: SessionRowProps): JSX.Element {
   const rowRef = useRef<HTMLDivElement>(null)
   const [isEditing, setIsEditing] = useState(false)
@@ -154,6 +156,7 @@ export default memo(function SessionRow({
       </div>
       {shortcut && <span className="session-shortcut">{shortcut}</span>}
       <div className="session-row-actions">
+        {previewAction}
         <button
           className="session-close-btn"
           onClick={(e) => {

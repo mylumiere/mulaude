@@ -116,12 +116,14 @@ export function useSettings(): UseSettingsReturn {
     }
     const onUp = (e: MouseEvent): void => {
       isResizing.current = false
+      document.body.classList.remove('resizing')
       document.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseup', onUp)
       document.body.style.cursor = ''
       document.body.style.userSelect = ''
       try { localStorage.setItem('mulaude-sidebar-width', String(Math.max(180, Math.min(500, e.clientX)))) } catch { /* */ }
     }
+    document.body.classList.add('resizing')
     document.body.style.cursor = 'col-resize'
     document.body.style.userSelect = 'none'
     document.addEventListener('mousemove', onMove)

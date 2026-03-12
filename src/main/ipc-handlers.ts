@@ -6,14 +6,15 @@
  */
 
 import { ipcMain, dialog, Notification, clipboard, BrowserWindow } from 'electron'
-import { writeFile } from 'fs/promises'
+import { writeFile, readFile } from 'fs/promises'
 import { join } from 'path'
 import { tmpdir } from 'os'
 import type { SessionManager } from './session-manager'
 import type { NativeChatManager } from './native-chat-manager'
 import { showOrphanDialog } from './close-handler'
-import { watchPlanFile, unwatchPlanFile, listPlanFiles } from './plan-watcher'
+import { watchPlanFile, unwatchPlanFile, listPlanFiles, resolvePlanPath } from './plan-watcher'
 import { getCachedUsageData, setHideHud, setKeychainAccess } from './statusline-manager'
+import { launchPreview, stopPreview, writeLaunchConfig } from './preview-launcher'
 import type { UsageData } from '../shared/types'
 
 /** 이미지 파일 확장자 목록 */
@@ -259,6 +260,21 @@ export function registerIpcHandlers(
     }
   })
 
+  // Preview: 프로젝트 감지 + dev 서버 프로세스 실행
+  ipcMain.handle('preview:launch', async (_event, sessionId: string, workingDir: string) => {
+    return launchPreview(sessionId, workingDir)
+  })
+
+  // Preview: 프로세스 종료
+  ipcMain.handle('preview:stop', async (_event, sessionId: string) => {
+    stopPreview(sessionId)
+  })
+
+  // Preview: 사용자 확인 후 launch.json 저장
+  ipcMain.handle('preview:save-config', async (_event, workingDir: string, config: { version?: string; configurations: { name: string; runtimeExecutable: string; runtimeArgs?: string[]; port?: number; cwd?: string }[] }) => {
+    await writeLaunchConfig(workingDir, config)
+  })
+
   // 미연결 tmux 세션 감지 및 정리
   ipcMain.handle('session:check-orphans', async () => {
     try {
@@ -304,6 +320,28 @@ export function registerIpcHandlers(
     const session = sessionManager.getSessionList().find(s => s.id === sessionId)
     if (!session) return []
     return listPlanFiles(session.workingDir)
+  })
+
+  // 플랜 파일명 → 실제 경로 해석 (홈/프로젝트 양쪽 검색)
+  ipcMain.handle('plan:resolve-path', async (_event, sessionId: string, fileName: string) => {
+    const session = sessionManager.getSessionList().find(s => s.id === sessionId)
+    const workingDir = session?.workingDir || ''
+    return resolvePlanPath(workingDir, fileName)
+  })
+
+  // .md 파일 선택 다이얼로그 (기본경로: 프로젝트 루트)
+  ipcMain.handle('plan:open-file-dialog', async (event, sessionId: string) => {
+    const session = sessionManager.getSessionList().find(s => s.id === sessionId)
+    const parentWindow = BrowserWindow.fromWebContents(event.sender) ?? undefined
+    const result = await dialog.showOpenDialog({
+      ...(parentWindow ? { parentWindow } : {}),
+      title: dt('plan.openFile'),
+      defaultPath: session?.workingDir,
+      filters: [{ name: 'Markdown', extensions: ['md'] }],
+      properties: ['openFile', 'showHiddenFiles']
+    })
+    if (result.canceled || result.filePaths.length === 0) return null
+    return result.filePaths[0]
   })
 }
 

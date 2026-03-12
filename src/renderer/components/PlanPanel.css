@@ -154,6 +154,17 @@
   margin-left: 8px;
 }
 
+.plan-panel-dropdown-open {
+  gap: 6px;
+  color: #666;
+  border-top: 1px solid #e5e5e5;
+  justify-content: flex-start;
+}
+
+.plan-panel-dropdown-open:hover {
+  color: #333;
+}
+
 /* ─── 콘텐츠 영역 ─── */
 
 .plan-panel-content {
