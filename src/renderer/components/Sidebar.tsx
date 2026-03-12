@@ -205,6 +205,7 @@ export default function Sidebar({
                                 className={`sidebar-preview-btn${previewSessions?.has(session.id) ? ' sidebar-preview-btn--active' : ''}`}
                                 onClick={(e) => { e.stopPropagation(); onTogglePreview(session.id) }}
                                 title={t(locale, 'shortcuts.preview')}
+                                aria-label={t(locale, 'shortcuts.preview')}
                               >
                                 <Eye size={11} />
                               </button>

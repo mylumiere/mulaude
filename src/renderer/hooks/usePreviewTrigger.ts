@@ -6,6 +6,7 @@
  */
 
 import { useCallback, useEffect, useRef } from 'react'
+import { PREVIEW_TRIGGER_COOLDOWN } from '../../shared/constants'
 import { stripAnsi } from '../pty-parser'
 
 /**
@@ -67,8 +68,8 @@ export function usePreviewTrigger({
 }: UsePreviewTriggerParams): UsePreviewTriggerReturn {
   const buffers = useRef<Record<string, string>>({})
   const cooldowns = useRef<Record<string, number>>({})
-  // 앱 시작 후 10초간 트리거 억제 — tmux 세션 복원 시 이전 출력 재전송 방지
-  const globalCooldownRef = useRef(Date.now() + 10_000)
+  // 앱 시작 후 쿨다운 시간만큼 트리거 억제 — tmux 세션 복원 시 이전 출력 재전송 방지
+  const globalCooldownRef = useRef(Date.now() + PREVIEW_TRIGGER_COOLDOWN)
   const openRef = useRef(openPreviewWithUrl)
   openRef.current = openPreviewWithUrl
 
@@ -85,7 +86,7 @@ export function usePreviewTrigger({
       const now = Date.now()
       // 앱 시작 직후 tmux 출력 재전송 무시
       if (now < globalCooldownRef.current) return
-      if (cooldowns.current[sessionId] && now - cooldowns.current[sessionId] < 10000) return
+      if (cooldowns.current[sessionId] && now - cooldowns.current[sessionId] < PREVIEW_TRIGGER_COOLDOWN) return
 
       const cleaned = stripAnsi(rawData)
       const buf = ((buffers.current[sessionId] || '') + cleaned).slice(-500)

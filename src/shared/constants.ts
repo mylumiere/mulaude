@@ -118,3 +118,21 @@ export const DUPLICATE_ALERT_TIMEOUT = 2000
 export const MAX_CLOSED_PANE_HISTORY = 10
 
 /* ═══════ Preview ═══════ */
+
+/** iframe 자동 재시도 최대 횟수 */
+export const PREVIEW_MAX_RETRIES = 10
+/** iframe 자동 재시도 간격 (ms) */
+export const PREVIEW_RETRY_INTERVAL = 2000
+/** 트리거 쿨다운 (ms) — 동일 세션 내 중복 감지 방지 */
+export const PREVIEW_TRIGGER_COOLDOWN = 10_000
+/** SIGTERM 후 포트 kill 대기 (ms) */
+export const PREVIEW_SIGTERM_GRACE = 1000
+/** 미지원 프로젝트 토스트 알림 표시 시간 (ms) */
+export const PREVIEW_ALERT_TIMEOUT = 3000
+
+/* ═══════ Plan ═══════ */
+
+/** 플랜 트리거 쿨다운 (ms) — 동일 세션 내 중복 감지 방지 */
+export const PLAN_TRIGGER_COOLDOWN = 10_000
+/** 플랜 파일 변경 감지 디바운스 (ms) */
+export const PLAN_WATCHER_DEBOUNCE = 100

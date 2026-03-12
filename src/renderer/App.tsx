@@ -25,6 +25,7 @@ import { usePlanTrigger } from './hooks/usePlanTrigger'
 import { usePreviewManager } from './hooks/usePreviewManager'
 import { usePreviewTrigger } from './hooks/usePreviewTrigger'
 import type { PermissionMode } from './components/TerminalView'
+import type { SessionInfo } from '../shared/types'
 
 const PERMISSION_CYCLE: PermissionMode[] = ['default', 'acceptEdits', 'plan']
 
@@ -40,14 +41,28 @@ export default function App(): JSX.Element {
   // Plan 관리
   const planManager = usePlanManager()
 
-  // Preview 관리
-  const previewManager = usePreviewManager()
-
   // 터미널 출력에서 트리거 키워드 감지 → Preview 자동 열기
+  // (usePreviewManager보다 먼저 선언 — notifyClose를 전달하기 위한 중간 ref)
+  const openPreviewWithUrlRef = useRef<(sessionId: string, url: string | null) => void>(() => {})
+  const previewSessionsRef = useRef<Set<string>>(new Set())
   const { notifyClose: notifyPreviewClose } = usePreviewTrigger({
-    openPreviewWithUrl: previewManager.openPreviewWithUrl,
-    previewSessionsRef: previewManager.previewSessionsRef
+    openPreviewWithUrl: (...args) => openPreviewWithUrlRef.current(...args),
+    previewSessionsRef
   })
+
+  // sessions ref — 훅 초기화 순서 제약 우회 (previewManager → sessionManager)
+  const sessionsRef = useRef<SessionInfo[]>([])
+
+  // Preview 관리 (상태 + 액션 통합)
+  const previewManager = usePreviewManager({
+    sessionsRef,
+    locale: settings.locale,
+    notifyPreviewClose
+  })
+
+  // ref 동기화 (순환 의존 해소)
+  openPreviewWithUrlRef.current = previewManager.openPreviewWithUrl
+  previewSessionsRef.current = previewManager.previewSessions
 
   const sessionManager = useSessionManager({
     locale: settings.locale,
@@ -57,6 +72,7 @@ export default function App(): JSX.Element {
 
   // ref 연결 (초기 렌더 완료 후 실제 함수 참조)
   updateSessionSubtitleRef.current = sessionManager.updateSessionSubtitle
+  sessionsRef.current = sessionManager.sessions
 
   // 터미널 출력에서 플랜 파일 경로 감지 → Plan 자동 열기
   usePlanTrigger({
@@ -84,106 +100,10 @@ export default function App(): JSX.Element {
     } catch { /* 무시 */ }
   }, [planManager])
 
-  // 세션 복원 후 미리보기 프로세스 재실행 + 없는 세션 정리
-  const previewRestoredRef = useRef(false)
+  // 세션 복원 후 미리보기 프로세스 재실행
   useEffect(() => {
-    if (previewRestoredRef.current || sessionManager.sessions.length === 0) return
-    previewRestoredRef.current = true
-
-    const sessionIds = new Set(sessionManager.sessions.map(s => s.id))
-    const savedPreviews = Array.from(previewManager.previewSessions)
-
-    // 존재하지 않는 세션의 미리보기 정리
-    for (const sid of savedPreviews) {
-      if (!sessionIds.has(sid)) {
-        previewManager.cleanupPreview(sid)
-      }
-    }
-
-    // 존재하는 세션의 프로세스 재실행
-    for (const sid of savedPreviews) {
-      if (!sessionIds.has(sid)) continue
-      const session = sessionManager.sessions.find(s => s.id === sid)
-      if (session) {
-        window.api.launchPreview(sid, session.workingDir).catch(() => {})
-      }
-    }
+    if (sessionManager.sessions.length > 0) previewManager.restorePreview()
   }, [sessionManager.sessions]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // launch.json 저장 확인 다이얼로그
-  const [pendingSaveConfig, setPendingSaveConfig] = useState<{
-    sessionId: string
-    workingDir: string
-    config: { version?: string; configurations: { name: string; runtimeExecutable: string; runtimeArgs?: string[]; port?: number; cwd?: string }[] }
-  } | null>(null)
-
-  // Preview 미지원 프로젝트 토스트 알림 (세션별)
-  const [previewAlert, setPreviewAlert] = useState<{ sessionId: string; message: string } | null>(null)
-  useEffect(() => {
-    if (!previewAlert) return
-    const timer = setTimeout(() => setPreviewAlert(null), 3000)
-    return () => clearTimeout(timer)
-  }, [previewAlert])
-
-  // Preview 토글 + 자동 dev server 실행
-  const previewTogglingRef = useRef<Set<string>>(new Set())
-  const handleTogglePreview = useCallback(async (sessionId: string) => {
-    // 중복 클릭 방지 (launchPreview IPC 대기 중 재클릭 무시)
-    if (previewTogglingRef.current.has(sessionId)) return
-    previewTogglingRef.current.add(sessionId)
-    try {
-      // 이미 열려있으면 닫기 + 프로세스 종료
-      if (previewManager.previewSessionsRef.current.has(sessionId)) {
-        // iframe TCP 연결 먼저 정리 → CLOSE_WAIT 방지
-        document.querySelectorAll<HTMLIFrameElement>('.preview-iframe').forEach((f) => { f.src = 'about:blank' })
-        previewManager.closePreview(sessionId)
-        notifyPreviewClose(sessionId)
-        await window.api.stopPreview(sessionId)
-        return
-      }
-      // 세션의 workingDir 조회
-      const session = sessionManager.sessions.find(s => s.id === sessionId)
-      if (!session) {
-        previewManager.openPreview(sessionId)
-        return
-      }
-      const result = await window.api.launchPreview(sessionId, session.workingDir)
-      if (result) {
-        // dev 서버 프로세스가 실행됨 → URL로 열기
-        previewManager.openPreviewWithUrl(sessionId, result.previewUrl)
-        // 새로 감지된 설정이면 저장 확인 표시
-        if (result.created) {
-          setPendingSaveConfig({ sessionId, workingDir: session.workingDir, config: result.config })
-        }
-      } else {
-        // 프로젝트 감지 실패 → 알림 표시
-        setPreviewAlert({ sessionId, message: t(settings.locale, 'preview.notSupported') })
-      }
-    } catch {
-      setPreviewAlert({ sessionId, message: t(settings.locale, 'preview.notSupported') })
-    } finally {
-      previewTogglingRef.current.delete(sessionId)
-    }
-  }, [sessionManager.sessions, previewManager, notifyPreviewClose, settings.locale])
-
-  const handleSaveLaunchConfig = useCallback(async () => {
-    if (!pendingSaveConfig) return
-    try {
-      await window.api.saveLaunchConfig(pendingSaveConfig.workingDir, pendingSaveConfig.config)
-    } catch { /* 저장 실패 무시 */ }
-    setPendingSaveConfig(null)
-  }, [pendingSaveConfig])
-
-  const handleSkipSaveLaunchConfig = useCallback(() => {
-    setPendingSaveConfig(null)
-  }, [])
-
-  // Preview X 버튼으로 닫기
-  const handleClosePreview = useCallback(async (sessionId: string) => {
-    previewManager.closePreview(sessionId)
-    notifyPreviewClose(sessionId)
-    await window.api.stopPreview(sessionId)
-  }, [previewManager, notifyPreviewClose])
 
   // child pane 상태 관리
   const {
@@ -271,7 +191,7 @@ export default function App(): JSX.Element {
       const sid = terminalLayout.isGridMode
         ? terminalLayout.getFocusedSessionId()
         : sessionManager.activeSessionId
-      if (sid) handleTogglePreview(sid)
+      if (sid) previewManager.handleTogglePreview(sid)
     },
     openSettings: () => settings.setShowSettings(true),
     openShortcuts: () => setShortcutsOpen(true),
@@ -337,7 +257,7 @@ export default function App(): JSX.Element {
           isGridMode={terminalLayout.isGridMode}
           gridSessionIds={gridSessionIds}
           previewSessions={previewManager.previewSessions}
-          onTogglePreview={handleTogglePreview}
+          onTogglePreview={previewManager.handleTogglePreview}
           onRestartTutorial={tutorial.restart}
           shortcutsOpen={shortcutsOpen}
           onShortcutsClose={() => setShortcutsOpen(false)}
@@ -373,15 +293,15 @@ export default function App(): JSX.Element {
               blockCenterDrop={tutorial.phase === 'steps' && tutorial.steps[tutorial.currentStep]?.action === 'drag'}
               previewSessions={previewManager.previewSessions}
               previewRatios={previewManager.previewRatios}
-              onTogglePreview={handleTogglePreview}
-              onClosePreview={handleClosePreview}
+              onTogglePreview={previewManager.handleTogglePreview}
+              onClosePreview={previewManager.handleClosePreview}
               onPreviewResize={previewManager.handlePreviewResize}
               pendingUrls={previewManager.pendingUrls}
               consumePendingUrl={previewManager.consumePendingUrl}
-              previewAlert={previewAlert}
-              pendingSaveConfig={pendingSaveConfig}
-              onSaveLaunchConfig={handleSaveLaunchConfig}
-              onSkipSaveLaunchConfig={handleSkipSaveLaunchConfig}
+              previewAlert={previewManager.previewAlert}
+              pendingSaveConfig={previewManager.pendingSaveConfig}
+              onSaveLaunchConfig={previewManager.handleSaveLaunchConfig}
+              onSkipSaveLaunchConfig={previewManager.handleSkipSaveLaunchConfig}
               permissionModes={permissionModes}
               onCycleMode={cyclePermissionMode}
               planSessions={planManager.planSessions}

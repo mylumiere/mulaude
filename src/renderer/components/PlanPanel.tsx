@@ -134,6 +134,7 @@ export default function PlanPanel({
             className="plan-panel-title-btn"
             onClick={handleToggleDropdown}
             title={t(locale, 'plan.switchFile')}
+            aria-label={t(locale, 'plan.switchFile')}
           >
             <span className="plan-panel-title">{title}</span>
             <ChevronDown size={12} className="plan-panel-chevron" />
@@ -175,6 +176,7 @@ export default function PlanPanel({
           className="plan-panel-close"
           onClick={onClose}
           title={t(locale, 'plan.close')}
+          aria-label={t(locale, 'plan.close')}
         >
           <X size={14} />
         </button>

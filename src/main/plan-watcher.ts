@@ -6,9 +6,11 @@
  * Claude가 플랜 파일을 작성하는 동안 실시간으로 업데이트됩니다.
  */
 
-import { watch, readFile, readdir, stat, type FSWatcher } from 'fs'
+import { watch, readFile, type FSWatcher } from 'fs'
+import { readdir, stat } from 'fs/promises'
 import { join, basename } from 'path'
 import { app, BrowserWindow } from 'electron'
+import { PLAN_WATCHER_DEBOUNCE } from '../shared/constants'
 
 /* ─── Types ─── */
 
@@ -46,7 +48,7 @@ function debouncedReadAndSend(sessionId: string, filePath: string): void {
         win.webContents.send('plan:content-update', sessionId, filePath, content)
       }
     })
-  }, 100))
+  }, PLAN_WATCHER_DEBOUNCE))
 }
 
 /* ─── Public API ─── */
@@ -153,13 +155,7 @@ export async function listPlanFiles(workingDir: string): Promise<PlanFileInfo[]>
 
   for (const dir of dirs) {
     try {
-      const files = await new Promise<string[]>((resolve, reject) => {
-        readdir(dir, (err, entries) => {
-          if (err) reject(err)
-          else resolve(entries)
-        })
-      })
-
+      const files = await readdir(dir)
       const mdFiles = files.filter(f => f.endsWith('.md'))
 
       for (const file of mdFiles) {
@@ -168,12 +164,7 @@ export async function listPlanFiles(workingDir: string): Promise<PlanFileInfo[]>
 
         const filePath = join(dir, file)
         try {
-          const stats = await new Promise<import('fs').Stats>((resolve, reject) => {
-            stat(filePath, (err, s) => {
-              if (err) reject(err)
-              else resolve(s)
-            })
-          })
+          const stats = await stat(filePath)
           results.push({
             name: file,
             path: filePath,
@@ -205,23 +196,13 @@ export async function resolvePlanPath(workingDir: string, fileName: string): Pro
 
   // 홈 디렉토리 먼저 확인 (Claude Code 기본 저장 위치)
   try {
-    await new Promise<import('fs').Stats>((resolve, reject) => {
-      stat(homePath, (err, s) => {
-        if (err) reject(err)
-        else resolve(s)
-      })
-    })
+    await stat(homePath)
     return homePath
   } catch { /* 없음 */ }
 
   // 프로젝트 디렉토리 확인
   try {
-    await new Promise<import('fs').Stats>((resolve, reject) => {
-      stat(projectPath, (err, s) => {
-        if (err) reject(err)
-        else resolve(s)
-      })
-    })
+    await stat(projectPath)
     return projectPath
   } catch { /* 없음 */ }
 

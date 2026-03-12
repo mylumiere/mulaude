@@ -20,10 +20,12 @@
  * }
  */
 
-import { spawn, exec, type ChildProcess } from 'child_process'
+import { spawn, exec, execSync, type ChildProcess } from 'child_process'
 import { readFile, writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
+import { createConnection } from 'net'
 import { BrowserWindow } from 'electron'
+import { PREVIEW_SIGTERM_GRACE } from '../shared/constants'
 
 /* ─── Types ─── */
 
@@ -265,7 +267,6 @@ function getOwnPids(): Set<number> {
   // Electron renderer/GPU helper 등은 ppid가 main process이므로
   // pgrep -P로 자식 PID도 수집
   try {
-    const { execSync } = require('child_process')
     const children = execSync(`pgrep -P ${process.pid}`, { encoding: 'utf-8' }).trim()
     if (children) children.split('\n').forEach((p: string) => pids.add(Number(p)))
   } catch { /* pgrep 실패 무시 */ }
@@ -290,11 +291,12 @@ export function stopPreview(sessionId: string): void {
   // mulaude 자체 프로세스(dev 서버 등)는 절대 죽이지 않음
   if (ports.length > 0) {
     const ownPids = getOwnPids()
+    // SIGTERM 후 대기 시간 — 자식 프로세스 정리 후 포트 kill
     setTimeout(() => {
       for (const port of ports) {
         killByPort(port, ownPids)
       }
-    }, 1000)
+    }, PREVIEW_SIGTERM_GRACE)
   }
 
   runningProcesses.delete(sessionId)
@@ -357,19 +359,17 @@ function replacePortInArgs(args: string[], oldPort: number, newPort: number): st
 /** 포트 사용 중 확인 */
 function isPortInUse(port: number): Promise<boolean> {
   return new Promise((resolve) => {
-    import('net').then(({ createConnection }) => {
-      const socket = createConnection({ port, host: '127.0.0.1' })
-      socket.once('connect', () => {
-        socket.destroy()
-        resolve(true)
-      })
-      socket.once('error', () => {
-        resolve(false)
-      })
-      socket.setTimeout(500, () => {
-        socket.destroy()
-        resolve(false)
-      })
+    const socket = createConnection({ port, host: '127.0.0.1' })
+    socket.once('connect', () => {
+      socket.destroy()
+      resolve(true)
+    })
+    socket.once('error', () => {
+      resolve(false)
+    })
+    socket.setTimeout(500, () => {
+      socket.destroy()
+      resolve(false)
     })
   })
 }

@@ -1,17 +1,40 @@
 /**
- * usePreviewManager — 세션별 Preview 토글 상태와 분할 비율 관리
+ * usePreviewManager — 세션별 Preview 상태/비율 관리 + 토글/닫기/저장 액션 통합
+ *
+ * App.tsx의 Preview 관련 상태와 핸들러를 한 곳에서 관리합니다.
  */
 
-import { useState, useCallback, useRef } from 'react'
-import { PREVIEW_DEFAULT_RATIO, MIN_PANE_RATIO } from '../../shared/constants'
+import { useState, useCallback, useRef, useEffect } from 'react'
+import { PREVIEW_DEFAULT_RATIO, MIN_PANE_RATIO, PREVIEW_ALERT_TIMEOUT } from '../../shared/constants'
 import { savePreviewSessions, loadPreviewSessions, deletePreviewState, savePreviewState } from '../utils/preview-storage'
+import { t, type Locale } from '../i18n'
+import type { SessionInfo } from '../../shared/types'
+
+/* ─── Types ─── */
+
+export interface SaveConfigInfo {
+  sessionId: string
+  workingDir: string
+  config: {
+    version?: string
+    configurations: { name: string; runtimeExecutable: string; runtimeArgs?: string[]; port?: number; cwd?: string }[]
+  }
+}
+
+interface UsePreviewManagerParams {
+  /** ref로 전달 — 훅 초기화 순서 제약 우회 (sessionManager보다 먼저 호출됨) */
+  sessionsRef: React.MutableRefObject<SessionInfo[]>
+  locale: Locale
+  /** usePreviewTrigger의 notifyClose */
+  notifyPreviewClose: (sessionId: string) => void
+}
 
 interface UsePreviewManagerReturn {
+  /* ── 코어 상태 ── */
   previewSessions: Set<string>
   previewRatios: Record<string, number>
   pendingUrls: Record<string, string>
   consumePendingUrl: (sessionId: string) => string | null
-  togglePreview: (sessionId: string) => void
   openPreview: (sessionId: string) => void
   openPreviewWithUrl: (sessionId: string, url: string | null) => void
   closePreview: (sessionId: string) => void
@@ -19,9 +42,25 @@ interface UsePreviewManagerReturn {
   handlePreviewResize: (sessionId: string) => (e: React.MouseEvent) => void
   /** ref로 최신 상태 즉시 참조 (usePreviewTrigger용) */
   previewSessionsRef: React.MutableRefObject<Set<string>>
+
+  /* ── 액션 (App.tsx에서 이관) ── */
+  handleTogglePreview: (sessionId: string) => Promise<void>
+  handleClosePreview: (sessionId: string) => Promise<void>
+  pendingSaveConfig: SaveConfigInfo | null
+  handleSaveLaunchConfig: () => Promise<void>
+  handleSkipSaveLaunchConfig: () => void
+  previewAlert: { sessionId: string; message: string } | null
+  /** 세션 복원 후 호출 — 저장된 미리보기 프로세스 재실행 */
+  restorePreview: () => void
 }
 
-export function usePreviewManager(): UsePreviewManagerReturn {
+/* ─── Hook ─── */
+
+export function usePreviewManager({
+  sessionsRef,
+  locale,
+  notifyPreviewClose
+}: UsePreviewManagerParams): UsePreviewManagerReturn {
   const [previewSessions, setPreviewSessions] = useState<Set<string>>(() => {
     return new Set(loadPreviewSessions())
   })
@@ -33,8 +72,8 @@ export function usePreviewManager(): UsePreviewManagerReturn {
   const previewSessionsRef = useRef(previewSessions)
   previewSessionsRef.current = previewSessions
 
-  const persist = useCallback((sessions: Set<string>) => {
-    savePreviewSessions(Array.from(sessions))
+  const persist = useCallback((s: Set<string>) => {
+    savePreviewSessions(Array.from(s))
   }, [])
 
   const openPreview = useCallback((sessionId: string) => {
@@ -42,16 +81,6 @@ export function usePreviewManager(): UsePreviewManagerReturn {
       if (prev.has(sessionId)) return prev
       const next = new Set(prev)
       next.add(sessionId)
-      persist(next)
-      return next
-    })
-  }, [persist])
-
-  const togglePreview = useCallback((sessionId: string) => {
-    setPreviewSessions(prev => {
-      const next = new Set(prev)
-      if (next.has(sessionId)) next.delete(sessionId)
-      else next.add(sessionId)
       persist(next)
       return next
     })
@@ -126,9 +155,110 @@ export function usePreviewManager(): UsePreviewManagerReturn {
     }
   }, [previewRatios])
 
+  /* ── launch.json 저장 확인 ── */
+  const [pendingSaveConfig, setPendingSaveConfig] = useState<SaveConfigInfo | null>(null)
+
+  const handleSaveLaunchConfig = useCallback(async () => {
+    if (!pendingSaveConfig) return
+    try {
+      await window.api.saveLaunchConfig(pendingSaveConfig.workingDir, pendingSaveConfig.config)
+    } catch { /* 저장 실패 무시 */ }
+    setPendingSaveConfig(null)
+  }, [pendingSaveConfig])
+
+  const handleSkipSaveLaunchConfig = useCallback(() => {
+    setPendingSaveConfig(null)
+  }, [])
+
+  /* ── 미지원 프로젝트 토스트 알림 ── */
+  const [previewAlert, setPreviewAlert] = useState<{ sessionId: string; message: string } | null>(null)
+  useEffect(() => {
+    if (!previewAlert) return
+    const timer = setTimeout(() => setPreviewAlert(null), PREVIEW_ALERT_TIMEOUT)
+    return () => clearTimeout(timer)
+  }, [previewAlert])
+
+  /* ── 토글 + 자동 dev server 실행 ── */
+  const previewTogglingRef = useRef<Set<string>>(new Set())
+
+  const handleTogglePreview = useCallback(async (sessionId: string) => {
+    // 중복 클릭 방지 (launchPreview IPC 대기 중 재클릭 무시)
+    if (previewTogglingRef.current.has(sessionId)) return
+    previewTogglingRef.current.add(sessionId)
+    try {
+      // 이미 열려있으면 닫기 + 프로세스 종료
+      if (previewSessionsRef.current.has(sessionId)) {
+        // iframe TCP 연결 먼저 정리 → CLOSE_WAIT 방지
+        document.querySelectorAll<HTMLIFrameElement>('.preview-iframe').forEach((f) => { f.src = 'about:blank' })
+        closePreview(sessionId)
+        notifyPreviewClose(sessionId)
+        await window.api.stopPreview(sessionId)
+        return
+      }
+      // 세션의 workingDir 조회
+      const session = sessionsRef.current.find(s => s.id === sessionId)
+      if (!session) {
+        openPreview(sessionId)
+        return
+      }
+      const result = await window.api.launchPreview(sessionId, session.workingDir)
+      if (result) {
+        // dev 서버 프로세스가 실행됨 → URL로 열기
+        openPreviewWithUrl(sessionId, result.previewUrl)
+        // 새로 감지된 설정이면 저장 확인 표시
+        if (result.created) {
+          setPendingSaveConfig({ sessionId, workingDir: session.workingDir, config: result.config })
+        }
+      } else {
+        // 프로젝트 감지 실패 → 알림 표시
+        setPreviewAlert({ sessionId, message: t(locale, 'preview.notSupported') })
+      }
+    } catch {
+      setPreviewAlert({ sessionId, message: t(locale, 'preview.notSupported') })
+    } finally {
+      previewTogglingRef.current.delete(sessionId)
+    }
+  }, [locale, closePreview, openPreview, openPreviewWithUrl, notifyPreviewClose]) // sessionsRef는 ref이므로 deps 불필요
+
+  /* ── Preview X 버튼으로 닫기 ── */
+  const handleClosePreview = useCallback(async (sessionId: string) => {
+    closePreview(sessionId)
+    notifyPreviewClose(sessionId)
+    await window.api.stopPreview(sessionId)
+  }, [closePreview, notifyPreviewClose])
+
+  /* ── 세션 복원 시 미리보기 프로세스 재실행 ── */
+  const previewRestoredRef = useRef(false)
+  const restorePreview = useCallback(() => {
+    if (previewRestoredRef.current) return
+    const currentSessions = sessionsRef.current
+    if (currentSessions.length === 0) return
+    previewRestoredRef.current = true
+
+    const sessionIds = new Set(currentSessions.map(s => s.id))
+    const savedPreviews = Array.from(previewSessionsRef.current)
+
+    // 존재하지 않는 세션의 미리보기 정리
+    for (const sid of savedPreviews) {
+      if (!sessionIds.has(sid)) cleanupPreview(sid)
+    }
+
+    // 존재하는 세션의 프로세스 재실행
+    for (const sid of savedPreviews) {
+      if (!sessionIds.has(sid)) continue
+      const session = currentSessions.find(s => s.id === sid)
+      if (session) {
+        window.api.launchPreview(sid, session.workingDir).catch(() => {})
+      }
+    }
+  }, [cleanupPreview]) // eslint-disable-line react-hooks/exhaustive-deps
+
   return {
     previewSessions, previewRatios, pendingUrls, consumePendingUrl,
-    togglePreview, openPreview, openPreviewWithUrl, closePreview, cleanupPreview,
-    handlePreviewResize, previewSessionsRef
+    openPreview, openPreviewWithUrl, closePreview, cleanupPreview,
+    handlePreviewResize, previewSessionsRef,
+    handleTogglePreview, handleClosePreview,
+    pendingSaveConfig, handleSaveLaunchConfig, handleSkipSaveLaunchConfig,
+    previewAlert, restorePreview
   }
 }
