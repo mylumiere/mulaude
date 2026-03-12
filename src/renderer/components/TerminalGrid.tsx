@@ -284,59 +284,59 @@ export default function TerminalGrid({
         onDragLeave={handleDragLeave}
         onDrop={(e) => handleDrop(e, leaf.id)}
       >
-        {/* 그리드 모드일 때만 패인 헤더 표시 */}
-        {isGridMode && (
-          <div
-            className={`terminal-grid-pane-header${isZoomed ? ' terminal-grid-pane-header--zoomed' : ''}`}
-            draggable={!isZoomed}
-            onDragStart={(e) => {
-              if (isZoomed) { e.preventDefault(); return }
-              e.dataTransfer.setData('text/pane-id', leaf.id)
-              e.dataTransfer.effectAllowed = 'move'
-            }}
-          >
-            <span className="terminal-grid-pane-title">
-              {isZoomed && <Maximize2 size={10} className="terminal-grid-zoom-icon" />}
-              {session?.name ?? leaf.sessionId}
-              {claudeId && !isShellStatus && <span className="terminal-grid-claude-chip">{claudeId.slice(0, 4)}</span>}
-            </span>
-            <div className="terminal-grid-pane-actions">
-              {permissionModes?.[leaf.sessionId] && permissionModes[leaf.sessionId] !== 'default' && (
-                <button
-                  className={`terminal-grid-mode-chip terminal-grid-mode-chip--${permissionModes[leaf.sessionId]}`}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onCycleMode?.(leaf.sessionId)
-                    window.api.writeSession(leaf.sessionId, '\x1b[Z')
-                  }}
-                  title={t(locale, 'mode.cycleTip')}
-                >
-                  {t(locale, `mode.${permissionModes[leaf.sessionId]}`)}
-                </button>
-              )}
+        {/* 패인 헤더 — 싱글 세션에서도 Plan/Preview 토글 표시 */}
+        <div
+          className={`terminal-grid-pane-header${isZoomed ? ' terminal-grid-pane-header--zoomed' : ''}`}
+          draggable={isGridMode && !isZoomed}
+          onDragStart={isGridMode ? (e) => {
+            if (isZoomed) { e.preventDefault(); return }
+            e.dataTransfer.setData('text/pane-id', leaf.id)
+            e.dataTransfer.effectAllowed = 'move'
+          } : undefined}
+        >
+          <span className="terminal-grid-pane-title">
+            {isZoomed && <Maximize2 size={10} className="terminal-grid-zoom-icon" />}
+            {session?.name ?? leaf.sessionId}
+            {claudeId && !isShellStatus && <span className="terminal-grid-claude-chip">{claudeId.slice(0, 4)}</span>}
+          </span>
+          <div className="terminal-grid-pane-actions">
+            {permissionModes?.[leaf.sessionId] && permissionModes[leaf.sessionId] !== 'default' && (
               <button
-                className={`terminal-grid-pane-preview-toggle${planSessions?.has(leaf.sessionId) ? ' terminal-grid-pane-preview-toggle--active' : ''}`}
-                onClick={(e) => { e.stopPropagation(); onTogglePlan?.(leaf.sessionId) }}
-                title={t(locale, 'plan.title')}
+                className={`terminal-grid-mode-chip terminal-grid-mode-chip--${permissionModes[leaf.sessionId]}`}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onCycleMode?.(leaf.sessionId)
+                  window.api.writeSession(leaf.sessionId, '\x1b[Z')
+                }}
+                title={t(locale, 'mode.cycleTip')}
               >
-                <FileText size={10} />
+                {t(locale, `mode.${permissionModes[leaf.sessionId]}`)}
               </button>
+            )}
+            <button
+              className={`terminal-grid-pane-preview-toggle${planSessions?.has(leaf.sessionId) ? ' terminal-grid-pane-preview-toggle--active' : ''}`}
+              onClick={(e) => { e.stopPropagation(); onTogglePlan?.(leaf.sessionId) }}
+              title={t(locale, 'plan.title')}
+            >
+              <FileText size={10} />
+            </button>
+            <button
+              className={`terminal-grid-pane-preview-toggle${previewSessions.has(leaf.sessionId) ? ' terminal-grid-pane-preview-toggle--active' : ''}`}
+              onClick={(e) => { e.stopPropagation(); onTogglePreview(leaf.sessionId) }}
+              title={t(locale, 'shortcuts.preview')}
+            >
+              {previewSessions.has(leaf.sessionId) ? <EyeOff size={10} /> : <Eye size={10} />}
+            </button>
+            {isGridMode && isZoomed && (
               <button
-                className={`terminal-grid-pane-preview-toggle${previewSessions.has(leaf.sessionId) ? ' terminal-grid-pane-preview-toggle--active' : ''}`}
-                onClick={(e) => { e.stopPropagation(); onTogglePreview(leaf.sessionId) }}
-                title={t(locale, 'shortcuts.preview')}
+                className="terminal-grid-pane-zoom-exit"
+                onClick={(e) => { e.stopPropagation(); onToggleZoom?.() }}
+                title={t(locale, 'shortcuts.zoomToggle')}
               >
-                {previewSessions.has(leaf.sessionId) ? <EyeOff size={10} /> : <Eye size={10} />}
+                <Minimize2 size={10} />
               </button>
-              {isZoomed && (
-                <button
-                  className="terminal-grid-pane-zoom-exit"
-                  onClick={(e) => { e.stopPropagation(); onToggleZoom?.() }}
-                  title={t(locale, 'shortcuts.zoomToggle')}
-                >
-                  <Minimize2 size={10} />
-                </button>
-              )}
+            )}
+            {isGridMode && (
               <button
                 className="terminal-grid-pane-close"
                 onClick={(e) => {
@@ -348,9 +348,9 @@ export default function TerminalGrid({
               >
                 <X size={10} />
               </button>
-            </div>
+            )}
           </div>
-        )}
+        </div>
         <div className="terminal-grid-pane-content">
           {(() => {
             const hasPreview = previewSessions.has(leaf.sessionId)
