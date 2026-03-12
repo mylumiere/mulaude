@@ -20,7 +20,10 @@ import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import { useChildPaneManager } from './hooks/useChildPaneManager'
 import { useTerminalLayout, getAllLeaves } from './hooks/useTerminalLayout'
 import { useTutorial } from './hooks/useTutorial'
+import { usePreviewManager } from './hooks/usePreviewManager'
+import { usePreviewTrigger } from './hooks/usePreviewTrigger'
 import type { PermissionMode } from './components/TerminalView'
+import type { SessionInfo } from '../shared/types'
 
 const PERMISSION_CYCLE: PermissionMode[] = ['default', 'acceptEdits', 'plan']
 
@@ -33,14 +36,43 @@ export default function App(): JSX.Element {
   const { sessionStatuses, contextPercents, teamAgents, hookAgents, claudeSessionIds, initSession, cleanupSession } =
     useSessionStatus({ locale: settings.locale, updateSessionSubtitleRef })
 
+  // 터미널 출력에서 트리거 키워드 감지 → Preview 자동 열기
+  // (usePreviewManager보다 먼저 선언 — notifyClose를 전달하기 위한 중간 ref)
+  const openPreviewWithUrlRef = useRef<(sessionId: string, url: string | null) => void>(() => {})
+  const previewSessionsRef = useRef<Set<string>>(new Set())
+  const { notifyClose: notifyPreviewClose } = usePreviewTrigger({
+    openPreviewWithUrl: (...args) => openPreviewWithUrlRef.current(...args),
+    previewSessionsRef
+  })
+
+  // sessions ref — 훅 초기화 순서 제약 우회 (previewManager → sessionManager)
+  const sessionsRef = useRef<SessionInfo[]>([])
+
+  // Preview 관리 (상태 + 액션 통합)
+  const previewManager = usePreviewManager({
+    sessionsRef,
+    locale: settings.locale,
+    notifyPreviewClose
+  })
+
+  // ref 동기화 (순환 의존 해소)
+  openPreviewWithUrlRef.current = previewManager.openPreviewWithUrl
+  previewSessionsRef.current = previewManager.previewSessions
+
   const sessionManager = useSessionManager({
     locale: settings.locale,
     initSession,
-    cleanupSession: (id) => { cleanupSession(id); settings.cleanupSessionTheme(id) }
+    cleanupSession: (id) => { cleanupSession(id); settings.cleanupSessionTheme(id); previewManager.cleanupPreview(id); window.api.stopPreview(id) }
   })
 
   // ref 연결 (초기 렌더 완료 후 실제 함수 참조)
   updateSessionSubtitleRef.current = sessionManager.updateSessionSubtitle
+  sessionsRef.current = sessionManager.sessions
+
+  // 세션 복원 후 미리보기 프로세스 재실행
+  useEffect(() => {
+    if (sessionManager.sessions.length > 0) previewManager.restorePreview()
+  }, [sessionManager.sessions]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // child pane 상태 관리
   const {
@@ -124,6 +156,12 @@ export default function App(): JSX.Element {
     focusDirection: terminalLayout.focusDirection,
     isGridMode: terminalLayout.isGridMode,
     getFocusedSessionId: terminalLayout.getFocusedSessionId,
+    togglePreview: () => {
+      const sid = terminalLayout.isGridMode
+        ? terminalLayout.getFocusedSessionId()
+        : sessionManager.activeSessionId
+      if (sid) previewManager.handleTogglePreview(sid)
+    },
     openSettings: () => settings.setShowSettings(true),
     openShortcuts: () => setShortcutsOpen(true),
     tutorialPhase: tutorial.phase,
@@ -187,6 +225,8 @@ export default function App(): JSX.Element {
           claudeSessionIds={claudeSessionIds}
           isGridMode={terminalLayout.isGridMode}
           gridSessionIds={gridSessionIds}
+          previewSessions={previewManager.previewSessions}
+          onTogglePreview={previewManager.handleTogglePreview}
           onRestartTutorial={tutorial.restart}
           shortcutsOpen={shortcutsOpen}
           onShortcutsClose={() => setShortcutsOpen(false)}
@@ -220,6 +260,17 @@ export default function App(): JSX.Element {
               duplicateAlert={terminalLayout.duplicateAlert}
               gridAlert={terminalLayout.gridAlert}
               blockCenterDrop={tutorial.phase === 'steps' && tutorial.steps[tutorial.currentStep]?.action === 'drag'}
+              previewSessions={previewManager.previewSessions}
+              previewRatios={previewManager.previewRatios}
+              onTogglePreview={previewManager.handleTogglePreview}
+              onClosePreview={previewManager.handleClosePreview}
+              onPreviewResize={previewManager.handlePreviewResize}
+              pendingUrls={previewManager.pendingUrls}
+              consumePendingUrl={previewManager.consumePendingUrl}
+              previewAlert={previewManager.previewAlert}
+              pendingSaveConfig={previewManager.pendingSaveConfig}
+              onSaveLaunchConfig={previewManager.handleSaveLaunchConfig}
+              onSkipSaveLaunchConfig={previewManager.handleSkipSaveLaunchConfig}
               permissionModes={permissionModes}
               onCycleMode={cyclePermissionMode}
             />

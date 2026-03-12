@@ -23,6 +23,7 @@ import { setupPanePolling, setupChildPaneForwarding } from './pane-poller'
 import { startWatching as startStatuslineWatching, cleanup as cleanupStatusline } from './statusline-manager'
 import { setupCloseHandler, dt, setLocale, getCloseAction, resetCloseAction } from './close-handler'
 import { logger } from './logger'
+import { stopAllPreviews } from './preview-launcher'
 import { SCREEN_VISIBILITY_MARGIN, WINDOW_SAVE_DEBOUNCE } from '../shared/constants'
 import type { AppMode } from '../shared/types'
 
@@ -225,6 +226,7 @@ app.whenReady().then(() => {
       logger.info('App', 'Window closed, shutting down')
       nativeChatManager.destroyAll()
       nativeChatManager.getSessionStore().saveImmediate()
+      stopAllPreviews()
       hooksManager.cleanup()
       cleanupStatusline()
 
@@ -272,6 +274,7 @@ app.whenReady().then(() => {
       // 디바운스된 save가 있으면 즉시 flush
       sessionManager.getSessionStore().saveImmediate()
       resetCloseAction()
+      stopAllPreviews()
       cleanupPanePolling()
       hooksManager.cleanup()
       cleanupStatusline()

@@ -49,6 +49,7 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
       { keys: '⌘⇧ ↵', labelKey: 'shortcuts.zoomToggle' },
       { keys: '⌘ ← / →', labelKey: 'shortcuts.gridFocusCol' },
       { keys: '⌘ ↑ / ↓', labelKey: 'shortcuts.gridFocusRow' },
+      { keys: '⌘⇧ P', labelKey: 'shortcuts.preview' },
     ]
   },
   {

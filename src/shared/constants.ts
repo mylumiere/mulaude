@@ -114,3 +114,18 @@ export const MIN_PANE_RATIO = 0.1
 export const DUPLICATE_ALERT_TIMEOUT = 2000
 /** ⌘⇧T 닫은 패인 되살리기 히스토리 최대 개수 */
 export const MAX_CLOSED_PANE_HISTORY = 10
+
+/* ═══════ Preview ═══════ */
+
+/** 터미널:프리뷰 기본 비율 */
+export const PREVIEW_DEFAULT_RATIO = 0.5
+/** iframe 자동 재시도 최대 횟수 */
+export const PREVIEW_MAX_RETRIES = 10
+/** iframe 자동 재시도 간격 (ms) */
+export const PREVIEW_RETRY_INTERVAL = 2000
+/** 트리거 쿨다운 (ms) — 동일 세션 내 중복 감지 방지 */
+export const PREVIEW_TRIGGER_COOLDOWN = 10_000
+/** SIGTERM 후 포트 kill 대기 (ms) */
+export const PREVIEW_SIGTERM_GRACE = 1000
+/** 미지원 프로젝트 토스트 알림 표시 시간 (ms) */
+export const PREVIEW_ALERT_TIMEOUT = 3000

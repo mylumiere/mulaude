@@ -10,7 +10,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
-import { Settings, Plus, BookOpen, Route, Keyboard, MessageSquareWarning, X } from 'lucide-react'
+import { Settings, Plus, BookOpen, Route, Keyboard, MessageSquareWarning, X, Eye } from 'lucide-react'
 import type { ProjectGroup, SessionStatus, UsageData, AgentInfo } from '../../shared/types'
 import { type Locale, t } from '../i18n'
 import ProjectHeader from './sidebar/ProjectHeader'
@@ -50,6 +50,9 @@ interface SidebarProps {
   isGridMode?: boolean
   /** 튜토리얼 다시보기 */
   onRestartTutorial?: () => void
+  /** Preview 토글 */
+  previewSessions?: Set<string>
+  onTogglePreview?: (sessionId: string) => void | Promise<void>
   /** 외부에서 단축키 모달 열기 (⌘/) */
   shortcutsOpen?: boolean
   onShortcutsClose?: () => void
@@ -78,6 +81,8 @@ export default function Sidebar({
   sidebarCursorId,
   isGridMode,
   gridSessionIds,
+  previewSessions,
+  onTogglePreview,
   onRestartTutorial,
   shortcutsOpen,
   onShortcutsClose
@@ -195,6 +200,16 @@ export default function Sidebar({
                             onSelect={() => onSelectSession(session.id)}
                             onDestroy={() => onDestroySession(session.id)}
                             onUpdateName={(name) => onUpdateSessionName(session.id, name)}
+                            previewAction={onTogglePreview ? (
+                              <button
+                                className={`sidebar-preview-btn${previewSessions?.has(session.id) ? ' sidebar-preview-btn--active' : ''}`}
+                                onClick={(e) => { e.stopPropagation(); onTogglePreview(session.id) }}
+                                title={t(locale, 'shortcuts.preview')}
+                                aria-label={t(locale, 'shortcuts.preview')}
+                              >
+                                <Eye size={11} />
+                              </button>
+                            ) : undefined}
                           />
                           {hookEntry && (
                             <div className="session-hook-agents">

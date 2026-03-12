@@ -14,10 +14,11 @@
  */
 
 import { useCallback, useMemo, useState } from 'react'
-import { X, Maximize2, Minimize2 } from 'lucide-react'
+import { X, Maximize2, Minimize2, Eye, EyeOff } from 'lucide-react'
 import TerminalView from './TerminalView'
 import type { PermissionMode } from './TerminalView'
 import AgentPanel from './AgentPanel'
+import PreviewPanel from './PreviewPanel'
 import type { SessionInfo, AgentInfo, SessionStatus } from '../../shared/types'
 import type {
   PaneTreeState,
@@ -27,7 +28,7 @@ import type {
   DropPosition
 } from '../hooks/useTerminalLayout'
 import { t, type Locale } from '../i18n'
-import { MAX_PANES } from '../../shared/constants'
+import { MAX_PANES, PREVIEW_DEFAULT_RATIO } from '../../shared/constants'
 import './TerminalGrid.css'
 
 interface TerminalGridProps {
@@ -68,6 +69,25 @@ interface TerminalGridProps {
   gridAlert?: string | null
   /** 튜토리얼 드래그 스텝 — center 드롭 차단 */
   blockCenterDrop?: boolean
+
+  // Preview 관련
+  previewSessions: Set<string>
+  previewRatios: Record<string, number>
+  onTogglePreview: (sessionId: string) => void | Promise<void>
+  onClosePreview: (sessionId: string) => void
+  onPreviewResize: (sessionId: string) => (e: React.MouseEvent) => void
+  pendingUrls: Record<string, string>
+  consumePendingUrl: (sessionId: string) => string | null
+
+  // 세션별 토스트 알림
+  previewAlert?: { sessionId: string; message: string } | null
+  pendingSaveConfig?: {
+    sessionId: string
+    workingDir: string
+    config: { version?: string; configurations: { name: string; runtimeExecutable: string; runtimeArgs?: string[]; port?: number; cwd?: string }[] }
+  } | null
+  onSaveLaunchConfig?: () => void
+  onSkipSaveLaunchConfig?: () => void
   /** 세션별 퍼미션 모드 */
   permissionModes?: Record<string, PermissionMode>
   /** 퍼미션 모드 순환 콜백 */
@@ -103,6 +123,17 @@ export default function TerminalGrid({
   duplicateAlert,
   gridAlert,
   blockCenterDrop,
+  previewSessions,
+  previewRatios,
+  onTogglePreview,
+  onClosePreview,
+  onPreviewResize,
+  pendingUrls,
+  consumePendingUrl,
+  previewAlert,
+  pendingSaveConfig,
+  onSaveLaunchConfig,
+  onSkipSaveLaunchConfig,
   permissionModes,
   onCycleMode
 }: TerminalGridProps): JSX.Element {
@@ -265,6 +296,13 @@ export default function TerminalGrid({
                   {t(locale, `mode.${permissionModes[leaf.sessionId]}`)}
                 </button>
               )}
+              <button
+                className={`terminal-grid-pane-preview-toggle${previewSessions.has(leaf.sessionId) ? ' terminal-grid-pane-preview-toggle--active' : ''}`}
+                onClick={(e) => { e.stopPropagation(); onTogglePreview(leaf.sessionId) }}
+                title={t(locale, 'shortcuts.preview')}
+              >
+                {previewSessions.has(leaf.sessionId) ? <EyeOff size={10} /> : <Eye size={10} />}
+              </button>
               {isZoomed && (
                 <button
                   className="terminal-grid-pane-zoom-exit"
@@ -289,47 +327,100 @@ export default function TerminalGrid({
           </div>
         )}
         <div className="terminal-grid-pane-content">
-          {hasAgentPanes ? (
-            <div className="terminal-split">
-              <div className="terminal-split-parent" style={{ flex: `0 0 ${ratio * 100}%` }}>
-                <TerminalView
-                  sessionId={leaf.sessionId}
-                  isActive={true}
-                  themeId={getSessionThemeId(leaf.sessionId)}
-                  contextPercent={contextPercents[leaf.sessionId] ?? null}
-                  isFocused={isFocused && agentFocus === null}
-                  onFocusTerminal={() => handleFocusParent(leaf.sessionId)}
-                  permissionMode={permissionModes?.[leaf.sessionId]}
-                  onCycleMode={() => onCycleMode?.(leaf.sessionId)}
-                  locale={locale}
+          {(() => {
+            const hasPreview = previewSessions.has(leaf.sessionId)
+            const previewRatio = previewRatios[leaf.sessionId] ?? PREVIEW_DEFAULT_RATIO
+
+            // Terminal + Agent 부분 렌더링
+            const terminalContent = hasAgentPanes ? (
+              <div className="terminal-split">
+                <div className="terminal-split-parent" style={{ flex: `0 0 ${ratio * 100}%` }}>
+                  <TerminalView
+                    sessionId={leaf.sessionId}
+                    isActive={true}
+                    themeId={getSessionThemeId(leaf.sessionId)}
+                    contextPercent={contextPercents[leaf.sessionId] ?? null}
+                    isFocused={isFocused && agentFocus === null}
+                    onFocusTerminal={() => handleFocusParent(leaf.sessionId)}
+                    permissionMode={permissionModes?.[leaf.sessionId]}
+                    onCycleMode={() => onCycleMode?.(leaf.sessionId)}
+                    locale={locale}
+                  />
+                </div>
+                <div
+                  className="terminal-split-handle"
+                  onMouseDown={handleSplitResize(leaf.sessionId)}
                 />
+                <div className="terminal-split-agents" style={{ flex: 1 }}>
+                  <AgentPanel
+                    sessionId={leaf.sessionId}
+                    themeId={getSessionThemeId(leaf.sessionId)}
+                    focusedPaneIndex={typeof agentFocus === 'number' ? agentFocus : null}
+                    onFocusPane={(paneIndex) => handleFocusPane(leaf.sessionId, paneIndex)}
+                    panes={childPaneMap[leaf.sessionId] || EMPTY_MAP}
+                    agents={sessionAgents[leaf.sessionId]}
+                  />
+                </div>
               </div>
-              <div
-                className="terminal-split-handle"
-                onMouseDown={handleSplitResize(leaf.sessionId)}
+            ) : (
+              <TerminalView
+                sessionId={leaf.sessionId}
+                isActive={true}
+                themeId={getSessionThemeId(leaf.sessionId)}
+                contextPercent={contextPercents[leaf.sessionId] ?? null}
+                isFocused={isFocused}
+                permissionMode={permissionModes?.[leaf.sessionId]}
+                onCycleMode={() => onCycleMode?.(leaf.sessionId)}
+                locale={locale}
               />
-              <div className="terminal-split-agents" style={{ flex: 1 }}>
-                <AgentPanel
-                  sessionId={leaf.sessionId}
-                  themeId={getSessionThemeId(leaf.sessionId)}
-                  focusedPaneIndex={typeof agentFocus === 'number' ? agentFocus : null}
-                  onFocusPane={(paneIndex) => handleFocusPane(leaf.sessionId, paneIndex)}
-                  panes={childPaneMap[leaf.sessionId] || EMPTY_MAP}
-                  agents={sessionAgents[leaf.sessionId]}
+            )
+
+            if (!hasPreview) return terminalContent
+
+            return (
+              <div className="terminal-split">
+                <div className="terminal-split-parent" style={{ flex: `0 0 ${previewRatio * 100}%` }}>
+                  {terminalContent}
+                </div>
+                <div
+                  className="terminal-split-handle"
+                  onMouseDown={onPreviewResize(leaf.sessionId)}
                 />
+                <div className="terminal-split-preview" style={{ flex: 1 }}>
+                  <PreviewPanel
+                    sessionId={leaf.sessionId}
+                    isFocused={isFocused}
+                    locale={locale}
+                    onClose={() => onClosePreview(leaf.sessionId)}
+                    pendingUrl={pendingUrls[leaf.sessionId] || null}
+                  />
+                </div>
+              </div>
+            )
+          })()}
+          {/* 세션별 토스트 알림 */}
+          {previewAlert && previewAlert.sessionId === leaf.sessionId && (
+            <div className="pane-toast">{previewAlert.message}</div>
+          )}
+          {pendingSaveConfig && pendingSaveConfig.sessionId === leaf.sessionId && (
+            <div className="pane-toast pane-toast--confirm">
+              <div className="toast-message">
+                {t(locale, 'preview.saveConfig')}
+                <div className="toast-detail">
+                  {t(locale, 'preview.saveConfigDetail', {
+                    processes: pendingSaveConfig.config.configurations.map(c => c.name).join(', ')
+                  })}
+                </div>
+              </div>
+              <div className="toast-actions">
+                <button className="toast-btn toast-btn--primary" onClick={(e) => { e.stopPropagation(); onSaveLaunchConfig?.() }}>
+                  {t(locale, 'preview.save')}
+                </button>
+                <button className="toast-btn toast-btn--secondary" onClick={(e) => { e.stopPropagation(); onSkipSaveLaunchConfig?.() }}>
+                  {t(locale, 'preview.skip')}
+                </button>
               </div>
             </div>
-          ) : (
-            <TerminalView
-              sessionId={leaf.sessionId}
-              isActive={true}
-              themeId={getSessionThemeId(leaf.sessionId)}
-              contextPercent={contextPercents[leaf.sessionId] ?? null}
-              isFocused={isFocused}
-              permissionMode={permissionModes?.[leaf.sessionId]}
-              onCycleMode={() => onCycleMode?.(leaf.sessionId)}
-              locale={locale}
-            />
           )}
         </div>
       </div>

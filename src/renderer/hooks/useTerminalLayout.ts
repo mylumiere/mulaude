@@ -421,9 +421,11 @@ export function useTerminalLayout({
       }
 
       const onUp = (): void => {
+        document.body.classList.remove('resizing')
         document.removeEventListener('mousemove', onMove)
         document.removeEventListener('mouseup', onUp)
       }
+      document.body.classList.add('resizing')
       document.addEventListener('mousemove', onMove)
       document.addEventListener('mouseup', onUp)
     }
