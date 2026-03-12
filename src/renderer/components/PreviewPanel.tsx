@@ -25,6 +25,7 @@ import {
   Copy, MessageSquare
 } from 'lucide-react'
 import { loadPreviewState, savePreviewState } from '../utils/preview-storage'
+import { PREVIEW_MAX_RETRIES, PREVIEW_RETRY_INTERVAL } from '../../shared/constants'
 import { t, type Locale } from '../i18n'
 import './PreviewPanel.css'
 
@@ -316,7 +317,8 @@ export default function PreviewPanel({ sessionId, isFocused, locale, onClose, pe
     try {
       const doc = iframeRef.current?.contentDocument
       // 정상 로드 시 contentDocument에 접근 가능 (same-origin) → 성공
-      if (doc && doc.title) {
+      // doc.body !== null 로 판별 (doc.title은 빈 문자열일 수 있어 falsy)
+      if (doc && doc.body !== null) {
         retryCountRef.current = 0
         return
       }
@@ -326,12 +328,12 @@ export default function PreviewPanel({ sessionId, isFocused, locale, onClose, pe
       return
     }
     // contentDocument가 빈 페이지 = 서버 미준비 → 재시도
-    if (retryCountRef.current < 10) {
+    if (retryCountRef.current < PREVIEW_MAX_RETRIES) {
       retryCountRef.current++
       retryTimerRef.current = setTimeout(() => {
         setUrlKey(k => k + 1)
         setIsLoading(true)
-      }, 2000)
+      }, PREVIEW_RETRY_INTERVAL)
     }
   }, [])
 
@@ -518,7 +520,8 @@ export default function PreviewPanel({ sessionId, isFocused, locale, onClose, pe
     const clean = trimmed.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '')
     // 5000자 초과 시 잘라내기
     const truncated = clean.length > 5000 ? '...(truncated)\n' + clean.slice(-5000) : clean
-    const message = `아래 로그를 분석해줘:\n\`\`\`\n${truncated}\n\`\`\``
+    const prompt = t(locale, 'preview.askClaudePrompt')
+    const message = `${prompt}\n\`\`\`\n${truncated}\n\`\`\``
     // 멀티라인 입력을 위해 bracketed paste 모드 사용
     window.api.writeSession(sessionId, `\x1b[200~${message}\x1b[201~\r`)
     setLogSelection(null)
