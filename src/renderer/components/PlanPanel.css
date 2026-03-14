@@ -1,0 +1,346 @@
+/**
+ * PlanPanel — Claude Desktop Code 탭 플랜 패널 스타일
+ *
+ * Claude Desktop의 플랜 패널을 재현:
+ * - 밝은 배경, 깔끔한 타이포그래피
+ * - 인라인 코드: 분홍/붉은 배경
+ * - 코드 블록: 회색 배경
+ * - 테이블: 깔끔한 보더
+ */
+
+.plan-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #ffffff;
+  color: #1a1a2e;
+  border-left: 1px solid #e5e5e5;
+  overflow: hidden;
+}
+
+/* ─── 헤더 바 ─── */
+
+.plan-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid #e5e5e5;
+  background: #fafafa;
+  min-height: 36px;
+  flex-shrink: 0;
+}
+
+.plan-panel-title-wrapper {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.plan-panel-title-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  padding: 2px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #1a1a2e;
+  font-size: 13px;
+  font-weight: 600;
+  max-width: 100%;
+  transition: background 0.15s;
+}
+
+.plan-panel-title-btn:hover {
+  background: #f0f0f0;
+}
+
+.plan-panel-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plan-panel-chevron {
+  flex-shrink: 0;
+  opacity: 0.5;
+}
+
+.plan-panel-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #666;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+}
+
+.plan-panel-close:hover {
+  background: #f0f0f0;
+  color: #333;
+}
+
+/* ─── 파일 선택 드롭다운 ─── */
+
+.plan-panel-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  min-width: 280px;
+  max-height: 300px;
+  overflow-y: auto;
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  z-index: 100;
+}
+
+.plan-panel-dropdown-empty {
+  padding: 12px 16px;
+  color: #888;
+  font-size: 12px;
+  text-align: center;
+}
+
+.plan-panel-dropdown-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+
+.plan-panel-dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.plan-panel-dropdown-item:hover {
+  background: #f5f5f5;
+}
+
+.plan-panel-dropdown-item--active {
+  background: #eef2ff;
+}
+
+.plan-panel-dropdown-name {
+  font-size: 12px;
+  color: #333;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plan-panel-dropdown-date {
+  font-size: 11px;
+  color: #999;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.plan-panel-dropdown-open {
+  gap: 6px;
+  color: #666;
+  border-top: 1px solid #e5e5e5;
+  justify-content: flex-start;
+}
+
+.plan-panel-dropdown-open:hover {
+  color: #333;
+}
+
+/* ─── 콘텐츠 영역 ─── */
+
+.plan-panel-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 20px 24px;
+}
+
+.plan-panel-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #999;
+  font-size: 13px;
+}
+
+/* ─── 마크다운 렌더링 (Claude Desktop 스타일) ─── */
+
+.plan-markdown {
+  font-size: 14px;
+  line-height: 1.7;
+  color: #1a1a2e;
+  word-wrap: break-word;
+}
+
+.plan-markdown h1 {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 16px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e5e5e5;
+  color: #111;
+}
+
+.plan-markdown h2 {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 24px 0 12px 0;
+  color: #111;
+}
+
+.plan-markdown h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 20px 0 8px 0;
+  color: #222;
+}
+
+.plan-markdown h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 16px 0 8px 0;
+  color: #333;
+}
+
+.plan-markdown p {
+  margin: 0 0 12px 0;
+}
+
+.plan-markdown a {
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.plan-markdown a:hover {
+  text-decoration: underline;
+}
+
+/* 인라인 코드 — Claude Desktop 분홍/붉은 배경 */
+.plan-markdown code {
+  background: #fdf2f2;
+  color: #c0392b;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+}
+
+/* 코드 블록 — 회색 배경 */
+.plan-markdown pre {
+  background: #f5f5f5;
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin: 12px 0;
+  overflow-x: auto;
+  border: 1px solid #e8e8e8;
+}
+
+.plan-markdown pre code {
+  background: none;
+  color: #333;
+  padding: 0;
+  border-radius: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* 리스트 */
+.plan-markdown ul,
+.plan-markdown ol {
+  margin: 0 0 12px 0;
+  padding-left: 24px;
+}
+
+.plan-markdown li {
+  margin: 4px 0;
+}
+
+.plan-markdown li > ul,
+.plan-markdown li > ol {
+  margin: 4px 0 0 0;
+}
+
+/* 체크리스트 */
+.plan-markdown input[type="checkbox"] {
+  margin-right: 6px;
+  transform: translateY(1px);
+}
+
+/* 테이블 — Claude Desktop 깔끔한 보더 */
+.plan-markdown table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 12px 0;
+  font-size: 13px;
+}
+
+.plan-markdown th {
+  background: #f9f9f9;
+  font-weight: 600;
+  text-align: left;
+  padding: 8px 12px;
+  border: 1px solid #e0e0e0;
+}
+
+.plan-markdown td {
+  padding: 8px 12px;
+  border: 1px solid #e0e0e0;
+  vertical-align: top;
+}
+
+.plan-markdown tr:hover {
+  background: #fafafa;
+}
+
+/* 인용 */
+.plan-markdown blockquote {
+  border-left: 3px solid #d0d0d0;
+  margin: 12px 0;
+  padding: 4px 16px;
+  color: #555;
+  background: #fafafa;
+  border-radius: 0 4px 4px 0;
+}
+
+/* 구분선 */
+.plan-markdown hr {
+  border: none;
+  border-top: 1px solid #e5e5e5;
+  margin: 20px 0;
+}
+
+/* 볼드/이탤릭 */
+.plan-markdown strong {
+  font-weight: 700;
+  color: #111;
+}
+
+.plan-markdown em {
+  font-style: italic;
+}
+
+/* 이미지 */
+.plan-markdown img {
+  max-width: 100%;
+  border-radius: 4px;
+}

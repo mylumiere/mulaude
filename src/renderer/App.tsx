@@ -20,6 +20,8 @@ import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import { useChildPaneManager } from './hooks/useChildPaneManager'
 import { useTerminalLayout, getAllLeaves } from './hooks/useTerminalLayout'
 import { useTutorial } from './hooks/useTutorial'
+import { usePlanManager } from './hooks/usePlanManager'
+import { usePlanTrigger } from './hooks/usePlanTrigger'
 import { usePreviewManager } from './hooks/usePreviewManager'
 import { usePreviewTrigger } from './hooks/usePreviewTrigger'
 import type { PermissionMode } from './components/TerminalView'
@@ -35,6 +37,9 @@ export default function App(): JSX.Element {
 
   const { sessionStatuses, contextPercents, teamAgents, hookAgents, claudeSessionIds, initSession, cleanupSession } =
     useSessionStatus({ locale: settings.locale, updateSessionSubtitleRef })
+
+  // Plan 관리
+  const planManager = usePlanManager()
 
   // 터미널 출력에서 트리거 키워드 감지 → Preview 자동 열기
   // (usePreviewManager보다 먼저 선언 — notifyClose를 전달하기 위한 중간 ref)
@@ -62,12 +67,38 @@ export default function App(): JSX.Element {
   const sessionManager = useSessionManager({
     locale: settings.locale,
     initSession,
-    cleanupSession: (id) => { cleanupSession(id); settings.cleanupSessionTheme(id); previewManager.cleanupPreview(id); window.api.stopPreview(id) }
+    cleanupSession: (id) => { cleanupSession(id); settings.cleanupSessionTheme(id); planManager.cleanupPlan(id); previewManager.cleanupPreview(id); window.api.stopPreview(id) }
   })
 
   // ref 연결 (초기 렌더 완료 후 실제 함수 참조)
   updateSessionSubtitleRef.current = sessionManager.updateSessionSubtitle
   sessionsRef.current = sessionManager.sessions
+
+  // 터미널 출력에서 플랜 파일 경로 감지 → Plan 자동 열기
+  usePlanTrigger({
+    openPlan: planManager.openPlan,
+    planSessionsRef: planManager.planSessionsRef
+  })
+
+  // Plan 토글: 열려있으면 닫기, 닫혀있으면 최근 플랜 파일 열기 / 없으면 파일 선택
+  const handleTogglePlan = useCallback(async (sessionId: string) => {
+    if (planManager.planSessionsRef.current.has(sessionId)) {
+      planManager.closePlan(sessionId)
+      return
+    }
+    try {
+      const files = await window.api.listPlanFiles(sessionId)
+      if (files.length > 0) {
+        planManager.openPlan(sessionId, files[0].path)
+      } else {
+        // 플랜 파일 없음 → 파일 선택 다이얼로그
+        const filePath = await window.api.openPlanFileDialog(sessionId)
+        if (filePath) {
+          planManager.openPlan(sessionId, filePath)
+        }
+      }
+    } catch { /* 무시 */ }
+  }, [planManager])
 
   // 세션 복원 후 미리보기 프로세스 재실행
   useEffect(() => {
@@ -273,6 +304,13 @@ export default function App(): JSX.Element {
               onSkipSaveLaunchConfig={previewManager.handleSkipSaveLaunchConfig}
               permissionModes={permissionModes}
               onCycleMode={cyclePermissionMode}
+              planSessions={planManager.planSessions}
+              planInfos={planManager.planInfos}
+              planRatios={planManager.planRatios}
+              onTogglePlan={handleTogglePlan}
+              onClosePlan={planManager.closePlan}
+              onPlanResize={planManager.handlePlanResize}
+              onSwitchPlanFile={planManager.switchFile}
             />
           ) : (
             <div className="empty-state">

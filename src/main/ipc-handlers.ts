@@ -12,6 +12,7 @@ import { tmpdir } from 'os'
 import type { SessionManager } from './session-manager'
 import type { NativeChatManager } from './native-chat-manager'
 import { showOrphanDialog } from './close-handler'
+import { watchPlanFile, unwatchPlanFile, listPlanFiles, resolvePlanPath } from './plan-watcher'
 import { getCachedUsageData, setHideHud, setKeychainAccess } from './statusline-manager'
 import { launchPreview, stopPreview, writeLaunchConfig } from './preview-launcher'
 import type { UsageData } from '../shared/types'
@@ -304,6 +305,47 @@ export function registerIpcHandlers(
       console.error('[IPC] session:check-orphans failed:', err)
       return { found: 0, cleaned: false }
     }
+  })
+
+  // ─── Plan Viewer IPC ───
+
+  // 플랜 파일 감시 시작
+  ipcMain.on('plan:watch-file', (_event, sessionId: string, filePath: string) => {
+    watchPlanFile(sessionId, filePath)
+  })
+
+  // 플랜 파일 감시 해제
+  ipcMain.on('plan:unwatch-file', (_event, sessionId: string) => {
+    unwatchPlanFile(sessionId)
+  })
+
+  // 플랜 파일 목록 조회
+  ipcMain.handle('plan:list-files', async (_event, sessionId: string) => {
+    const session = sessionManager.getSessionList().find(s => s.id === sessionId)
+    if (!session) return []
+    return listPlanFiles(session.workingDir)
+  })
+
+  // 플랜 파일명 → 실제 경로 해석 (홈/프로젝트 양쪽 검색)
+  ipcMain.handle('plan:resolve-path', async (_event, sessionId: string, fileName: string) => {
+    const session = sessionManager.getSessionList().find(s => s.id === sessionId)
+    const workingDir = session?.workingDir || ''
+    return resolvePlanPath(workingDir, fileName)
+  })
+
+  // .md 파일 선택 다이얼로그 (기본경로: 프로젝트 루트)
+  ipcMain.handle('plan:open-file-dialog', async (event, sessionId: string) => {
+    const session = sessionManager.getSessionList().find(s => s.id === sessionId)
+    const parentWindow = BrowserWindow.fromWebContents(event.sender) ?? undefined
+    const result = await dialog.showOpenDialog({
+      ...(parentWindow ? { parentWindow } : {}),
+      title: dt('plan.openFile'),
+      defaultPath: session?.workingDir,
+      filters: [{ name: 'Markdown', extensions: ['md'] }],
+      properties: ['openFile', 'showHiddenFiles']
+    })
+    if (result.canceled || result.filePaths.length === 0) return null
+    return result.filePaths[0]
   })
 }
 
