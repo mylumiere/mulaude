@@ -384,6 +384,15 @@ export function startWatching(mainWindow: BrowserWindow, hideHud: boolean, useKe
   installStatusline()
   updateProxyMode(hideHud)
 
+  // 이전 실행에서 남은 ctx 파일 정리 (크래시 시 잔류 파일 제거)
+  try {
+    if (existsSync(CTX_DIR)) {
+      for (const f of readdirSync(CTX_DIR).filter(f => f.endsWith('.json'))) {
+        try { unlinkSync(join(CTX_DIR, f)) } catch {}
+      }
+    }
+  } catch {}
+
   // HUD 숨김 시 백그라운드 폴러로 claude-hud 캐시 갱신
   if (hideHud) startHudPoller()
 
