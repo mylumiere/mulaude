@@ -99,8 +99,9 @@ export default function PreviewPanel({ sessionId, isFocused, locale, onClose, pe
   const [viewport, setViewport] = useState<ViewportPreset>('responsive')
   const pendingConsumed = useRef(false)
   const iframeRef = useRef<HTMLIFrameElement>(null)
-  const retryCountRef = useRef(0)
-  const retryTimerRef = useRef<ReturnType<typeof setTimeout>>()
+  /** 서버 준비 대기 폴링 타이머 */
+  const pollTimerRef = useRef<ReturnType<typeof setTimeout>>()
+  const pollCountRef = useRef(0)
 
   // 닫기: iframe TCP 연결 먼저 정리 → CLOSE_WAIT 방지
   const handleClose = useCallback(() => {
@@ -263,16 +264,16 @@ export default function PreviewPanel({ sessionId, isFocused, locale, onClose, pe
     }
   }, [])
 
-  // 언마운트 시 재시도 타이머 정리
+  // 언마운트 시 폴링 타이머 정리
   useEffect(() => {
-    return () => { clearTimeout(retryTimerRef.current) }
+    return () => { clearTimeout(pollTimerRef.current) }
   }, [])
 
   /** URL 이동 (히스토리 추가) */
   const navigateTo = useCallback((rawUrl: string) => {
     const finalUrl = /^https?:\/\//i.test(rawUrl) ? rawUrl : `http://${rawUrl}`
-    retryCountRef.current = 0
-    clearTimeout(retryTimerRef.current)
+    pollCountRef.current = 0
+    clearTimeout(pollTimerRef.current)
     setUrl(finalUrl)
     setUrlInput(finalUrl)
     setUrlKey(k => k + 1)
@@ -323,29 +324,33 @@ export default function PreviewPanel({ sessionId, isFocused, locale, onClose, pe
 
   const handleIframeLoad = useCallback(() => {
     setIsLoading(false)
-    // dev 서버가 아직 준비 안 됐으면 자동 재시도 (최대 10회, 2초 간격)
-    try {
-      const doc = iframeRef.current?.contentDocument
-      // 정상 로드 시 contentDocument에 접근 가능 (same-origin) → 성공
-      // doc.body !== null 로 판별 (doc.title은 빈 문자열일 수 있어 falsy)
-      if (doc && doc.body !== null) {
-        retryCountRef.current = 0
-        return
-      }
-    } catch {
-      // cross-origin이면 접근 불가 → 정상 로드로 간주
-      retryCountRef.current = 0
-      return
-    }
-    // contentDocument가 빈 페이지 = 서버 미준비 → 재시도
-    if (retryCountRef.current < PREVIEW_MAX_RETRIES) {
-      retryCountRef.current++
-      retryTimerRef.current = setTimeout(() => {
-        setUrlKey(k => k + 1)
-        setIsLoading(true)
-      }, PREVIEW_RETRY_INTERVAL)
-    }
   }, [])
+
+  // 서버 준비 대기: iframe 로드 대신 fetch로 폴링 → 응답 오면 한 번만 새로고침
+  useEffect(() => {
+    if (!url) return
+    pollCountRef.current = 0
+    clearTimeout(pollTimerRef.current)
+
+    const poll = (): void => {
+      if (pollCountRef.current >= PREVIEW_MAX_RETRIES) return
+      pollCountRef.current++
+      fetch(url, { mode: 'no-cors' })
+        .then(() => {
+          // 서버 응답 OK → iframe 한 번만 새로고침
+          setUrlKey(k => k + 1)
+        })
+        .catch(() => {
+          // 서버 미준비 → 다시 폴링
+          pollTimerRef.current = setTimeout(poll, PREVIEW_RETRY_INTERVAL)
+        })
+    }
+
+    // 첫 로드 시 약간 딜레이 후 폴링 시작 (서버 시작 대기)
+    pollTimerRef.current = setTimeout(poll, PREVIEW_RETRY_INTERVAL)
+
+    return () => { clearTimeout(pollTimerRef.current) }
+  }, [url])
 
   const openExternal = useCallback(() => {
     if (url) window.open(url, '_blank')
