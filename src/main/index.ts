@@ -17,7 +17,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { SessionManager } from './session-manager'
 import { HooksManager } from './hooks-manager'
 import { NativeChatManager } from './native-chat-manager'
-import { registerIpcHandlers, registerNativeIpcHandlers } from './ipc-handlers'
+import { registerIpcHandlers, registerNativeIpcHandlers, cleanupPasteImages } from './ipc-handlers'
 import { setupSessionDataForwarding } from './session-forwarder'
 import { setupPanePolling, setupChildPaneForwarding } from './pane-poller'
 import { startWatching as startStatuslineWatching, cleanup as cleanupStatusline } from './statusline-manager'
@@ -231,6 +231,7 @@ app.whenReady().then(() => {
       stopAllPreviews()
       hooksManager.cleanup()
       cleanupStatusline()
+      cleanupPasteImages()
 
       app.quit()
     })
@@ -281,6 +282,7 @@ app.whenReady().then(() => {
       cleanupPanePolling()
       hooksManager.cleanup()
       cleanupStatusline()
+      cleanupPasteImages()
 
       app.quit()
     })

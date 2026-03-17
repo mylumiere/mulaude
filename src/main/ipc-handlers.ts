@@ -6,7 +6,7 @@
  */
 
 import { ipcMain, dialog, Notification, clipboard, BrowserWindow } from 'electron'
-import { writeFile, readFile } from 'fs/promises'
+import { writeFile, readFile, unlink } from 'fs/promises'
 import { join } from 'path'
 import { tmpdir } from 'os'
 import type { SessionManager } from './session-manager'
@@ -19,6 +19,9 @@ import type { UsageData } from '../shared/types'
 
 /** 이미지 파일 확장자 목록 */
 const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'tiff', 'tif']
+
+/** 생성된 클립보드 임시 파일 경로 추적 (앱 종료 시 정리용) */
+const pasteImagePaths = new Set<string>()
 
 /**
  * 클립보드에서 이미지를 추출하여 파일 경로를 반환합니다.
@@ -73,6 +76,7 @@ async function saveClipboardImageToFile(): Promise<string | null> {
   const pngBuffer = image.toPNG()
   const filePath = join(tmpdir(), `mulaude-paste-${Date.now()}.png`)
   await writeFile(filePath, pngBuffer)
+  pasteImagePaths.add(filePath)
   return filePath
 }
 
@@ -499,4 +503,12 @@ export function registerNativeIpcHandlers(
   // ─── 터미널 전용 API의 No-op 핸들러 (Sidebar 등에서 호출 가능) ───
 
   ipcMain.handle('session:capture-screen', async () => null)
+}
+
+/** 클립보드 임시 이미지 파일 정리 (앱 종료 시 호출) */
+export function cleanupPasteImages(): void {
+  for (const filePath of pasteImagePaths) {
+    unlink(filePath).catch(() => {})
+  }
+  pasteImagePaths.clear()
 }

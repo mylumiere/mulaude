@@ -7,7 +7,7 @@
  * 로그 로테이션: 앱 시작 시 10MB 초과하면 .old로 이동
  */
 
-import { appendFileSync, statSync, renameSync, mkdirSync, writeFileSync } from 'fs'
+import { appendFileSync, statSync, renameSync, mkdirSync, writeFileSync, unlinkSync } from 'fs'
 import { join } from 'path'
 import { homedir } from 'os'
 
@@ -22,6 +22,8 @@ type LogLevel = 'DEBUG' | 'INFO' | 'WARN' | 'ERROR'
 function init(): void {
   try {
     mkdirSync(LOG_DIR, { recursive: true })
+    // .old 파일이 존재하면 먼저 삭제 (무한 누적 방지)
+    try { unlinkSync(LOG_OLD) } catch { /* 없으면 무시 */ }
     const stats = statSync(LOG_FILE)
     if (stats.size > MAX_SIZE) {
       try { renameSync(LOG_FILE, LOG_OLD) } catch { /* ignore */ }
