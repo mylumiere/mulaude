@@ -8,7 +8,7 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { X, ChevronDown, FolderOpen } from 'lucide-react'
 import { marked } from 'marked'
-import type { PlanFileInfo } from '../../main/plan-watcher'
+import type { PlanFileInfo } from '../../shared/types'
 import type { Locale } from '../i18n'
 import { t } from '../i18n'
 import './PlanPanel.css'

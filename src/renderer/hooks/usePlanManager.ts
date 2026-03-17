@@ -65,6 +65,13 @@ export function usePlanManager(): UsePlanManagerReturn {
       persist(next)
       return next
     })
+    // 이전 내용 제거 — 재열기 시 stale content flash 방지
+    setPlanInfos(prev => {
+      if (!prev[sessionId]) return prev
+      const next = { ...prev }
+      delete next[sessionId]
+      return next
+    })
     // IPC: 파일 감시 해제
     window.api.unwatchPlanFile(sessionId)
   }, [persist])

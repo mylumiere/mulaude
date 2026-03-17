@@ -101,6 +101,13 @@ export interface TmuxPaneInfo {
   content: string
 }
 
+/** 플랜 파일 정보 */
+export interface PlanFileInfo {
+  name: string
+  path: string
+  mtime: number
+}
+
 /** 프로젝트 그룹 (같은 workingDir의 세션을 묶음) */
 export interface ProjectGroup {
   workingDir: string

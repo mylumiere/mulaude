@@ -14,11 +14,7 @@ import { PLAN_WATCHER_DEBOUNCE } from '../shared/constants'
 
 /* ─── Types ─── */
 
-export interface PlanFileInfo {
-  name: string
-  path: string
-  mtime: number
-}
+export type { PlanFileInfo } from '../shared/types'
 
 interface WatcherEntry {
   watcher: FSWatcher
