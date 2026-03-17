@@ -17,7 +17,7 @@
  *   - 개별 팝아웃: 각 프로세스를 독립 창으로 분리
  */
 
-import { useRef, useEffect, useCallback, useState } from 'react'
+import { useRef, useEffect, useCallback, useState, useMemo } from 'react'
 import {
   X, Globe, RefreshCw, ScrollText, Trash2, ExternalLink,
   Smartphone, Tablet, Monitor, Loader2, ArrowLeft, ArrowRight,
