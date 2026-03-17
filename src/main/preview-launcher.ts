@@ -53,6 +53,8 @@ export interface LaunchResult {
   previewUrl: string
   /** 새로 감지된 설정인지 */
   created: boolean
+  /** launch.json에 정의된 프로세스 이름 순서 */
+  processOrder: string[]
 }
 
 /* ─── launch.json 읽기/쓰기 ─── */
@@ -241,7 +243,7 @@ export async function launchPreview(sessionId: string, workingDir: string): Prom
     runningProcesses.set(sessionId, children)
   }
 
-  return { config, previewUrl: getPreviewUrl(config), created }
+  return { config, previewUrl: getPreviewUrl(config), created, processOrder: config.configurations.map(c => c.name) }
 }
 
 /** 포트를 LISTEN하는 프로세스만 찾아서 강제 종료 (mulaude 자체 프로세스 제외) */

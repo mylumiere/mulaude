@@ -265,6 +265,14 @@
   cursor: grabbing;
 }
 
+/* 싱글 세션 — 드래그 불가이므로 기본 커서 */
+.terminal-grid-pane:only-child > .terminal-grid-pane-header {
+  cursor: default;
+}
+.terminal-grid-pane:only-child > .terminal-grid-pane-header:active {
+  cursor: default;
+}
+
 .terminal-grid-pane-title {
   font-family: var(--font-ui);
   font-size: 0.7rem;
