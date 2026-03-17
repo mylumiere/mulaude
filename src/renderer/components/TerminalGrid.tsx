@@ -90,6 +90,8 @@ interface TerminalGridProps {
   } | null
   onSaveLaunchConfig?: () => void
   onSkipSaveLaunchConfig?: () => void
+  /** 세션별 프로세스 이름 순서 (launch.json 순서) */
+  processOrders?: Record<string, string[]>
   /** 세션별 퍼미션 모드 */
   permissionModes?: Record<string, PermissionMode>
   /** 퍼미션 모드 순환 콜백 */
@@ -145,6 +147,7 @@ export default function TerminalGrid({
   pendingSaveConfig,
   onSaveLaunchConfig,
   onSkipSaveLaunchConfig,
+  processOrders,
   permissionModes,
   onCycleMode,
   planSessions,
@@ -414,6 +417,7 @@ export default function TerminalGrid({
                   locale={locale}
                   onClose={() => onClosePreview(leaf.sessionId)}
                   pendingUrl={pendingUrls[leaf.sessionId] || null}
+                  processOrder={processOrders?.[leaf.sessionId]}
                 />
               )
             }

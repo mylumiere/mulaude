@@ -52,6 +52,8 @@ interface UsePreviewManagerReturn {
   previewAlert: { sessionId: string; message: string } | null
   /** 세션 복원 후 호출 — 저장된 미리보기 프로세스 재실행 */
   restorePreview: () => void
+  /** 세션별 프로세스 이름 순서 (launch.json 순서) */
+  processOrders: Record<string, string[]>
 }
 
 /* ─── Hook ─── */
@@ -155,6 +157,9 @@ export function usePreviewManager({
     }
   }, [previewRatios])
 
+  /* ── 프로세스 이름 순서 (launch.json 순서 유지) ── */
+  const [processOrders, setProcessOrders] = useState<Record<string, string[]>>({})
+
   /* ── launch.json 저장 확인 ── */
   const [pendingSaveConfig, setPendingSaveConfig] = useState<SaveConfigInfo | null>(null)
 
@@ -205,6 +210,10 @@ export function usePreviewManager({
       if (result) {
         // dev 서버 프로세스가 실행됨 → URL로 열기
         openPreviewWithUrl(sessionId, result.previewUrl)
+        // 프로세스 순서 저장 (launch.json 순서)
+        if (result.processOrder?.length) {
+          setProcessOrders(prev => ({ ...prev, [sessionId]: result.processOrder }))
+        }
         // 새로 감지된 설정이면 저장 확인 표시
         if (result.created) {
           setPendingSaveConfig({ sessionId, workingDir: session.workingDir, config: result.config })
@@ -248,7 +257,11 @@ export function usePreviewManager({
       if (!sessionIds.has(sid)) continue
       const session = currentSessions.find(s => s.id === sid)
       if (session) {
-        window.api.launchPreview(sid, session.workingDir).catch(() => {})
+        window.api.launchPreview(sid, session.workingDir).then(result => {
+          if (result?.processOrder?.length) {
+            setProcessOrders(prev => ({ ...prev, [sid]: result.processOrder }))
+          }
+        }).catch(() => {})
       }
     }
   }, [cleanupPreview]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -259,6 +272,6 @@ export function usePreviewManager({
     handlePreviewResize, previewSessionsRef,
     handleTogglePreview, handleClosePreview,
     pendingSaveConfig, handleSaveLaunchConfig, handleSkipSaveLaunchConfig,
-    previewAlert, restorePreview
+    previewAlert, restorePreview, processOrders
   }
 }

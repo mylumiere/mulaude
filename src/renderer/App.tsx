@@ -302,6 +302,7 @@ export default function App(): JSX.Element {
               pendingSaveConfig={previewManager.pendingSaveConfig}
               onSaveLaunchConfig={previewManager.handleSaveLaunchConfig}
               onSkipSaveLaunchConfig={previewManager.handleSkipSaveLaunchConfig}
+              processOrders={previewManager.processOrders}
               permissionModes={permissionModes}
               onCycleMode={cyclePermissionMode}
               planSessions={planManager.planSessions}

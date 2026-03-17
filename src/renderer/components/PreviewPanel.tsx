@@ -42,6 +42,8 @@ interface PreviewPanelProps {
   onClose: () => void
   /** 트리거 또는 launch.json에서 전달된 URL */
   pendingUrl?: string | null
+  /** launch.json에 정의된 프로세스 이름 순서 */
+  processOrder?: string[]
 }
 
 /** 프로세스 로그 최대 라인 수 */
@@ -89,7 +91,7 @@ function appendLogEntry(doc: Document, container: HTMLElement, entry: ProcessLog
   container.appendChild(line)
 }
 
-export default function PreviewPanel({ sessionId, isFocused, locale, onClose, pendingUrl }: PreviewPanelProps): JSX.Element {
+export default function PreviewPanel({ sessionId, isFocused, locale, onClose, pendingUrl, processOrder }: PreviewPanelProps): JSX.Element {
   const [url, setUrl] = useState('')
   const [urlInput, setUrlInput] = useState('')
   const [urlKey, setUrlKey] = useState(0)
@@ -133,8 +135,16 @@ export default function PreviewPanel({ sessionId, isFocused, locale, onClose, pe
   const splitRatiosRef = useRef<number[]>([])
   splitRatiosRef.current = splitRatios
 
-  // 프로세스 목록
-  const processNames = Object.keys(processLogs)
+  // 프로세스 목록 (launch.json 순서 유지)
+  const processNames = useMemo(() => {
+    const keys = Object.keys(processLogs)
+    if (!processOrder?.length) return keys
+    return keys.sort((a, b) => {
+      const ia = processOrder.indexOf(a)
+      const ib = processOrder.indexOf(b)
+      return (ia === -1 ? Infinity : ia) - (ib === -1 ? Infinity : ib)
+    })
+  }, [processLogs, processOrder])
   const hasProcesses = processNames.length > 0
   const multiProcess = processNames.length > 1
 
