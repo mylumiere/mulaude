@@ -279,14 +279,13 @@ export default function PreviewPanel({ sessionId, isFocused, locale, onClose, pe
     return () => { clearTimeout(pollTimerRef.current) }
   }, [])
 
-  /** URL 이동 (히스토리 추가) */
+  /** URL 이동 (히스토리 추가) — iframe 로드는 polling useEffect가 담당 */
   const navigateTo = useCallback((rawUrl: string) => {
     const finalUrl = /^https?:\/\//i.test(rawUrl) ? rawUrl : `http://${rawUrl}`
     pollCountRef.current = 0
     clearTimeout(pollTimerRef.current)
     setUrl(finalUrl)
     setUrlInput(finalUrl)
-    setUrlKey(k => k + 1)
     setIsLoading(true)
     savePreviewState(sessionId, { url: finalUrl })
 
@@ -313,7 +312,6 @@ export default function PreviewPanel({ sessionId, isFocused, locale, onClose, pe
     setHistoryIndex(newIndex)
     setUrl(history[newIndex])
     setUrlInput(history[newIndex])
-    setUrlKey(k => k + 1)
     setIsLoading(true)
   }, [canGoBack, historyIndex, history])
 
@@ -323,7 +321,6 @@ export default function PreviewPanel({ sessionId, isFocused, locale, onClose, pe
     setHistoryIndex(newIndex)
     setUrl(history[newIndex])
     setUrlInput(history[newIndex])
-    setUrlKey(k => k + 1)
     setIsLoading(true)
   }, [canGoForward, historyIndex, history])
 
@@ -336,7 +333,7 @@ export default function PreviewPanel({ sessionId, isFocused, locale, onClose, pe
     setIsLoading(false)
   }, [])
 
-  // 서버 준비 대기: iframe 로드 대신 fetch로 폴링 → 응답 오면 한 번만 새로고침
+  // 서버 준비 대기: fetch로 서버 응답 확인 → 성공 시 iframe 1회 로드
   useEffect(() => {
     if (!url) return
     pollCountRef.current = 0
@@ -351,13 +348,13 @@ export default function PreviewPanel({ sessionId, isFocused, locale, onClose, pe
           setUrlKey(k => k + 1)
         })
         .catch(() => {
-          // 서버 미준비 → 다시 폴링
+          // 서버 미준비 → 재시도
           pollTimerRef.current = setTimeout(poll, PREVIEW_RETRY_INTERVAL)
         })
     }
 
-    // 첫 로드 시 약간 딜레이 후 폴링 시작 (서버 시작 대기)
-    pollTimerRef.current = setTimeout(poll, PREVIEW_RETRY_INTERVAL)
+    // 즉시 fetch 시도 (서버가 이미 준비됐으면 바로 로드)
+    poll()
 
     return () => { clearTimeout(pollTimerRef.current) }
   }, [url])
