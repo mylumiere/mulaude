@@ -458,7 +458,11 @@ export class SessionManager {
       const envExport = this.ipcDir
         ? `export MULAUDE_SESSION_ID='${persisted.id}' MULAUDE_IPC_DIR='${safeIpcDir}'; `
         : ''
-      sendKeysToTmux(tmuxPath, tmuxName, unsetNested + envExport + this.claudePath)
+      // 저장된 Claude 세션 ID가 있으면 --resume으로 대화 이어받기
+      const resumeFlag = persisted.claudeSessionId
+        ? ` --resume '${persisted.claudeSessionId}'`
+        : ''
+      sendKeysToTmux(tmuxPath, tmuxName, unsetNested + envExport + this.claudePath + resumeFlag)
     } catch (err) {
       console.error(`[SessionManager] recreate send-keys failed for ${tmuxName}:`, err)
       killTmuxSession(tmuxPath, tmuxName)

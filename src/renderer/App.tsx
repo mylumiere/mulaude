@@ -24,6 +24,9 @@ import { usePlanManager } from './hooks/usePlanManager'
 import { usePlanTrigger } from './hooks/usePlanTrigger'
 import { usePreviewManager } from './hooks/usePreviewManager'
 import { usePreviewTrigger } from './hooks/usePreviewTrigger'
+import { useCowrkAgents } from './hooks/useCowrkAgents'
+import CowrkChatPanel from './components/cowrk/CowrkChatPanel'
+import CowrkCreateDialog from './components/cowrk/CowrkCreateDialog'
 import type { PermissionMode } from './components/TerminalView'
 import type { SessionInfo } from '../shared/types'
 
@@ -105,6 +108,13 @@ export default function App(): JSX.Element {
     if (sessionManager.sessions.length > 0) previewManager.restorePreview()
   }, [sessionManager.sessions]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Claude 세션 ID를 main process에 저장 (재부팅 후 --resume에 사용)
+  useEffect(() => {
+    for (const [mulaudeId, claudeId] of Object.entries(claudeSessionIds)) {
+      if (claudeId) window.api.updateClaudeSessionId(mulaudeId, claudeId)
+    }
+  }, [claudeSessionIds])
+
   // child pane 상태 관리
   const {
     childPaneMap,
@@ -150,6 +160,9 @@ export default function App(): JSX.Element {
 
   const tutorial = useTutorial(sessionManager.sessions.length)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
+
+  // Cowrk (영속 AI 팀원)
+  const cowrk = useCowrkAgents()
 
   // 세션별 퍼미션 모드 상태
   const [permissionModes, setPermissionModes] = useState<Record<string, PermissionMode>>({})
@@ -261,6 +274,11 @@ export default function App(): JSX.Element {
           onRestartTutorial={tutorial.restart}
           shortcutsOpen={shortcutsOpen}
           onShortcutsClose={() => setShortcutsOpen(false)}
+          cowrkAgents={cowrk.agents}
+          cowrkActiveAgent={cowrk.activeAgent}
+          cowrkChatMessages={cowrk.chatMessages}
+          onSelectCowrkAgent={cowrk.openChat}
+          onCreateCowrkAgent={() => cowrk.setCreating(true)}
         />
         <div className="resize-handle" onMouseDown={settings.handleResizeStart} />
         <div className="terminal-area">
@@ -337,6 +355,23 @@ export default function App(): JSX.Element {
         globalThemeId={settings.globalThemeId}
         onLocaleChange={settings.handleLocaleChange}
         onThemeChange={settings.handleThemeChange}
+      />
+      {cowrk.activeAgent && (
+        <CowrkChatPanel
+          agentName={cowrk.activeAgent}
+          messages={cowrk.chatMessages[cowrk.activeAgent] || []}
+          isStreaming={cowrk.agents.find(a => a.name === cowrk.activeAgent)?.status === 'thinking'}
+          onSend={(msg) => cowrk.askAgent(msg, activeSession?.workingDir)}
+          onCancel={cowrk.cancelAgent}
+          onClose={cowrk.closeChat}
+          onDelete={() => cowrk.deleteAgent(cowrk.activeAgent!)}
+          projectDir={activeSession?.workingDir}
+        />
+      )}
+      <CowrkCreateDialog
+        isOpen={cowrk.isCreating}
+        onClose={() => cowrk.setCreating(false)}
+        onCreate={cowrk.createAgent}
       />
       {settings.showSettings && (
         <SettingsModal

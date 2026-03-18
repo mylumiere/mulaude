@@ -1,0 +1,543 @@
+/* ═══════ Cowrk Tab Panel (Agents 탭) ═══════ */
+
+.cowrk-tab-panel {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.cowrk-tab-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 40px 20px;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 12px;
+}
+
+.cowrk-tab-empty-icon {
+  font-size: 28px;
+  opacity: 0.5;
+}
+
+.cowrk-tab-create-btn {
+  margin-top: 4px;
+  padding: 6px 16px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.cowrk-tab-create-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* ═══════ Chat List (메신저 스타일) ═══════ */
+
+.cowrk-chat-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.cowrk-chat-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  font-family: inherit;
+  transition: background 0.12s;
+}
+
+.cowrk-chat-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.cowrk-chat-item--active {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+/* 아바타 */
+.cowrk-chat-avatar {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.cowrk-chat-avatar-letter {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.cowrk-chat-avatar-dot {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 2px solid #1a1a2e;
+}
+
+/* 이름 + 프리뷰 */
+.cowrk-chat-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cowrk-chat-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.cowrk-chat-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cowrk-chat-time {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.3);
+  flex-shrink: 0;
+}
+
+.cowrk-chat-preview {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.cowrk-chat-typing {
+  color: rgba(240, 180, 41, 0.7);
+  font-style: italic;
+}
+
+.cowrk-chat-no-msg {
+  color: rgba(255, 255, 255, 0.2);
+  font-style: italic;
+}
+
+@keyframes cowrk-pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+/* ═══════ Chat Panel (플로팅) ═══════ */
+
+.cowrk-panel {
+  position: fixed;
+  top: 38px; /* titlebar height */
+  right: 0;
+  bottom: 0;
+  width: 400px;
+  background: #1a1a2e;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+  animation: cowrk-slide-in 0.2s ease;
+}
+
+@keyframes cowrk-slide-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.cowrk-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  min-height: 36px;
+}
+
+.cowrk-panel-back {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  transition: color 0.15s;
+}
+
+.cowrk-panel-back:hover {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.cowrk-panel-name {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.cowrk-panel-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.cowrk-panel-btn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  transition: color 0.15s, background 0.15s;
+}
+
+.cowrk-panel-btn:hover {
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.cowrk-panel-btn--danger:hover {
+  color: #e74c3c;
+}
+
+.cowrk-panel-btn--confirm {
+  color: #e74c3c;
+  background: rgba(231, 76, 60, 0.15);
+}
+
+.cowrk-panel-btn-label {
+  font-size: 10px;
+  font-weight: bold;
+}
+
+/* 메시지 영역 */
+
+.cowrk-panel-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cowrk-panel-empty {
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 12px;
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.cowrk-msg {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cowrk-msg-role {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.cowrk-msg--user .cowrk-msg-role {
+  color: rgba(100, 180, 255, 0.6);
+}
+
+.cowrk-msg-content {
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.85);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.cowrk-msg--user .cowrk-msg-content {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.cowrk-msg-cursor {
+  display: inline-block;
+  color: rgba(255, 255, 255, 0.6);
+  animation: cowrk-blink 0.8s step-end infinite;
+}
+
+@keyframes cowrk-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* 입력 영역 */
+
+.cowrk-panel-input {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 8px 12px;
+}
+
+.cowrk-panel-context {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.3);
+  padding: 0 0 4px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cowrk-panel-input-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.cowrk-panel-textarea {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 13px;
+  font-family: inherit;
+  padding: 8px 10px;
+  resize: none;
+  outline: none;
+  min-height: 36px;
+  max-height: 120px;
+  transition: border-color 0.15s;
+}
+
+.cowrk-panel-textarea:focus {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.cowrk-panel-textarea::placeholder {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.cowrk-panel-textarea:disabled {
+  opacity: 0.5;
+}
+
+.cowrk-panel-send {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.6);
+  border-radius: 6px;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.cowrk-panel-send:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.cowrk-panel-send:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.cowrk-panel-send--cancel {
+  color: #e74c3c;
+  border-color: rgba(231, 76, 60, 0.3);
+}
+
+.cowrk-panel-send--cancel:hover {
+  background: rgba(231, 76, 60, 0.15);
+  color: #e74c3c;
+}
+
+/* ═══════ Create Dialog ═══════ */
+
+.cowrk-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  animation: cowrk-fade-in 0.15s ease;
+}
+
+@keyframes cowrk-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.cowrk-dialog {
+  background: #1e1e36;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  width: 380px;
+  max-width: 90vw;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+}
+
+.cowrk-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 10px;
+}
+
+.cowrk-dialog-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.cowrk-dialog-close {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  transition: color 0.15s;
+}
+
+.cowrk-dialog-close:hover {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.cowrk-dialog-body {
+  padding: 4px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cowrk-dialog-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.cowrk-dialog-optional {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.cowrk-dialog-input,
+.cowrk-dialog-textarea {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 13px;
+  font-family: inherit;
+  padding: 8px 10px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.cowrk-dialog-input:focus,
+.cowrk-dialog-textarea:focus {
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.cowrk-dialog-input::placeholder,
+.cowrk-dialog-textarea::placeholder {
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.cowrk-dialog-input:disabled,
+.cowrk-dialog-textarea:disabled {
+  opacity: 0.5;
+}
+
+.cowrk-dialog-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.cowrk-dialog-error {
+  font-size: 12px;
+  color: #e74c3c;
+  padding: 4px 0;
+}
+
+.cowrk-dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.cowrk-dialog-btn {
+  padding: 6px 16px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.cowrk-dialog-btn--cancel {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.cowrk-dialog-btn--cancel:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.cowrk-dialog-btn--create {
+  background: rgba(100, 130, 255, 0.2);
+  border: 1px solid rgba(100, 130, 255, 0.3);
+  color: rgba(150, 180, 255, 0.9);
+}
+
+.cowrk-dialog-btn--create:hover:not(:disabled) {
+  background: rgba(100, 130, 255, 0.3);
+}
+
+.cowrk-dialog-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}

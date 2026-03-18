@@ -16,6 +16,9 @@
 - **4种语言**: English、한국어、日本語、中文
 - **图片和文件支持**: 剪贴板图片粘贴（⌘V）+ 从 Finder 拖放文件
 - **用量监控**: 在侧边栏实时查看 Claude 计划用量
+- **Cowrk Agents**: 持久化 AI 队友 — 从侧边栏创建、聊天、管理代理，保持人设和记忆
+- **会话恢复**: 重启后通过 `--resume` 自动继续之前的 Claude 对话
+- **Web 预览**: 集成 dev 服务器预览面板，自动 URL 检测
 
 ## 为什么选择 Mulaude？
 
@@ -183,7 +186,9 @@ src/
 │   ├── hooks-manager.ts       # Claude Code Hooks 监听
 │   ├── child-pane-streamer.ts # 子面板流式传输
 │   ├── tmux-utils.ts          # tmux 命令工具
-│   └── logger.ts              # 文件日志
+│   ├── logger.ts              # 文件日志
+│   ├── cowrk-manager.ts       # Cowrk 代理编排器
+│   └── cowrk/                 # Cowrk 代理内部（store、manager、types）
 ├── preload/
 │   └── index.ts               # contextBridge API
 ├── renderer/                  # React 应用
@@ -193,11 +198,12 @@ src/
 │   ├── roadmap.ts             # 路线图数据
 │   ├── settings.ts            # 设置类型/工具
 │   ├── pty-parser.ts          # PTY 输出解析器
-│   ├── hooks/                 # React 自定义 hooks（12个）
+│   ├── hooks/                 # React 自定义 hooks（13个）
 │   ├── utils/                 # 纯工具函数
 │   │   ├── pane-tree.ts       # 二叉树数据结构/运算
 │   │   └── pane-storage.ts    # 布局 localStorage 持久化
-│   └── components/            # React 组件（15个）
+│   └── components/            # React 组件（18个）
+│       └── cowrk/             # Cowrk 代理 UI（Section、ChatPanel、CreateDialog）
 └── shared/
     ├── types.ts               # 共享类型
     └── constants.ts           # 共享常量（37个）

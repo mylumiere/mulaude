@@ -16,6 +16,9 @@
 - **4 Languages**: English, 한국어, 日本語, 中文
 - **Image & File Support**: Clipboard image paste (⌘V) + drag-and-drop files from Finder
 - **Usage Monitor**: View Claude plan usage in real-time from the sidebar
+- **Cowrk Agents**: Persistent AI teammates — create, chat, and manage agents with persona/memory right from the sidebar
+- **Session Resume**: Automatically continues previous Claude conversations after reboot via `--resume`
+- **Web Preview**: Integrated dev server preview panel with auto-URL detection
 
 ## Why Mulaude?
 
@@ -183,7 +186,9 @@ src/
 │   ├── hooks-manager.ts       # Claude Code Hooks watcher
 │   ├── child-pane-streamer.ts # Child pane streaming
 │   ├── tmux-utils.ts          # tmux command utilities
-│   └── logger.ts              # File logger
+│   ├── logger.ts              # File logger
+│   ├── cowrk-manager.ts       # Cowrk agent orchestrator
+│   └── cowrk/                 # Cowrk agent internals (store, manager, types)
 ├── preload/
 │   └── index.ts               # contextBridge API
 ├── renderer/                  # React App
@@ -193,11 +198,12 @@ src/
 │   ├── roadmap.ts             # Roadmap data
 │   ├── settings.ts            # Settings types/utils
 │   ├── pty-parser.ts          # PTY output parser
-│   ├── hooks/                 # React custom hooks (12)
+│   ├── hooks/                 # React custom hooks (13)
 │   ├── utils/                 # Pure utilities
 │   │   ├── pane-tree.ts       # Binary tree data structure/operations
 │   │   └── pane-storage.ts    # Layout localStorage persistence
-│   └── components/            # React components (15)
+│   └── components/            # React components (18)
+│       └── cowrk/             # Cowrk agent UI (Section, ChatPanel, CreateDialog)
 └── shared/
     ├── types.ts               # Shared types
     └── constants.ts           # Shared constants (37)

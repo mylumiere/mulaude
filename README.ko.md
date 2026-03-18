@@ -16,6 +16,9 @@
 - **4개 언어**: English, 한국어, 日本語, 中文
 - **이미지 & 파일 지원**: 클립보드 이미지 붙여넣기 (⌘V) + Finder에서 파일 드래그 앤 드롭
 - **사용량 모니터**: Claude 플랜 사용량을 사이드바에서 실시간 확인
+- **Cowrk Agents**: 영속적 AI 팀원 — 사이드바에서 에이전트 생성/채팅/관리, 페르소나·메모리 유지
+- **세션 이어받기**: 재부팅 후 `--resume`으로 이전 Claude 대화를 자동으로 이어받기
+- **웹 미리보기**: dev 서버 실행/프리뷰/프로세스 관리 통합 패널
 
 ## 왜 Mulaude인가?
 
@@ -183,7 +186,9 @@ src/
 │   ├── hooks-manager.ts       # Claude Code Hooks 감시
 │   ├── child-pane-streamer.ts # 자식 pane 스트리밍
 │   ├── tmux-utils.ts          # tmux 명령어 유틸
-│   └── logger.ts              # 파일 로거
+│   ├── logger.ts              # 파일 로거
+│   ├── cowrk-manager.ts       # Cowrk 에이전트 오케스트레이터
+│   └── cowrk/                 # Cowrk 에이전트 내부 (store, manager, types)
 ├── preload/
 │   └── index.ts               # contextBridge API
 ├── renderer/                  # React 앱
@@ -193,11 +198,12 @@ src/
 │   ├── roadmap.ts             # 로드맵 데이터
 │   ├── settings.ts            # 설정 타입/유틸
 │   ├── pty-parser.ts          # PTY 출력 파서
-│   ├── hooks/                 # React 커스텀 훅 (12개)
+│   ├── hooks/                 # React 커스텀 훅 (13개)
 │   ├── utils/                 # 순수 유틸리티
 │   │   ├── pane-tree.ts       # 이진 트리 자료구조/연산
 │   │   └── pane-storage.ts    # 레이아웃 localStorage 영속화
-│   └── components/            # React 컴포넌트 (15개)
+│   └── components/            # React 컴포넌트 (18개)
+│       └── cowrk/             # Cowrk 에이전트 UI (Section, ChatPanel, CreateDialog)
 └── shared/
     ├── types.ts               # 공유 타입
     └── constants.ts           # 공유 상수 (37개)

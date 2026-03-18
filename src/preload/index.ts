@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
-import type { SessionInfo, HookEvent, UsageData, TmuxPaneInfo, AgentInfo, AppMode, NativeInputRequest } from '../shared/types'
+import type { SessionInfo, HookEvent, UsageData, TmuxPaneInfo, AgentInfo, AppMode, NativeInputRequest, CowrkAgentState } from '../shared/types'
 
 /**
  * Preload 스크립트 - contextBridge를 통해 렌더러에 안전한 API를 노출합니다.
@@ -139,6 +139,10 @@ const api = {
   /** 세션 부제목(subtitle) 업데이트 (자동 감지 작업명 → 영속 저장소) */
   updateSessionSubtitle: (id: string, subtitle: string): void =>
     ipcRenderer.send('session:subtitle-update', id, subtitle),
+
+  /** Claude 세션 ID 저장 (재부팅 후 --resume에 사용) */
+  updateClaudeSessionId: (id: string, claudeSessionId: string): void =>
+    ipcRenderer.send('session:claude-session-id', id, claudeSessionId),
 
   /** 세션 화면 캡처 (세션 전환 시 xterm 복원용)
    *  cols/rows 제공 시 tmux resize를 await한 후 캡처 (atomic resize+capture) */
@@ -354,6 +358,55 @@ const api = {
     }
     ipcRenderer.on('plan:content-update', handler)
     return () => ipcRenderer.removeListener('plan:content-update', handler)
+  },
+
+  // ─── Cowrk (영속 AI 팀원) APIs ───
+
+  /** Cowrk 에이전트 목록 조회 */
+  cowrkListAgents: (): Promise<CowrkAgentState[]> =>
+    ipcRenderer.invoke('cowrk:list-agents'),
+
+  /** Cowrk 에이전트 생성 */
+  cowrkCreateAgent: (name: string, persona?: string): Promise<CowrkAgentState> =>
+    ipcRenderer.invoke('cowrk:create-agent', name, persona),
+
+  /** Cowrk 에이전트 삭제 */
+  cowrkDeleteAgent: (name: string): Promise<void> =>
+    ipcRenderer.invoke('cowrk:delete-agent', name),
+
+  /** Cowrk 에이전트에게 질문 (스트리밍 시작) */
+  cowrkAsk: (agentName: string, message: string, projectDir?: string): void =>
+    ipcRenderer.send('cowrk:ask', agentName, message, projectDir),
+
+  /** Cowrk 에이전트 스트리밍 취소 */
+  cowrkCancel: (agentName: string): void =>
+    ipcRenderer.send('cowrk:cancel', agentName),
+
+  /** Cowrk 스트림 청크 수신 (텍스트 델타) */
+  onCowrkStreamChunk: (cb: (agentName: string, chunk: string) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, agentName: string, chunk: string): void => {
+      cb(agentName, chunk)
+    }
+    ipcRenderer.on('cowrk:stream-chunk', handler)
+    return () => ipcRenderer.removeListener('cowrk:stream-chunk', handler)
+  },
+
+  /** Cowrk 턴 완료 수신 */
+  onCowrkTurnComplete: (cb: (agentName: string, response: string) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, agentName: string, response: string): void => {
+      cb(agentName, response)
+    }
+    ipcRenderer.on('cowrk:turn-complete', handler)
+    return () => ipcRenderer.removeListener('cowrk:turn-complete', handler)
+  },
+
+  /** Cowrk 턴 에러 수신 */
+  onCowrkTurnError: (cb: (agentName: string, error: string) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, agentName: string, error: string): void => {
+      cb(agentName, error)
+    }
+    ipcRenderer.on('cowrk:turn-error', handler)
+    return () => ipcRenderer.removeListener('cowrk:turn-error', handler)
   }
 }
 

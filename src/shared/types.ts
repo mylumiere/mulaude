@@ -194,3 +194,24 @@ export interface ChatInputRequestBlock {
   /** 응답 표시 텍스트 (예: "✓ Allowed", "→ Option A") */
   responseLabel?: string
 }
+
+/* ═══════ Cowrk (영속 AI 팀원) 타입 ═══════ */
+
+/** Cowrk 에이전트 상태 (렌더러 표시용) */
+export interface CowrkAgentState {
+  name: string
+  model: string
+  createdAt: string
+  totalConversations: number
+  lastUsedAt: string | null
+  /** 현재 상태 */
+  status: 'idle' | 'thinking' | 'error'
+}
+
+/** Cowrk 채팅 메시지 */
+export interface CowrkChatMessage {
+  role: 'user' | 'assistant'
+  content: string
+  timestamp: number
+  isStreaming?: boolean
+}

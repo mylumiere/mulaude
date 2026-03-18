@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 
-import type { SessionInfo, HookEvent, UsageData, TmuxPaneInfo, AppMode, NativeInputRequest } from '../shared/types'
+import type { SessionInfo, HookEvent, UsageData, TmuxPaneInfo, AppMode, NativeInputRequest, CowrkAgentState } from '../shared/types'
 
 interface Window {
   api: {
@@ -33,6 +33,7 @@ interface Window {
     setLocale: (locale: string) => void
     updateSessionName: (id: string, name: string) => void
     updateSessionSubtitle: (id: string, subtitle: string) => void
+    updateClaudeSessionId: (id: string, claudeSessionId: string) => void
     restoreAllSessions: () => Promise<SessionInfo[]>
     checkTmux: () => Promise<{ available: boolean; version: string | null }>
     onSessionPaneCommand: (callback: (id: string, command: string) => void) => () => void
@@ -59,5 +60,14 @@ interface Window {
     resolvePlanPath: (sessionId: string, fileName: string) => Promise<string>
     openPlanFileDialog: (sessionId: string) => Promise<string | null>
     onPlanContentUpdate: (cb: (sessionId: string, filePath: string, content: string) => void) => () => void
+    // Cowrk APIs
+    cowrkListAgents: () => Promise<CowrkAgentState[]>
+    cowrkCreateAgent: (name: string, persona?: string) => Promise<CowrkAgentState>
+    cowrkDeleteAgent: (name: string) => Promise<void>
+    cowrkAsk: (agentName: string, message: string, projectDir?: string) => void
+    cowrkCancel: (agentName: string) => void
+    onCowrkStreamChunk: (cb: (agentName: string, chunk: string) => void) => () => void
+    onCowrkTurnComplete: (cb: (agentName: string, response: string) => void) => () => void
+    onCowrkTurnError: (cb: (agentName: string, error: string) => void) => () => void
   }
 }

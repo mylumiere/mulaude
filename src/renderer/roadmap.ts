@@ -60,6 +60,18 @@ export const ROADMAP: Milestone[] = [
   },
   {
     version: 'v1.2',
+    title: 'Agents & Resume',
+    features: [
+      { title: 'Cowrk Agents', desc: '영속적 AI 팀원 — 사이드바에서 에이전트 생성/채팅/관리', status: 'done' },
+      { title: 'Session Resume', desc: '재부팅 후 Claude 대화를 --resume으로 자동 이어받기', status: 'done' },
+      { title: 'Sidebar Tabs', desc: 'Projects | Agents 탭 전환으로 사이드바 정리', status: 'done' },
+      { title: 'Web Preview', desc: 'dev 서버 실행/프리뷰/프로세스 관리 통합 패널', status: 'done' },
+      { title: 'Permission Mode', desc: '세션별 퍼미션 모드 순환 (default/acceptEdits/plan)', status: 'done' },
+      { title: 'Temp File Cleanup', desc: '로그 로테이션 + 클립보드 이미지 + ctx 파일 자동 정리', status: 'done' },
+    ]
+  },
+  {
+    version: 'v1.3',
     title: 'Quality of Life',
     features: [
       { title: 'Pin Sessions', desc: '중요 세션을 사이드바 상단에 고정', status: 'planned' },
@@ -70,7 +82,7 @@ export const ROADMAP: Milestone[] = [
     ]
   },
   {
-    version: 'v1.3',
+    version: 'v1.4',
     title: 'Search & Export',
     features: [
       { title: 'Conversation Search', desc: '모든 세션 대화를 전문 검색 (⌘⇧F)', status: 'planned' },
@@ -79,7 +91,7 @@ export const ROADMAP: Milestone[] = [
     ]
   },
   {
-    version: 'v1.4',
+    version: 'v1.5',
     title: 'Analytics',
     features: [
       { title: 'Usage Dashboard', desc: '일별/주별 세션 수, 토큰 사용량 그래프', status: 'planned' },

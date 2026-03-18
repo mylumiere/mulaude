@@ -1,5 +1,63 @@
 # Changelog
 
+## [1.2.0] - 2026-03-18
+
+### Cowrk Agents — 영속적 AI 팀원
+
+앱 내에서 Claude Code 기반의 영속적 AI 에이전트를 생성하고 채팅할 수 있습니다.
+메신저 앱처럼 에이전트별 채팅 패널에서 대화하며, 에이전트는 페르소나·메모리·프로젝트 컨텍스트를 유지합니다.
+
+#### 백엔드 (`src/main/cowrk/`, `cowrk-manager.ts`)
+- **CowrkManager**: 에이전트 CRUD + 대화 오케스트레이터
+  - `claude -p --output-format stream-json` subprocess 스폰 (NativeChatManager 패턴 재사용)
+  - 시스템 프롬프트: 페르소나 + 메모리 + 프로젝트 컨텍스트 (CLAUDE.md + 디렉토리 트리)
+  - 히스토리 임베딩 (최근 20턴)
+  - Fire-and-forget 메모리 자동 갱신 (haiku 모델)
+- **저장소**: `~/.mulaude/cowrk/agents/{name}/` (persona.md, memory.md, history.jsonl, meta.json)
+- **IPC 채널 8개**: `cowrk:list-agents`, `cowrk:create-agent`, `cowrk:delete-agent`, `cowrk:ask`, `cowrk:cancel`, `cowrk:stream-chunk`, `cowrk:turn-complete`, `cowrk:turn-error`
+
+#### 프론트엔드
+- **사이드바 탭**: Projects | Agents 탭 전환 (채팅 리스트 스타일)
+  - 에이전트 아바타 (이니셜 + 상태 도트), 마지막 메시지 프리뷰, 타임스탬프
+- **CowrkChatPanel**: 우측 플로팅 채팅 패널 (400px, 슬라이드 애니메이션)
+  - 스트리밍 응답, 커서 인디케이터, Esc로 닫기
+- **CowrkCreateDialog**: 에이전트 생성 모달 (이름 + 페르소나)
+
+### Session Resume — 재부팅 후 대화 이어받기
+
+- Claude 세션 ID를 hooks에서 감지 → `sessions.json`에 자동 저장
+- 재부팅 후 tmux 세션 재생성 시 `claude --resume <savedId>`로 이전 대화 자동 이어받기
+- 새 IPC 채널: `session:claude-session-id` (R→M, Claude 세션 ID 저장)
+
+### Web Preview Panel
+
+- dev 서버 실행/프리뷰/프로세스 관리 통합 패널
+- 터미널 출력에서 URL 자동 감지 → 프리뷰 자동 열기
+- 프리뷰 패널 리사이즈, 런치 설정 저장
+
+### Permission Mode
+
+- 세션별 퍼미션 모드 순환: default → acceptEdits → plan
+- 그리드 헤더에 현재 모드 표시
+
+### 사이드바 개선
+- **탭 UI**: Projects | Agents 분리로 사이드바 정리
+- **StatusLegend 제거**: 불필요한 상태 범례 삭제
+- **푸터 컴팩트화**: 텍스트 제거, 아이콘만 표시
+
+### 임시 파일 정리 (v1.1.22~30 핫픽스 통합)
+- 로그 로테이션 (10MB 초과 시 자동 교체)
+- 클립보드 이미지 임시 파일 앱 종료 시 정리
+- ctx 디렉토리 오래된 파일 자동 정리
+- 환경 의존 장애 방어 코드 전수 적용 (9개 파일)
+- DMG 환경 세션 생성 실패 수정
+- 재부팅 후 세션 복원 안정화
+- 드래그 분할 발견성 개선 (코칭 + 넛지)
+- 패인 네비게이션 전역 2D 중심점 거리 기반 수정
+- ⌘⇧T 닫은 패인 되살리기
+
+---
+
 ## [1.1.21] - 2026-03-04
 
 ### claude-hud 의존성 제거 — 자체 Statusline 통합

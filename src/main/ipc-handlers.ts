@@ -11,6 +11,7 @@ import { join } from 'path'
 import { tmpdir } from 'os'
 import type { SessionManager } from './session-manager'
 import type { NativeChatManager } from './native-chat-manager'
+import type { CowrkManager } from './cowrk-manager'
 import { showOrphanDialog } from './close-handler'
 import { watchPlanFile, unwatchPlanFile, listPlanFiles, resolvePlanPath } from './plan-watcher'
 import { getCachedUsageData, setHideHud, setKeychainAccess } from './statusline-manager'
@@ -180,6 +181,15 @@ export function registerIpcHandlers(
       sessionManager.getSessionStore().updateSessionSubtitle(id, subtitle)
     } catch (err) {
       console.error('[IPC] session:subtitle-update failed:', err)
+    }
+  })
+
+  // Claude 세션 ID 저장 (재부팅 후 --resume에 사용)
+  ipcMain.on('session:claude-session-id', (_event, id: string, claudeSessionId: string) => {
+    try {
+      sessionManager.getSessionStore().updateClaudeSessionId(id, claudeSessionId)
+    } catch (err) {
+      console.error('[IPC] session:claude-session-id failed:', err)
     }
   })
 
@@ -503,6 +513,49 @@ export function registerNativeIpcHandlers(
   // ─── 터미널 전용 API의 No-op 핸들러 (Sidebar 등에서 호출 가능) ───
 
   ipcMain.handle('session:capture-screen', async () => null)
+}
+
+/**
+ * Cowrk (영속 AI 팀원) IPC 핸들러를 등록합니다.
+ *
+ * terminal/native 모드 모두에서 사용됩니다.
+ * CowrkManager의 CRUD + 대화 API를 IPC로 노출합니다.
+ */
+export function registerCowrkIpcHandlers(cowrkManager: CowrkManager): void {
+  ipcMain.handle('cowrk:list-agents', async () => {
+    try {
+      return await cowrkManager.listAgents()
+    } catch (err) {
+      console.error('[IPC] cowrk:list-agents failed:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('cowrk:create-agent', async (_event, name: string, persona?: string) => {
+    try {
+      return await cowrkManager.createAgent(name, persona)
+    } catch (err) {
+      console.error('[IPC] cowrk:create-agent failed:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('cowrk:delete-agent', async (_event, name: string) => {
+    try {
+      await cowrkManager.deleteAgent(name)
+    } catch (err) {
+      console.error('[IPC] cowrk:delete-agent failed:', err)
+      throw err
+    }
+  })
+
+  ipcMain.on('cowrk:ask', (_event, agentName: string, message: string, projectDir?: string) => {
+    cowrkManager.askAgent(agentName, message, projectDir)
+  })
+
+  ipcMain.on('cowrk:cancel', (_event, agentName: string) => {
+    cowrkManager.cancelAgent(agentName)
+  })
 }
 
 /** 클립보드 임시 이미지 파일 정리 (앱 종료 시 호출) */

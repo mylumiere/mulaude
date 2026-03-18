@@ -16,6 +16,9 @@
 - **4言語対応**: English、한국어、日本語、中文
 - **画像＆ファイル対応**: クリップボード画像ペースト（⌘V）+ Finderからファイルドラッグ＆ドロップ
 - **使用量モニター**: Claudeプランの使用量をサイドバーでリアルタイム確認
+- **Cowrk Agents**: 永続AIチームメイト — サイドバーからエージェントの作成・チャット・管理、ペルソナ＆メモリ維持
+- **セッション再開**: 再起動後に`--resume`で前回のClaude会話を自動的に引き継ぎ
+- **Webプレビュー**: devサーバー実行/プレビュー/プロセス管理統合パネル
 
 ## なぜMulaudeなのか？
 
@@ -183,7 +186,9 @@ src/
 │   ├── hooks-manager.ts       # Claude Code Hooks監視
 │   ├── child-pane-streamer.ts # 子ペインストリーミング
 │   ├── tmux-utils.ts          # tmuxコマンドユーティリティ
-│   └── logger.ts              # ファイルロガー
+│   ├── logger.ts              # ファイルロガー
+│   ├── cowrk-manager.ts       # Cowrkエージェントオーケストレーター
+│   └── cowrk/                 # Cowrkエージェント内部（store、manager、types）
 ├── preload/
 │   └── index.ts               # contextBridge API
 ├── renderer/                  # Reactアプリ
@@ -193,11 +198,12 @@ src/
 │   ├── roadmap.ts             # ロードマップデータ
 │   ├── settings.ts            # 設定タイプ/ユーティリティ
 │   ├── pty-parser.ts          # PTY出力パーサー
-│   ├── hooks/                 # Reactカスタムフック（12個）
+│   ├── hooks/                 # Reactカスタムフック（13個）
 │   ├── utils/                 # 純粋ユーティリティ
 │   │   ├── pane-tree.ts       # 二分木データ構造/演算
 │   │   └── pane-storage.ts    # レイアウトlocalStorage永続化
-│   └── components/            # Reactコンポーネント（15個）
+│   └── components/            # Reactコンポーネント（18個）
+│       └── cowrk/             # CowrkエージェントUI（Section、ChatPanel、CreateDialog）
 └── shared/
     ├── types.ts               # 共有タイプ
     └── constants.ts           # 共有定数（37個）

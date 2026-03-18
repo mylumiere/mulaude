@@ -17,7 +17,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { SessionManager } from './session-manager'
 import { HooksManager } from './hooks-manager'
 import { NativeChatManager } from './native-chat-manager'
-import { registerIpcHandlers, registerNativeIpcHandlers, cleanupPasteImages } from './ipc-handlers'
+import { registerIpcHandlers, registerNativeIpcHandlers, registerCowrkIpcHandlers, cleanupPasteImages } from './ipc-handlers'
 import { setupSessionDataForwarding } from './session-forwarder'
 import { setupPanePolling, setupChildPaneForwarding } from './pane-poller'
 import { startWatching as startStatuslineWatching, cleanup as cleanupStatusline } from './statusline-manager'
@@ -25,6 +25,7 @@ import { setupCloseHandler, dt, setLocale, getCloseAction, resetCloseAction } fr
 import { logger } from './logger'
 import { unwatchAllPlans } from './plan-watcher'
 import { stopAllPreviews } from './preview-launcher'
+import { CowrkManager } from './cowrk-manager'
 import { SCREEN_VISIBILITY_MARGIN, WINDOW_SAVE_DEBOUNCE } from '../shared/constants'
 import type { AppMode } from '../shared/types'
 
@@ -203,6 +204,26 @@ app.whenReady().then(() => {
   // 창 생성
   const mainWindow = createWindow()
 
+  // ─── Cowrk (영속 AI 팀원) — 양쪽 모드 공통 ───
+  const cowrkManager = new CowrkManager()
+  registerCowrkIpcHandlers(cowrkManager)
+
+  cowrkManager.onStreamChunk = (agentName, chunk) => {
+    if (!mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('cowrk:stream-chunk', agentName, chunk)
+    }
+  }
+  cowrkManager.onTurnComplete = (agentName, response) => {
+    if (!mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('cowrk:turn-complete', agentName, response)
+    }
+  }
+  cowrkManager.onTurnError = (agentName, error) => {
+    if (!mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('cowrk:turn-error', agentName, error)
+    }
+  }
+
   if (appMode === 'native') {
     // ─── Native Chat 모드 ───
     const nativeChatManager = new NativeChatManager(hooksManager.getIpcDir())
@@ -245,6 +266,7 @@ app.whenReady().then(() => {
       nativeChatManager.destroyAll()
       nativeChatManager.getSessionStore().saveImmediate()
       unwatchAllPlans()
+      cowrkManager.destroyAll()
       stopAllPreviews()
       hooksManager.cleanup()
       cleanupStatusline()
@@ -295,6 +317,7 @@ app.whenReady().then(() => {
       sessionManager.getSessionStore().saveImmediate()
       resetCloseAction()
       unwatchAllPlans()
+      cowrkManager.destroyAll()
       stopAllPreviews()
       cleanupPanePolling()
       hooksManager.cleanup()

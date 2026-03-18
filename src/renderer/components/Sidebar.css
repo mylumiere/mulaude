@@ -1122,3 +1122,61 @@
   justify-content: center;
   margin-top: 6px;
 }
+
+/* ─── Sidebar Tabs (Projects | Agents) ─── */
+.sidebar-tabs {
+  display: flex;
+  gap: 2px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+}
+
+.sidebar-tab {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  border-radius: calc(var(--radius-sm) - 1px);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.sidebar-tab:hover {
+  color: var(--text-secondary);
+}
+
+.sidebar-tab--active {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+
+.sidebar-tab-badge {
+  font-size: 0.6rem;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-muted);
+  padding: 0 5px;
+  border-radius: 8px;
+  line-height: 1.5;
+}
+
+.sidebar-tab--active .sidebar-tab-badge {
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--text-secondary);
+}
+
+/* ─── Icon-only Footer Buttons ─── */
+.sidebar-footer-btn--icon {
+  flex: 0;
+  padding: 6px 10px;
+}

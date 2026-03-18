@@ -206,6 +206,23 @@ export class SessionStore {
   }
 
   /**
+   * 세션의 Claude 세션 ID를 갱신합니다.
+   *
+   * hooks에서 감지한 Claude session_id를 저장하여
+   * 재부팅 후 `claude --resume <id>`로 대화를 이어갈 수 있게 합니다.
+   *
+   * @param id - Mulaude 세션 ID
+   * @param claudeSessionId - Claude Code 세션 ID
+   */
+  updateClaudeSessionId(id: string, claudeSessionId: string): void {
+    const session = this.sessions.find((s) => s.id === id)
+    if (session && session.claudeSessionId !== claudeSessionId) {
+      session.claudeSessionId = claudeSessionId
+      this.save()
+    }
+  }
+
+  /**
    * 세션의 마지막 접근 시각을 갱신합니다.
    *
    * @param id - 세션 ID
