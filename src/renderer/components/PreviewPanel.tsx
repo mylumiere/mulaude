@@ -17,7 +17,7 @@
  *   - 개별 팝아웃: 각 프로세스를 독립 창으로 분리
  */
 
-import { useRef, useEffect, useCallback, useState } from 'react'
+import { useRef, useEffect, useCallback, useState, useMemo } from 'react'
 import {
   X, Globe, RefreshCw, ScrollText, Trash2, ExternalLink,
   Smartphone, Tablet, Monitor, Loader2, ArrowLeft, ArrowRight,
@@ -99,8 +99,7 @@ export default function PreviewPanel({ sessionId, isFocused, locale, onClose, pe
   const [viewport, setViewport] = useState<ViewportPreset>('responsive')
   const pendingConsumed = useRef(false)
   const iframeRef = useRef<HTMLIFrameElement>(null)
-  const retryCountRef = useRef(0)
-  const retryTimerRef = useRef<ReturnType<typeof setTimeout>>()
+  const pollTimerRef = useRef<ReturnType<typeof setInterval>>()
 
   // 닫기: iframe TCP 연결 먼저 정리 → CLOSE_WAIT 방지
   const handleClose = useCallback(() => {
@@ -263,16 +262,15 @@ export default function PreviewPanel({ sessionId, isFocused, locale, onClose, pe
     }
   }, [])
 
-  // 언마운트 시 재시도 타이머 정리
+  // 언마운트 시 폴링 타이머 정리
   useEffect(() => {
-    return () => { clearTimeout(retryTimerRef.current) }
+    return () => { clearInterval(pollTimerRef.current) }
   }, [])
 
   /** URL 이동 (히스토리 추가) */
   const navigateTo = useCallback((rawUrl: string) => {
     const finalUrl = /^https?:\/\//i.test(rawUrl) ? rawUrl : `http://${rawUrl}`
-    retryCountRef.current = 0
-    clearTimeout(retryTimerRef.current)
+    clearInterval(pollTimerRef.current)
     setUrl(finalUrl)
     setUrlInput(finalUrl)
     setUrlKey(k => k + 1)
@@ -323,29 +321,37 @@ export default function PreviewPanel({ sessionId, isFocused, locale, onClose, pe
 
   const handleIframeLoad = useCallback(() => {
     setIsLoading(false)
-    // dev 서버가 아직 준비 안 됐으면 자동 재시도 (최대 10회, 2초 간격)
+    // 정상 로드 확인
     try {
       const doc = iframeRef.current?.contentDocument
-      // 정상 로드 시 contentDocument에 접근 가능 (same-origin) → 성공
-      // doc.body !== null 로 판별 (doc.title은 빈 문자열일 수 있어 falsy)
-      if (doc && doc.body !== null) {
-        retryCountRef.current = 0
+      if (doc && doc.body !== null) return // same-origin 정상 로드
+    } catch {
+      return // cross-origin (SSO 등) → 정상 로드로 간주
+    }
+    // contentDocument가 빈 페이지 = 서버 미준비 → fetch 폴링으로 대기 후 1회 새로고침
+    if (!url) return
+    clearInterval(pollTimerRef.current)
+    setIsLoading(true)
+    let attempts = 0
+    pollTimerRef.current = setInterval(async () => {
+      attempts++
+      if (attempts > PREVIEW_MAX_RETRIES) {
+        clearInterval(pollTimerRef.current)
+        setIsLoading(false)
         return
       }
-    } catch {
-      // cross-origin이면 접근 불가 → 정상 로드로 간주
-      retryCountRef.current = 0
-      return
-    }
-    // contentDocument가 빈 페이지 = 서버 미준비 → 재시도
-    if (retryCountRef.current < PREVIEW_MAX_RETRIES) {
-      retryCountRef.current++
-      retryTimerRef.current = setTimeout(() => {
-        setUrlKey(k => k + 1)
-        setIsLoading(true)
-      }, PREVIEW_RETRY_INTERVAL)
-    }
-  }, [])
+      try {
+        const res = await fetch(url, { method: 'HEAD', mode: 'no-cors' })
+        // no-cors fetch는 opaque response (status 0) 반환 — 서버 응답 있으면 성공
+        if (res.status === 0 || res.ok) {
+          clearInterval(pollTimerRef.current)
+          setUrlKey(k => k + 1)
+        }
+      } catch {
+        // 서버 아직 미준비 → 다음 폴링까지 대기
+      }
+    }, PREVIEW_RETRY_INTERVAL)
+  }, [url])
 
   const openExternal = useCallback(() => {
     if (url) window.open(url, '_blank')
