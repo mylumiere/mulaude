@@ -147,6 +147,23 @@ function createWindow(): BrowserWindow {
   mainWindow.on('move', debouncedSave)
   mainWindow.on('close', () => saveWindowState(mainWindow))
 
+  // Preview iframe이 X-Frame-Options / CSP frame-ancestors에 의해 차단되지 않도록
+  // 응답 헤더에서 해당 값을 제거합니다. (SSO 리다이렉트 등)
+  mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+    const headers = { ...details.responseHeaders }
+    delete headers['X-Frame-Options']
+    delete headers['x-frame-options']
+    const cspKeys = ['Content-Security-Policy', 'content-security-policy']
+    for (const key of cspKeys) {
+      if (headers[key]) {
+        headers[key] = headers[key].map(v =>
+          v.replace(/frame-ancestors\s+[^;]+;?/gi, '')
+        )
+      }
+    }
+    callback({ cancel: false, responseHeaders: headers })
+  })
+
   // 파일 드롭 시 Electron 기본 네비게이션 차단 (renderer drop 핸들러에서 처리)
   mainWindow.webContents.on('will-navigate', (event, url) => {
     if (url.startsWith('file://')) {

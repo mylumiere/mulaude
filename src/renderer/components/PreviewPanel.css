@@ -569,3 +569,48 @@
   background: var(--accent-primary, #89b4fa);
   color: var(--bg-primary, #1e1e2e);
 }
+
+/* ─── Popout States ─── */
+
+.preview-poppedout-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-tertiary, #585b70);
+}
+
+.preview-poppedout-title {
+  font-size: 12px;
+  color: var(--text-secondary, #a6adc8);
+  margin: 0;
+}
+
+.preview-poppedout-restore {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: var(--bg-tertiary, #313244);
+  border: none;
+  border-radius: 4px;
+  color: var(--text-secondary, #a6adc8);
+  font-size: 11px;
+  cursor: pointer;
+  margin-top: 4px;
+}
+
+.preview-poppedout-restore:hover {
+  background: var(--bg-hover, #45475a);
+  color: var(--text-primary, #cdd6f4);
+}
+
+.preview-nav-btn--active {
+  color: var(--accent-primary, #89b4fa);
+}
+
+.preview-drawer-collapsed--poppedout {
+  color: var(--accent-primary, #89b4fa);
+}
