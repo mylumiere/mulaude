@@ -14,7 +14,7 @@
  */
 
 import { spawn, type ChildProcess } from 'child_process'
-import { readdir, readFile, stat } from 'node:fs/promises'
+import { readdir, readFile, stat, writeFile, unlink } from 'node:fs/promises'
 import { join, dirname, basename } from 'node:path'
 import { homedir } from 'node:os'
 import { NdjsonParser } from './ndjson-parser'
@@ -64,13 +64,24 @@ export class CowrkManager {
 
   async listAgents(): Promise<CowrkAgentState[]> {
     const registry = await loadRegistry()
-    return registry.agents.map(a => ({
-      name: a.name,
-      model: a.model,
-      createdAt: a.createdAt,
-      totalConversations: a.totalConversations,
-      lastUsedAt: a.lastUsedAt,
-      status: (this.activeProcesses.has(a.name) ? 'thinking' : 'idle') as CowrkAgentState['status'],
+    return Promise.all(registry.agents.map(async a => {
+      const files = agentFiles(a.name)
+      let avatarPath: string | undefined
+      try {
+        await stat(files.avatar)
+        avatarPath = files.avatar
+      } catch {
+        // avatar 파일 없음
+      }
+      return {
+        name: a.name,
+        model: a.model,
+        createdAt: a.createdAt,
+        totalConversations: a.totalConversations,
+        lastUsedAt: a.lastUsedAt,
+        status: (this.activeProcesses.has(a.name) ? 'thinking' : 'idle') as CowrkAgentState['status'],
+        avatarPath,
+      }
     }))
   }
 
@@ -90,6 +101,24 @@ export class CowrkManager {
   async deleteAgent(name: string): Promise<void> {
     this.cancelAgent(name)
     await agentManager.deleteAgent(name)
+  }
+
+  /* ═══════ Avatar ═══════ */
+
+  /** 에이전트 프로필 이미지를 저장합니다 (base64 → avatar.png, 최대 5MB) */
+  async setAvatar(name: string, base64: string): Promise<string> {
+    const files = agentFiles(name)
+    const buf = Buffer.from(base64, 'base64')
+    if (buf.length === 0) throw new Error('Invalid avatar data')
+    if (buf.length > 5 * 1024 * 1024) throw new Error('Avatar too large (max 5MB)')
+    await writeFile(files.avatar, buf)
+    return files.avatar
+  }
+
+  /** 에이전트 프로필 이미지를 삭제합니다 */
+  async removeAvatar(name: string): Promise<void> {
+    const files = agentFiles(name)
+    try { await unlink(files.avatar) } catch {}
   }
 
   /* ═══════ 대화 ═══════ */
@@ -152,7 +181,7 @@ export class CowrkManager {
     delete env['CLAUDE_CODE']
 
     // 6. claude -p 프로세스 spawn
-    const args = ['-p', fullMessage, '--output-format', 'stream-json']
+    const args = ['-p', fullMessage, '--output-format', 'stream-json', '--verbose']
     if (systemPrompt) {
       args.push('--system-prompt', systemPrompt)
     }
@@ -386,7 +415,7 @@ export class CowrkManager {
 
       const args = [
         '-p', memoryPrompt,
-        '--output-format', 'stream-json',
+        '--output-format', 'stream-json', '--verbose',
         '--system-prompt', MEMORY_SYSTEM_PROMPT,
         '--model', 'claude-haiku-4-5-20251001',
       ]

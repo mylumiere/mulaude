@@ -556,6 +556,26 @@ export function registerCowrkIpcHandlers(cowrkManager: CowrkManager): void {
   ipcMain.on('cowrk:cancel', (_event, agentName: string) => {
     cowrkManager.cancelAgent(agentName)
   })
+
+  // 에이전트 아바타 설정 (base64 → avatar.png 저장)
+  ipcMain.handle('cowrk:set-avatar', async (_event, name: string, base64: string) => {
+    try {
+      return await cowrkManager.setAvatar(name, base64)
+    } catch (err) {
+      console.error('[IPC] cowrk:set-avatar failed:', err)
+      throw err
+    }
+  })
+
+  // 에이전트 아바타 삭제
+  ipcMain.handle('cowrk:remove-avatar', async (_event, name: string) => {
+    try {
+      await cowrkManager.removeAvatar(name)
+    } catch (err) {
+      console.error('[IPC] cowrk:remove-avatar failed:', err)
+      throw err
+    }
+  })
 }
 
 /** 클립보드 임시 이미지 파일 정리 (앱 종료 시 호출) */

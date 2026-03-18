@@ -356,20 +356,27 @@ export default function App(): JSX.Element {
         onLocaleChange={settings.handleLocaleChange}
         onThemeChange={settings.handleThemeChange}
       />
-      {cowrk.activeAgent && (
-        <CowrkChatPanel
-          agentName={cowrk.activeAgent}
-          messages={cowrk.chatMessages[cowrk.activeAgent] || []}
-          isStreaming={cowrk.agents.find(a => a.name === cowrk.activeAgent)?.status === 'thinking'}
-          onSend={(msg) => cowrk.askAgent(msg, activeSession?.workingDir)}
-          onCancel={cowrk.cancelAgent}
-          onClose={cowrk.closeChat}
-          onDelete={() => cowrk.deleteAgent(cowrk.activeAgent!)}
-          projectDir={activeSession?.workingDir}
-        />
-      )}
+      {cowrk.activeAgent && (() => {
+        const activeAgentData = cowrk.agents.find(a => a.name === cowrk.activeAgent)
+        return (
+          <CowrkChatPanel
+            agentName={cowrk.activeAgent}
+            messages={cowrk.chatMessages[cowrk.activeAgent] || []}
+            isStreaming={activeAgentData?.status === 'thinking'}
+            locale={settings.locale}
+            onSend={(msg) => cowrk.askAgent(msg, activeSession?.workingDir)}
+            onCancel={cowrk.cancelAgent}
+            onClose={cowrk.closeChat}
+            onDelete={() => cowrk.deleteAgent(cowrk.activeAgent!)}
+            projectDir={activeSession?.workingDir}
+            avatarPath={activeAgentData?.avatarPath}
+            onAvatarChange={(base64) => cowrk.setAvatar(cowrk.activeAgent!, base64)}
+          />
+        )
+      })()}
       <CowrkCreateDialog
         isOpen={cowrk.isCreating}
+        locale={settings.locale}
         onClose={() => cowrk.setCreating(false)}
         onCreate={cowrk.createAgent}
       />

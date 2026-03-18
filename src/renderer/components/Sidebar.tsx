@@ -192,7 +192,7 @@ export default function Sidebar({
             </button>
           )}
           {sidebarTab === 'agents' && onCreateCowrkAgent && (
-            <button className="sidebar-add-btn" onClick={onCreateCowrkAgent} title="New agent">
+            <button className="sidebar-add-btn" onClick={onCreateCowrkAgent} title={t(locale, 'cowrk.newAgentBtn')}>
               <Plus size={14} />
             </button>
           )}
@@ -296,6 +296,7 @@ export default function Sidebar({
           agents={cowrkAgents}
           activeAgent={cowrkActiveAgent ?? null}
           chatMessages={cowrkChatMessages || {}}
+          locale={locale}
           onSelectAgent={onSelectCowrkAgent}
           onCreateAgent={onCreateCowrkAgent}
         />

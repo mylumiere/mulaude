@@ -427,13 +427,15 @@ close → history append + stats update
 cowrk:turn-complete IPC → isStreaming=false
 ```
 
-### IPC 채널 (8개)
+### IPC 채널 (10개)
 
 | 채널 | 방향 | 설명 |
 |------|------|------|
-| `cowrk:list-agents` | R→M (invoke) | 에이전트 목록 |
+| `cowrk:list-agents` | R→M (invoke) | 에이전트 목록 (avatarPath 포함) |
 | `cowrk:create-agent` | R→M (invoke) | 에이전트 생성 |
 | `cowrk:delete-agent` | R→M (invoke) | 에이전트 삭제 |
+| `cowrk:set-avatar` | R→M (invoke) | 아바타 이미지 저장 (base64 → avatar.png) |
+| `cowrk:remove-avatar` | R→M (invoke) | 아바타 이미지 삭제 |
 | `cowrk:ask` | R→M (send) | 대화 요청 |
 | `cowrk:cancel` | R→M (send) | 대화 취소 |
 | `cowrk:stream-chunk` | M→R | 스트리밍 텍스트 |
@@ -449,7 +451,8 @@ cowrk:turn-complete IPC → isStreaming=false
     ├── persona.md           # 페르소나 프롬프트
     ├── memory.md            # 자동 갱신 메모리
     ├── history.jsonl        # 대화 히스토리
-    └── meta.json            # 통계 (대화 수, 마지막 사용)
+    ├── meta.json            # 통계 (대화 수, 마지막 사용)
+    └── avatar.png           # 프로필 이미지 (선택, 없으면 letter badge)
 ```
 
 ## Session Resume (재부팅 후 대화 이어받기)

@@ -81,6 +81,13 @@
   flex-shrink: 0;
 }
 
+.cowrk-chat-avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
 .cowrk-chat-avatar-letter {
   font-size: 14px;
   font-weight: 600;
@@ -197,6 +204,43 @@
 
 .cowrk-panel-back:hover {
   color: rgba(255, 255, 255, 0.9);
+}
+
+/* 헤더 아바타 (업로드) */
+.cowrk-avatar-upload {
+  cursor: pointer;
+  position: relative;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.cowrk-header-avatar-letter {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.cowrk-avatar-upload-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.8);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.cowrk-avatar-upload:hover .cowrk-avatar-upload-overlay {
+  opacity: 1;
 }
 
 .cowrk-panel-name {
@@ -540,4 +584,139 @@
 .cowrk-dialog-btn:disabled {
   opacity: 0.4;
   cursor: default;
+}
+
+/* ═══════ Dialog Avatar (생성 시 이미지 선택) ═══════ */
+
+.cowrk-dialog-avatar-row {
+  display: flex;
+  justify-content: center;
+  padding: 4px 0 8px;
+}
+
+.cowrk-dialog-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 2px dashed rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.cowrk-dialog-avatar:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.cowrk-dialog-avatar-icon {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.cowrk-dialog-avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.cowrk-dialog-avatar-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.8);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.cowrk-dialog-avatar:hover .cowrk-dialog-avatar-overlay {
+  opacity: 1;
+}
+
+/* ═══════ Delete Confirm Bar ═══════ */
+
+.cowrk-panel-delete-confirm {
+  padding: 8px 12px;
+  background: rgba(231, 76, 60, 0.08);
+  border-bottom: 1px solid rgba(231, 76, 60, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cowrk-panel-delete-hint {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.cowrk-panel-delete-hint strong {
+  color: rgba(231, 76, 60, 0.9);
+}
+
+.cowrk-panel-delete-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.cowrk-panel-delete-input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(231, 76, 60, 0.3);
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 12px;
+  font-family: inherit;
+  padding: 4px 8px;
+  outline: none;
+}
+
+.cowrk-panel-delete-input:focus {
+  border-color: rgba(231, 76, 60, 0.6);
+}
+
+.cowrk-panel-delete-btn {
+  padding: 4px 10px;
+  background: rgba(231, 76, 60, 0.2);
+  border: 1px solid rgba(231, 76, 60, 0.4);
+  border-radius: 4px;
+  color: #e74c3c;
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.cowrk-panel-delete-btn:hover:not(:disabled) {
+  background: rgba(231, 76, 60, 0.35);
+}
+
+.cowrk-panel-delete-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.cowrk-panel-delete-cancel {
+  padding: 4px 10px;
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.cowrk-panel-delete-cancel:hover {
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.05);
 }

@@ -13,15 +13,20 @@
   - 시스템 프롬프트: 페르소나 + 메모리 + 프로젝트 컨텍스트 (CLAUDE.md + 디렉토리 트리)
   - 히스토리 임베딩 (최근 20턴)
   - Fire-and-forget 메모리 자동 갱신 (haiku 모델)
-- **저장소**: `~/.mulaude/cowrk/agents/{name}/` (persona.md, memory.md, history.jsonl, meta.json)
-- **IPC 채널 8개**: `cowrk:list-agents`, `cowrk:create-agent`, `cowrk:delete-agent`, `cowrk:ask`, `cowrk:cancel`, `cowrk:stream-chunk`, `cowrk:turn-complete`, `cowrk:turn-error`
+- **아바타 시스템**: `setAvatar(name, base64)` / `removeAvatar(name)` — base64 → avatar.png 파일 저장, `listAgents()`에서 avatarPath 자동 포함
+- **저장소**: `~/.mulaude/cowrk/agents/{name}/` (persona.md, memory.md, history.jsonl, meta.json, avatar.png)
+- **IPC 채널 10개**: `cowrk:list-agents`, `cowrk:create-agent`, `cowrk:delete-agent`, `cowrk:set-avatar`, `cowrk:remove-avatar`, `cowrk:ask`, `cowrk:cancel`, `cowrk:stream-chunk`, `cowrk:turn-complete`, `cowrk:turn-error`
 
 #### 프론트엔드
 - **사이드바 탭**: Projects | Agents 탭 전환 (채팅 리스트 스타일)
-  - 에이전트 아바타 (이니셜 + 상태 도트), 마지막 메시지 프리뷰, 타임스탬프
+  - 에이전트 아바타 (커스텀 이미지 또는 이니셜 letter badge + 상태 도트), 마지막 메시지 프리뷰, 타임스탬프
 - **CowrkChatPanel**: 우측 플로팅 채팅 패널 (400px, 슬라이드 애니메이션)
+  - 헤더에 클릭 가능한 아바타 (hover 시 카메라 오버레이 → 이미지 변경)
+  - 삭제 시 에이전트 이름 입력 확인 (실수 방지)
   - 스트리밍 응답, 커서 인디케이터, Esc로 닫기
-- **CowrkCreateDialog**: 에이전트 생성 모달 (이름 + 페르소나)
+- **CowrkCreateDialog**: 에이전트 생성 모달 (아바타 선택 + 이름 + 페르소나)
+  - 카메라 아이콘 클릭으로 프로필 이미지 미리보기 후 생성
+- **i18n**: Cowrk 컴포넌트 전체 4개 언어 (en/ko/ja/zh) 다국어 지원
 
 ### Session Resume — 재부팅 후 대화 이어받기
 

@@ -26,6 +26,7 @@ export const agentFiles = (name: string) => {
     memory: join(dir, 'memory.md'),
     history: join(dir, 'history.jsonl'),
     meta: join(dir, 'meta.json'),
+    avatar: join(dir, 'avatar.png'),
   }
 }
 

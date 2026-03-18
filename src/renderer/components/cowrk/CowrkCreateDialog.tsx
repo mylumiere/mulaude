@@ -7,19 +7,22 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { X } from 'lucide-react'
+import { X, Camera } from 'lucide-react'
+import { type Locale, t } from '../../i18n'
 import './CowrkPanel.css'
 
 interface CowrkCreateDialogProps {
   isOpen: boolean
+  locale: Locale
   onClose: () => void
-  onCreate: (name: string, persona?: string) => Promise<void>
+  onCreate: (name: string, persona?: string, avatarBase64?: string) => Promise<void>
 }
 
 const NAME_REGEX = /^[a-zA-Z0-9-]{1,30}$/
 
 export default function CowrkCreateDialog({
   isOpen,
+  locale,
   onClose,
   onCreate,
 }: CowrkCreateDialogProps): JSX.Element | null {
@@ -27,7 +30,10 @@ export default function CowrkCreateDialog({
   const [persona, setPersona] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [avatarBase64, setAvatarBase64] = useState<string | null>(null)
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const nameRef = useRef<HTMLInputElement>(null)
+  const avatarInputRef = useRef<HTMLInputElement>(null)
 
   // 열릴 때 초기화 + 포커스
   useEffect(() => {
@@ -36,9 +42,34 @@ export default function CowrkCreateDialog({
       setPersona('')
       setError('')
       setLoading(false)
+      setAvatarBase64(null)
+      setAvatarPreview(null)
       setTimeout(() => nameRef.current?.focus(), 100)
     }
   }, [isOpen])
+
+  // 아바타 파일 선택 (최대 5MB)
+  const handleAvatarSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 5 * 1024 * 1024) {
+      setError(t(locale, 'cowrk.fileTooLarge'))
+      e.target.value = ''
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => {
+      const dataUrl = reader.result as string
+      setAvatarPreview(dataUrl)
+      setAvatarBase64(dataUrl.split(',')[1] || null)
+    }
+    reader.onerror = () => {
+      console.error('[CowrkCreateDialog] FileReader error:', reader.error)
+      setError('Failed to read file')
+    }
+    reader.readAsDataURL(file)
+    e.target.value = ''
+  }, [locale])
 
   // Esc로 닫기
   useEffect(() => {
@@ -56,23 +87,23 @@ export default function CowrkCreateDialog({
   const handleCreate = useCallback(async () => {
     const trimmed = name.trim()
     if (!trimmed) {
-      setError('Name is required')
+      setError(t(locale, 'cowrk.nameRequired'))
       return
     }
     if (!NAME_REGEX.test(trimmed)) {
-      setError('Use letters, numbers, hyphens (1-30 chars)')
+      setError(t(locale, 'cowrk.nameInvalid'))
       return
     }
 
     setLoading(true)
     setError('')
     try {
-      await onCreate(trimmed, persona.trim() || undefined)
+      await onCreate(trimmed, persona.trim() || undefined, avatarBase64 || undefined)
     } catch (err) {
       setError((err as Error).message)
       setLoading(false)
     }
-  }, [name, persona, onCreate])
+  }, [name, persona, avatarBase64, locale, onCreate])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey && (e.target as HTMLElement).tagName !== 'TEXTAREA') {
@@ -87,15 +118,40 @@ export default function CowrkCreateDialog({
     <div className="cowrk-dialog-overlay" onClick={onClose}>
       <div className="cowrk-dialog" onClick={e => e.stopPropagation()} onKeyDown={handleKeyDown}>
         <div className="cowrk-dialog-header">
-          <span className="cowrk-dialog-title">New Agent</span>
+          <span className="cowrk-dialog-title">{t(locale, 'cowrk.newAgent')}</span>
           <button className="cowrk-dialog-close" onClick={onClose}>
             <X size={14} />
           </button>
         </div>
 
         <div className="cowrk-dialog-body">
+          {/* 아바타 선택 */}
+          <div className="cowrk-dialog-avatar-row">
+            <div
+              className="cowrk-dialog-avatar"
+              onClick={() => avatarInputRef.current?.click()}
+              title={t(locale, 'cowrk.selectAvatar')}
+            >
+              {avatarPreview ? (
+                <img src={avatarPreview} alt="avatar" className="cowrk-dialog-avatar-img" draggable={false} />
+              ) : (
+                <Camera size={20} className="cowrk-dialog-avatar-icon" />
+              )}
+              <div className="cowrk-dialog-avatar-overlay">
+                <Camera size={12} />
+              </div>
+            </div>
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={handleAvatarSelect}
+            />
+          </div>
+
           <label className="cowrk-dialog-label">
-            Name
+            {t(locale, 'cowrk.name')}
             <input
               ref={nameRef}
               className="cowrk-dialog-input"
@@ -108,12 +164,12 @@ export default function CowrkCreateDialog({
           </label>
 
           <label className="cowrk-dialog-label">
-            Persona <span className="cowrk-dialog-optional">(optional)</span>
+            {t(locale, 'cowrk.persona')} <span className="cowrk-dialog-optional">{t(locale, 'cowrk.personaOptional')}</span>
             <textarea
               className="cowrk-dialog-textarea"
               value={persona}
               onChange={e => setPersona(e.target.value)}
-              placeholder="시니어 코드 리뷰어. 보안 취약점과 성능 문제에 집중..."
+              placeholder={t(locale, 'cowrk.personaPlaceholder')}
               rows={4}
               disabled={loading}
             />
@@ -124,10 +180,10 @@ export default function CowrkCreateDialog({
 
         <div className="cowrk-dialog-footer">
           <button className="cowrk-dialog-btn cowrk-dialog-btn--cancel" onClick={onClose} disabled={loading}>
-            Cancel
+            {t(locale, 'cowrk.cancel')}
           </button>
           <button className="cowrk-dialog-btn cowrk-dialog-btn--create" onClick={handleCreate} disabled={loading || !name.trim()}>
-            {loading ? 'Creating...' : 'Create'}
+            {loading ? t(locale, 'cowrk.creating') : t(locale, 'cowrk.create')}
           </button>
         </div>
       </div>

@@ -6,6 +6,7 @@
  */
 
 import type { CowrkAgentState, CowrkChatMessage } from '../../../shared/types'
+import { type Locale, t } from '../../i18n'
 import './CowrkPanel.css'
 
 interface CowrkSectionProps {
@@ -13,6 +14,7 @@ interface CowrkSectionProps {
   activeAgent: string | null
   /** 에이전트별 마지막 메시지 (프리뷰용) */
   chatMessages: Record<string, CowrkChatMessage[]>
+  locale: Locale
   onSelectAgent: (name: string) => void
   onCreateAgent: () => void
 }
@@ -46,6 +48,7 @@ export default function CowrkSection({
   agents,
   activeAgent,
   chatMessages,
+  locale,
   onSelectAgent,
   onCreateAgent,
 }: CowrkSectionProps): JSX.Element {
@@ -54,9 +57,9 @@ export default function CowrkSection({
       {agents.length === 0 ? (
         <div className="cowrk-tab-empty">
           <div className="cowrk-tab-empty-icon">🤖</div>
-          <p>No teammates yet</p>
+          <p>{t(locale, 'cowrk.empty')}</p>
           <button className="cowrk-tab-create-btn" onClick={onCreateAgent}>
-            Create your first agent
+            {t(locale, 'cowrk.createFirst')}
           </button>
         </div>
       ) : (
@@ -74,9 +77,18 @@ export default function CowrkSection({
               >
                 {/* 아바타 */}
                 <div className="cowrk-chat-avatar">
-                  <span className="cowrk-chat-avatar-letter">
-                    {agent.name[0].toUpperCase()}
-                  </span>
+                  {agent.avatarPath ? (
+                    <img
+                      className="cowrk-chat-avatar-img"
+                      src={`file://${agent.avatarPath}?t=${Date.now()}`}
+                      alt={agent.name}
+                      draggable={false}
+                    />
+                  ) : (
+                    <span className="cowrk-chat-avatar-letter">
+                      {agent.name[0].toUpperCase()}
+                    </span>
+                  )}
                   <span
                     className="cowrk-chat-avatar-dot"
                     style={{ backgroundColor: statusColor(agent.status) }}
@@ -94,11 +106,11 @@ export default function CowrkSection({
                   <div className="cowrk-chat-preview">
                     {lastMsg ? (
                       <>
-                        {lastMsg.isStreaming && <span className="cowrk-chat-typing">typing...</span>}
+                        {lastMsg.isStreaming && <span className="cowrk-chat-typing">{t(locale, 'cowrk.typing')}</span>}
                         {!lastMsg.isStreaming && preview(lastMsg.content)}
                       </>
                     ) : (
-                      <span className="cowrk-chat-no-msg">Start a conversation</span>
+                      <span className="cowrk-chat-no-msg">{t(locale, 'cowrk.startConversation')}</span>
                     )}
                   </div>
                 </div>

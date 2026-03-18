@@ -206,6 +206,8 @@ export interface CowrkAgentState {
   lastUsedAt: string | null
   /** 현재 상태 */
   status: 'idle' | 'thinking' | 'error'
+  /** 프로필 이미지 절대 경로 (렌더러에서 file:// 로 로드) */
+  avatarPath?: string
 }
 
 /** Cowrk 채팅 메시지 */

@@ -407,7 +407,15 @@ const api = {
     }
     ipcRenderer.on('cowrk:turn-error', handler)
     return () => ipcRenderer.removeListener('cowrk:turn-error', handler)
-  }
+  },
+
+  /** Cowrk 에이전트 아바타 설정 (base64 → avatar.png 저장, 경로 반환) */
+  cowrkSetAvatar: (name: string, base64: string): Promise<string> =>
+    ipcRenderer.invoke('cowrk:set-avatar', name, base64),
+
+  /** Cowrk 에이전트 아바타 삭제 */
+  cowrkRemoveAvatar: (name: string): Promise<void> =>
+    ipcRenderer.invoke('cowrk:remove-avatar', name),
 }
 
 /* ═══════ 자식 pane 데이터 디스패처 (O(1) 키 기반) ═══════ */

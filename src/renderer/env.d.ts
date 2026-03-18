@@ -69,5 +69,7 @@ interface Window {
     onCowrkStreamChunk: (cb: (agentName: string, chunk: string) => void) => () => void
     onCowrkTurnComplete: (cb: (agentName: string, response: string) => void) => () => void
     onCowrkTurnError: (cb: (agentName: string, error: string) => void) => () => void
+    cowrkSetAvatar: (name: string, base64: string) => Promise<string>
+    cowrkRemoveAvatar: (name: string) => Promise<void>
   }
 }

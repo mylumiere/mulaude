@@ -18,7 +18,7 @@ interface UseCowrkAgentsReturn {
   /** 생성 다이얼로그 표시 여부 */
   isCreating: boolean
   /** 에이전트 생성 */
-  createAgent: (name: string, persona?: string) => Promise<void>
+  createAgent: (name: string, persona?: string, avatarBase64?: string) => Promise<void>
   /** 에이전트 삭제 */
   deleteAgent: (name: string) => Promise<void>
   /** 에이전트에게 질문 */
@@ -31,6 +31,8 @@ interface UseCowrkAgentsReturn {
   closeChat: () => void
   /** 생성 다이얼로그 토글 */
   setCreating: (open: boolean) => void
+  /** 에이전트 아바타 설정 */
+  setAvatar: (name: string, base64: string) => Promise<void>
 }
 
 export function useCowrkAgents(): UseCowrkAgentsReturn {
@@ -154,10 +156,25 @@ export function useCowrkAgents(): UseCowrkAgentsReturn {
     }
   }, [])
 
-  const createAgent = useCallback(async (name: string, persona?: string) => {
+  const createAgent = useCallback(async (name: string, persona?: string, avatarBase64?: string) => {
     const agent = await window.api.cowrkCreateAgent(name, persona)
+    if (avatarBase64) {
+      const avatarPath = await window.api.cowrkSetAvatar(name, avatarBase64)
+      agent.avatarPath = avatarPath
+    }
     setAgents(prev => [...prev, agent])
     setIsCreating(false)
+  }, [])
+
+  const setAvatar = useCallback(async (name: string, base64: string) => {
+    try {
+      const avatarPath = await window.api.cowrkSetAvatar(name, base64)
+      setAgents(prev => prev.map(a =>
+        a.name === name ? { ...a, avatarPath } : a
+      ))
+    } catch (err) {
+      console.error('[useCowrkAgents] setAvatar failed:', err)
+    }
   }, [])
 
   const deleteAgent = useCallback(async (name: string) => {
@@ -216,5 +233,6 @@ export function useCowrkAgents(): UseCowrkAgentsReturn {
     openChat,
     closeChat,
     setCreating: setIsCreating,
+    setAvatar,
   }
 }
