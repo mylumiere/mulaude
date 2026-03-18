@@ -22,7 +22,7 @@ import {
   X, Globe, RefreshCw, ScrollText, Trash2, ExternalLink,
   Smartphone, Tablet, Monitor, Loader2, ArrowLeft, ArrowRight,
   ChevronDown, ChevronUp, PanelTopOpen, Columns2,
-  Copy, MessageSquare
+  Copy, MessageSquare, Undo2
 } from 'lucide-react'
 import { loadPreviewState, savePreviewState } from '../utils/preview-storage'
 import { PREVIEW_MAX_RETRIES, PREVIEW_RETRY_INTERVAL } from '../../shared/constants'
@@ -102,6 +102,14 @@ export default function PreviewPanel({ sessionId, isFocused, locale, onClose, pe
   /** 서버 준비 대기 폴링 타이머 */
   const pollTimerRef = useRef<ReturnType<typeof setTimeout>>()
   const pollCountRef = useRef(0)
+
+  // 웹 미리보기 팝아웃
+  const [browserPoppedOut, setBrowserPoppedOut] = useState(false)
+  const browserPopupRef = useRef<Window | null>(null)
+
+  // 로그 드로어 팝아웃
+  const [drawerPoppedOut, setDrawerPoppedOut] = useState(false)
+  const drawerPopupRef = useRef<Window | null>(null)
 
   // 닫기: iframe TCP 연결 먼저 정리 → CLOSE_WAIT 방지
   const handleClose = useCallback(() => {
@@ -261,6 +269,8 @@ export default function PreviewPanel({ sessionId, isFocused, locale, onClose, pe
       for (const w of Object.values(popoutWindows.current)) {
         if (w && !w.closed) w.close()
       }
+      if (browserPopupRef.current && !browserPopupRef.current.closed) browserPopupRef.current.close()
+      if (drawerPopupRef.current && !drawerPopupRef.current.closed) drawerPopupRef.current.close()
     }
   }, [])
 
@@ -352,9 +362,169 @@ export default function PreviewPanel({ sessionId, isFocused, locale, onClose, pe
     return () => { clearTimeout(pollTimerRef.current) }
   }, [url])
 
-  const openExternal = useCallback(() => {
-    if (url) window.open(url, '_blank')
-  }, [url])
+  /** 웹 미리보기를 독립 창으로 팝아웃 */
+  const popoutBrowser = useCallback(() => {
+    if (!url) return
+    if (browserPopupRef.current && !browserPopupRef.current.closed) {
+      browserPopupRef.current.focus()
+      return
+    }
+
+    const popup = window.open('', `preview-browser-${sessionId}`, 'width=1024,height=768')
+    if (!popup) return
+    browserPopupRef.current = popup
+    setBrowserPoppedOut(true)
+
+    const doc = popup.document
+    doc.title = `Preview — ${url}`
+    doc.documentElement.style.cssText = 'margin:0;padding:0;height:100%;'
+    doc.body.style.cssText = 'margin:0;padding:0;height:100%;display:flex;flex-direction:column;background:#11111b;'
+
+    const style = doc.createElement('style')
+    style.textContent = `
+      * { box-sizing: border-box; }
+      .toolbar { display:flex;align-items:center;gap:4px;padding:4px 8px;background:#181825;border-bottom:1px solid #313244; }
+      .url-input { flex:1;background:#11111b;color:#cdd6f4;border:1px solid #313244;border-radius:4px;padding:4px 8px;font-size:12px;font-family:inherit;outline:none; }
+      .url-input:focus { border-color:#585b70; }
+      .nav-btn { background:none;border:none;color:#585b70;cursor:pointer;padding:4px;border-radius:3px;font-size:12px;line-height:1; }
+      .nav-btn:hover { color:#cdd6f4;background:#1e1e2e; }
+      .iframe-wrap { flex:1;overflow:hidden; }
+      iframe { width:100%;height:100%;border:none; }
+    `
+    doc.head.appendChild(style)
+
+    const toolbar = doc.createElement('div')
+    toolbar.className = 'toolbar'
+    const reloadBtn = doc.createElement('button')
+    reloadBtn.className = 'nav-btn'
+    reloadBtn.textContent = '↻'
+    reloadBtn.title = 'Reload'
+    const urlInput = doc.createElement('input')
+    urlInput.className = 'url-input'
+    urlInput.type = 'text'
+    urlInput.value = url
+    urlInput.spellcheck = false
+    toolbar.appendChild(reloadBtn)
+    toolbar.appendChild(urlInput)
+    doc.body.appendChild(toolbar)
+
+    const wrap = doc.createElement('div')
+    wrap.className = 'iframe-wrap'
+    const iframe = doc.createElement('iframe')
+    iframe.src = url
+    iframe.sandbox.add('allow-scripts', 'allow-modals', 'allow-forms', 'allow-same-origin', 'allow-popups')
+    wrap.appendChild(iframe)
+    doc.body.appendChild(wrap)
+
+    const navigate = (): void => {
+      const raw = urlInput.value.trim()
+      if (!raw) return
+      const final = /^https?:\/\//i.test(raw) ? raw : `http://${raw}`
+      iframe.src = final
+      urlInput.value = final
+      doc.title = `Preview — ${final}`
+    }
+    urlInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') navigate() })
+    reloadBtn.onclick = () => { iframe.src = iframe.src }
+
+    popup.addEventListener('beforeunload', () => {
+      browserPopupRef.current = null
+      setBrowserPoppedOut(false)
+    })
+  }, [url, sessionId])
+
+  /** 로그 드로어를 독립 창으로 팝아웃 */
+  const popoutDrawer = useCallback(() => {
+    if (drawerPopupRef.current && !drawerPopupRef.current.closed) {
+      drawerPopupRef.current.focus()
+      return
+    }
+
+    const popup = window.open('', `preview-drawer-${sessionId}`, 'width=800,height=500')
+    if (!popup) return
+    drawerPopupRef.current = popup
+    setDrawerPoppedOut(true)
+
+    for (const w of Object.values(popoutWindows.current)) {
+      if (w && !w.closed) w.close()
+    }
+    popoutWindows.current = {}
+
+    const doc = popup.document
+    doc.title = `Logs — ${processNames.join(', ')}`
+    doc.documentElement.style.cssText = 'margin:0;padding:0;height:100%;'
+    doc.body.style.cssText = `
+      margin:0;padding:0;height:100%;display:flex;flex-direction:column;
+      background:#11111b;color:#a6adc8;
+      font-family:'Menlo','SF Mono','Fira Code',monospace;
+      font-size:12px;line-height:1.6;
+    `
+
+    const style = doc.createElement('style')
+    style.textContent = `
+      ${POPOUT_STYLES}
+      .tabs { display:flex;gap:0;background:#181825;border-bottom:1px solid #313244;position:sticky;top:0;z-index:1; }
+      .tab { background:none;border:none;color:#585b70;cursor:pointer;padding:6px 14px;font-size:11px;font-family:inherit;border-bottom:2px solid transparent; }
+      .tab:hover { color:#a6adc8;background:#1e1e2e; }
+      .tab.active { color:#cdd6f4;border-bottom-color:#89b4fa; }
+      .tab-actions { margin-left:auto;display:flex;align-items:center;gap:2px;padding-right:8px; }
+      .action-btn { background:none;border:none;color:#585b70;cursor:pointer;padding:4px 6px;border-radius:3px;font-size:11px;font-family:inherit; }
+      .action-btn:hover { color:#a6adc8;background:#1e1e2e; }
+      .log-container { flex:1;overflow-y:auto;padding:4px 0; }
+    `
+    doc.head.appendChild(style)
+
+    const tabBar = doc.createElement('div')
+    tabBar.className = 'tabs'
+    const logContainer = doc.createElement('div')
+    logContainer.className = 'log-container'
+    logContainer.id = 'log-container'
+
+    let activePopoutTab = processNames[0] || ''
+
+    const renderTabs = (): void => {
+      tabBar.innerHTML = ''
+      for (const name of processNames) {
+        const tab = doc.createElement('button')
+        tab.className = `tab${name === activePopoutTab ? ' active' : ''}`
+        tab.textContent = name
+        tab.onclick = () => { activePopoutTab = name; renderTabs(); renderLogs() }
+        tabBar.appendChild(tab)
+      }
+      const actions = doc.createElement('div')
+      actions.className = 'tab-actions'
+      const clearBtn = doc.createElement('button')
+      clearBtn.className = 'action-btn'
+      clearBtn.textContent = '⌫ Clear'
+      clearBtn.onclick = () => {
+        setProcessLogs(prev => ({ ...prev, [activePopoutTab]: [] }))
+        logContainer.innerHTML = ''
+      }
+      actions.appendChild(clearBtn)
+      tabBar.appendChild(actions)
+    }
+
+    const renderLogs = (): void => {
+      logContainer.innerHTML = ''
+      const logs = processLogs[activePopoutTab] || []
+      for (const entry of logs) appendLogEntry(doc, logContainer, entry)
+      logContainer.scrollTop = logContainer.scrollHeight
+    }
+
+    renderTabs()
+    renderLogs()
+    doc.body.appendChild(tabBar)
+    doc.body.appendChild(logContainer)
+
+    // 실시간 동기화를 위해 등록
+    popoutWindows.current['__drawer__'] = popup
+
+    popup.addEventListener('beforeunload', () => {
+      drawerPopupRef.current = null
+      delete popoutWindows.current['__drawer__']
+      setDrawerPoppedOut(false)
+    })
+  }, [sessionId, processNames, processLogs])
 
   /** 특정 프로세스를 새 창으로 팝아웃 */
   const popoutProcess = useCallback((processName: string) => {
@@ -601,7 +771,11 @@ export default function PreviewPanel({ sessionId, isFocused, locale, onClose, pe
         </div>
 
         {url && (
-          <button className="preview-nav-btn" onClick={openExternal} title={t(locale, 'preview.openExternal')}>
+          <button
+            className={`preview-nav-btn${browserPoppedOut ? ' preview-nav-btn--active' : ''}`}
+            onClick={popoutBrowser}
+            title={t(locale, 'preview.openExternal')}
+          >
             <ExternalLink size={12} />
           </button>
         )}
@@ -649,9 +823,21 @@ export default function PreviewPanel({ sessionId, isFocused, locale, onClose, pe
         </button>
       </div>
 
-      {/* ── 브라우저 (항상 표시) ── */}
+      {/* ── 브라우저 ── */}
       <div className="preview-iframe-container">
-        {url ? (
+        {browserPoppedOut ? (
+          <div className="preview-poppedout-state">
+            <ExternalLink size={28} />
+            <p className="preview-poppedout-title">{t(locale, 'preview.openedInNewWindow')}</p>
+            <button
+              className="preview-poppedout-restore"
+              onClick={() => { browserPopupRef.current?.close(); setBrowserPoppedOut(false) }}
+            >
+              <Undo2 size={12} />
+              <span>{t(locale, 'preview.restoreHere')}</span>
+            </button>
+          </div>
+        ) : url ? (
           <div className={`preview-iframe-wrapper${viewportSize ? ' preview-iframe-wrapper--framed' : ''}`}>
             {viewportSize && (
               <div className="preview-viewport-label">
@@ -689,7 +875,7 @@ export default function PreviewPanel({ sessionId, isFocused, locale, onClose, pe
       </div>
 
       {/* ── 하단 로그 드로어 ── */}
-      {hasProcesses && drawerOpen && (
+      {hasProcesses && drawerOpen && !drawerPoppedOut && (
         <>
           <div className="preview-drawer-handle" onMouseDown={handleDrawerResize} />
 
@@ -733,7 +919,7 @@ export default function PreviewPanel({ sessionId, isFocused, locale, onClose, pe
                     </button>
                     <button
                       className="preview-drawer-action"
-                      onClick={() => processNames.forEach(name => popoutProcess(name))}
+                      onClick={popoutDrawer}
                       title={t(locale, 'preview.popoutLogs')}
                     >
                       <PanelTopOpen size={10} />
@@ -835,12 +1021,24 @@ export default function PreviewPanel({ sessionId, isFocused, locale, onClose, pe
       )}
 
       {/* 드로어 닫힌 상태 — 알림 바 */}
-      {hasProcesses && !drawerOpen && (
+      {hasProcesses && !drawerOpen && !drawerPoppedOut && (
         <button className="preview-drawer-collapsed" onClick={() => setDrawerOpen(true)}>
           <ChevronUp size={10} />
           <ScrollText size={10} />
           <span>{t(locale, 'preview.showLogs')}</span>
           <span className="preview-drawer-badge">{processNames.length}</span>
+        </button>
+      )}
+
+      {/* 드로어 팝아웃 상태 — 알림 바 */}
+      {hasProcesses && drawerPoppedOut && (
+        <button
+          className="preview-drawer-collapsed preview-drawer-collapsed--poppedout"
+          onClick={() => { drawerPopupRef.current?.close(); setDrawerPoppedOut(false) }}
+        >
+          <Undo2 size={10} />
+          <ScrollText size={10} />
+          <span>{t(locale, 'preview.openedInNewWindow')}</span>
         </button>
       )}
 
