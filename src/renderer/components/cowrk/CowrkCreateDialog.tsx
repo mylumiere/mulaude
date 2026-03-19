@@ -106,7 +106,7 @@ export default function CowrkCreateDialog({
   }, [name, persona, avatarBase64, locale, onCreate])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey && (e.target as HTMLElement).tagName !== 'TEXTAREA') {
+    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && (e.target as HTMLElement).tagName !== 'TEXTAREA') {
       e.preventDefault()
       handleCreate()
     }

@@ -87,7 +87,7 @@ export default function CowrkChatPanel({
   }, [input, isStreaming, onSend])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault()
       handleSend()
     }
@@ -197,7 +197,7 @@ export default function CowrkChatPanel({
               className="cowrk-panel-delete-input"
               value={deleteInput}
               onChange={e => setDeleteInput(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') handleDelete(); if (e.key === 'Escape') { setConfirmDelete(false); setDeleteInput('') } }}
+              onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) handleDelete(); if (e.key === 'Escape') { setConfirmDelete(false); setDeleteInput('') } }}
               placeholder={agentName}
               autoFocus
             />
@@ -234,6 +234,17 @@ export default function CowrkChatPanel({
             {msg.isStreaming && <span className="cowrk-msg-cursor">|</span>}
           </div>
         ))}
+        {/* Composing indicator: thinking 상태 + 마지막 메시지가 user (아직 스트림 미시작) */}
+        {isStreaming && messages.length > 0 && messages[messages.length - 1]?.role === 'user' && (
+          <div className="cowrk-msg cowrk-msg--assistant">
+            <div className="cowrk-msg-role">{agentName}</div>
+            <div className="cowrk-composing">
+              <span className="cowrk-composing-dot" />
+              <span className="cowrk-composing-dot" />
+              <span className="cowrk-composing-dot" />
+            </div>
+          </div>
+        )}
         <div ref={messagesEndRef} />
       </div>
 

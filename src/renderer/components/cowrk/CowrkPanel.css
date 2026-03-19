@@ -345,6 +345,28 @@
   50% { opacity: 0; }
 }
 
+/* Composing indicator (세 점 바운스) */
+
+.cowrk-composing {
+  display: flex;
+  gap: 4px;
+  padding: 4px 0;
+}
+.cowrk-composing-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.4);
+  animation: cowrk-bounce 1.4s ease-in-out infinite;
+}
+.cowrk-composing-dot:nth-child(2) { animation-delay: 0.2s; }
+.cowrk-composing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes cowrk-bounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-6px); opacity: 1; }
+}
+
 /* 입력 영역 */
 
 .cowrk-panel-input {

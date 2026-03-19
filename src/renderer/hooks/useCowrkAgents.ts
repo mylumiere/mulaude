@@ -204,6 +204,11 @@ export function useCowrkAgents(): UseCowrkAgentsReturn {
       }],
     }))
 
+    // 즉시 thinking 상태 전환 (스트림 시작 전 pending 표시)
+    setAgents(prev => prev.map(a =>
+      a.name === name ? { ...a, status: 'thinking' as const } : a
+    ))
+
     window.api.cowrkAsk(name, message, projectDir)
   }, [])
 
