@@ -67,15 +67,16 @@ Mulaude is a **"Claude Code control tower"** — monitor multiple projects at a 
 
 1. Download the latest `.dmg` from [Releases](https://github.com/mylumiere/mulaude/releases)
 2. Mount the DMG → Drag Mulaude to Applications
-3. On first launch, you may see "damaged and can't be opened" or "unidentified developer" warning:
+3. On first launch, macOS may show **"unidentified developer"** warning:
 
-   **Run this command in Terminal:**
+   **Method A** — Go to `System Settings` > `Privacy & Security` > Click **"Open Anyway"**
+
+   **Method B** — Run this command in Terminal:
    ```bash
-   xattr -cr /Applications/Mulaude.app
+   find /Applications/Mulaude.app -exec xattr -d com.apple.quarantine {} + 2>/dev/null
    ```
-   Or go to `System Settings` > `Privacy & Security` > `Open Anyway`
 
-   > The app is not code-signed, so macOS Gatekeeper blocks it. The command above removes the quarantine attribute to allow normal execution.
+   > The app is ad-hoc signed but not notarized (no Apple Developer ID), so macOS Gatekeeper blocks the first launch. Either method above allows normal execution thereafter.
 
 ### Option 2: Build from Source (Developers)
 

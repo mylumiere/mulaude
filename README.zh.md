@@ -67,15 +67,16 @@ Mulaude 是 **"Claude Code 控制塔"** — 在一个屏幕上监控多个项目
 
 1. 从 [Releases](https://github.com/mylumiere/mulaude/releases) 下载最新的 `.dmg` 文件
 2. 挂载 DMG → 将 Mulaude 拖入 Applications
-3. 首次启动时可能出现"已损坏，无法打开"或"未验证的开发者"警告：
+3. 首次启动时可能出现**"未验证的开发者"**警告：
 
-   **在终端中运行以下命令：**
+   **方法A** — 前往 `系统设置` > `隐私与安全` > 点击**「仍然打开」**
+
+   **方法B** — 在终端中运行以下命令：
    ```bash
-   xattr -cr /Applications/Mulaude.app
+   find /Applications/Mulaude.app -exec xattr -d com.apple.quarantine {} + 2>/dev/null
    ```
-   或前往 `系统设置` > `隐私与安全` > `仍然打开`
 
-   > 由于应用未进行代码签名，macOS Gatekeeper 会阻止运行。上述命令可移除隔离属性以正常启动。
+   > 应用已进行 Ad-hoc 签名但未经公证（Notarization），因此 macOS Gatekeeper 会阻止首次启动。使用以上任一方法后即可正常运行。
 
 ### 方法2: 源码构建（开发者）
 
