@@ -26,6 +26,14 @@ import { join } from 'path'
 import { createConnection } from 'net'
 import { BrowserWindow } from 'electron'
 import { PREVIEW_SIGTERM_GRACE } from '../shared/constants'
+import { getShellEnv } from './env-resolver'
+
+/** 로그인 셸 환경변수 캐시 (Finder 실행 시 PATH 누락 방지) */
+let shellEnvCache: Record<string, string> | null = null
+function getCachedShellEnv(): Record<string, string> {
+  if (!shellEnvCache) shellEnvCache = getShellEnv()
+  return shellEnvCache
+}
 
 /* ─── Types ─── */
 
@@ -207,7 +215,7 @@ export async function launchPreview(sessionId: string, workingDir: string): Prom
         cwd,
         shell: true,
         stdio: ['ignore', 'pipe', 'pipe'],
-        env: { ...process.env, FORCE_COLOR: '0' }
+        env: { ...getCachedShellEnv(), FORCE_COLOR: '0' }
       })
 
       // stdout/stderr → 렌더러로 전송
