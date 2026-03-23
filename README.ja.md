@@ -92,7 +92,7 @@ npm run dev
 | 要件 | インストール方法 | 必須 |
 |------|---------------|------|
 | **macOS** | — | ✅ |
-| **Node.js** 18+ | [nodejs.org](https://nodejs.org) | ✅（ソースビルド時） |
+| **Node.js** 22+ | [nodejs.org](https://nodejs.org) | ✅（ソースビルド時） |
 | **tmux** | `brew install tmux` | ✅ |
 | **Claude Code CLI** | `npm i -g @anthropic-ai/claude-code` | ✅ |
 
