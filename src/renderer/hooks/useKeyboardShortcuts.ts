@@ -43,6 +43,8 @@ interface UseKeyboardShortcutsParams {
   getFocusedSessionId?: () => string | null
   /** 프리뷰 토글 */
   togglePreview?: () => void
+  /** Harness 대시보드 토글 */
+  toggleHarness?: () => void
   /** 설정 열기 */
   openSettings?: () => void
   /** 단축키 모달 열기 */
@@ -66,6 +68,7 @@ export function useKeyboardShortcuts({
   reopenClosedPane,
   toggleZoom,
   togglePreview,
+  toggleHarness,
   focusDirection,
   isGridMode,
   getFocusedSessionId,
@@ -125,6 +128,13 @@ export function useKeyboardShortcuts({
       if (e.key === 'p' && e.shiftKey && !e.altKey && !e.ctrlKey) {
         e.preventDefault()
         togglePreview?.()
+        return
+      }
+
+      // ── Harness 대시보드 토글 (Cmd+Shift+H) ──
+      if (e.key === 'h' && e.shiftKey && !e.altKey && !e.ctrlKey) {
+        e.preventDefault()
+        toggleHarness?.()
         return
       }
 
@@ -220,5 +230,5 @@ export function useKeyboardShortcuts({
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [projects, activeSessionId, sessions, createProject, selectSession, focusedPane, setFocusedPane, getChildPaneIndices, sessionsWithPanes, closePane, reopenClosedPane, toggleZoom, togglePreview, focusDirection, isGridMode, getFocusedSessionId, openSettings, openShortcuts, tutorialPhase, tutorialStep])
+  }, [projects, activeSessionId, sessions, createProject, selectSession, focusedPane, setFocusedPane, getChildPaneIndices, sessionsWithPanes, closePane, reopenClosedPane, toggleZoom, togglePreview, toggleHarness, focusDirection, isGridMode, getFocusedSessionId, openSettings, openShortcuts, tutorialPhase, tutorialStep])
 }

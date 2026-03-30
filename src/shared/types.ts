@@ -195,6 +195,87 @@ export interface ChatInputRequestBlock {
   responseLabel?: string
 }
 
+/* ═══════ Harness Engineering 타입 ═══════ */
+
+/** Harness 타임라인 이벤트 유형 */
+export type HarnessEventType = 'tool_use' | 'tool_done' | 'agent_spawn' | 'turn_start' | 'turn_end' | 'error'
+
+/** Harness 타임라인 엔트리 */
+export interface HarnessTimelineEntry {
+  timestamp: number
+  eventType: HarnessEventType
+  toolName?: string
+  /** 파일 경로, 명령어 스니펫 등 */
+  detail?: string
+}
+
+/** 세션별 Harness 메트릭 */
+export interface HarnessMetrics {
+  /** 도구별 사용 횟수 (Read: 12, Edit: 5, Bash: 8) */
+  toolCounts: Record<string, number>
+  /** Edit/Write로 수정된 파일 경로 (고유) */
+  filesModified: string[]
+  /** Read로 읽은 파일 경로 (고유) */
+  filesRead: string[]
+  /** 최근 N개 이벤트 타임라인 */
+  timeline: HarnessTimelineEntry[]
+  /** 대화 턴 수 */
+  turnCount: number
+  /** Task 도구 호출 횟수 */
+  agentSpawnCount: number
+  /** 마지막 활동 시각 (epoch ms) */
+  lastActivity: number
+}
+
+/** Context Budget 분해 정보 */
+export interface ContextBudget {
+  usedPct: number
+  usedTokens: number
+  totalTokens: number
+  breakdown: {
+    filesRead: number
+    turnsConsumed: number
+    agentsActive: number
+  }
+}
+
+/** 검증 결과 */
+export interface VerificationResult {
+  type: 'typecheck' | 'lint' | 'test'
+  status: 'pass' | 'fail' | 'error' | 'running' | 'skipped'
+  output: string
+  exitCode: number | null
+  timestamp: number
+  durationMs: number
+}
+
+/** 검증 설정 */
+export interface VerificationConfig {
+  autoVerify: boolean
+  verifiers: Record<string, { enabled: boolean; command: string }>
+  debounceMs: number
+  timeoutMs: number
+}
+
+/** Guard Rail 규칙 */
+export interface GuardRail {
+  id: string
+  type: 'blocked_command' | 'protected_file' | 'approval_gate'
+  pattern: string
+  action: 'alert' | 'block'
+  enabled: boolean
+}
+
+/** Guard Rail 위반 */
+export interface GuardRailViolation {
+  ruleId: string
+  sessionId: string
+  toolName: string
+  detail: string
+  timestamp: number
+  action: 'alerted' | 'blocked'
+}
+
 /* ═══════ Cowrk (영속 AI 팀원) 타입 ═══════ */
 
 /** Cowrk 에이전트 상태 (렌더러 표시용) */
@@ -208,6 +289,47 @@ export interface CowrkAgentState {
   status: 'idle' | 'thinking' | 'error'
   /** 프로필 이미지 절대 경로 (렌더러에서 file:// 로 로드) */
   avatarPath?: string
+}
+
+/* ═══════ Workflow Assist 타입 ═══════ */
+
+/** 워크플로우 힌트(넛지) 유형 */
+export type WorkflowHintType =
+  | 'verificationFailed'   // verification 실패 + idle
+  | 'noPlan'               // 플랜 없이 큰 작업
+  | 'reviewSuggestion'     // 변경 파일 많음 + idle
+  | 'repeatedErrors'       // error 3회+
+  | 'contextHigh'          // context 80%+
+
+/** 워크플로우 액션 유형 */
+export type WorkflowActionType =
+  | 'feedbackToSession'    // verification output → 세션 paste
+  | 'askCowrkReview'       // Cowrk 에이전트에게 리뷰 요청
+  | 'openPlan'             // Plan viewer 열기
+  | 'suggestCompact'       // /compact 명령 입력
+  | 'createNewSession'     // 새 세션 생성
+  | 'dismiss'              // 넛지 닫기
+
+/** 워크플로우 힌트 (넛지) */
+export interface WorkflowHint {
+  /** 고유 ID: sessionId:type */
+  id: string
+  type: WorkflowHintType
+  sessionId: string
+  timestamp: number
+  /** i18n 키 */
+  messageKey: string
+  primaryAction: WorkflowActionType
+  secondaryAction?: WorkflowActionType
+  payload?: {
+    verificationOutput?: string
+    verificationType?: string
+    filesModified?: string[]
+    contextPercent?: number
+    errorCount?: number
+  }
+  /** 1 = 최고 우선순위 */
+  priority: number
 }
 
 /** Cowrk 채팅 메시지 */

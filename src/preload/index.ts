@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
-import type { SessionInfo, HookEvent, UsageData, TmuxPaneInfo, AgentInfo, AppMode, NativeInputRequest, CowrkAgentState } from '../shared/types'
+import type { SessionInfo, HookEvent, UsageData, TmuxPaneInfo, AgentInfo, AppMode, NativeInputRequest, CowrkAgentState, HarnessMetrics, ContextBudget, VerificationResult, VerificationConfig, GuardRail, GuardRailViolation } from '../shared/types'
 
 /**
  * Preload 스크립트 - contextBridge를 통해 렌더러에 안전한 API를 노출합니다.
@@ -416,6 +416,86 @@ const api = {
   /** Cowrk 에이전트 아바타 삭제 */
   cowrkRemoveAvatar: (name: string): Promise<void> =>
     ipcRenderer.invoke('cowrk:remove-avatar', name),
+
+  // ─── Harness Engineering APIs ───
+
+  /** Harness 메트릭 읽기 (전체 또는 특정 세션) */
+  readHarnessMetrics: (sessionId?: string): Promise<Record<string, HarnessMetrics> | HarnessMetrics | null> =>
+    ipcRenderer.invoke('harness:metrics-read', sessionId),
+
+  /** Context Budget 배치 업데이트 수신 (3초 간격) */
+  onContextBudgetBatch: (cb: (batch: Record<string, ContextBudget>) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, batch: Record<string, ContextBudget>): void => {
+      cb(batch)
+    }
+    ipcRenderer.on('statusline:context-budget-batch', handler)
+    return () => ipcRenderer.removeListener('statusline:context-budget-batch', handler)
+  },
+
+  /** 수동 검증 실행 */
+  runVerification: (sessionId: string, type: string): void =>
+    ipcRenderer.send('harness:run-verification', sessionId, type),
+
+  /** 검증 결과 수신 */
+  onVerificationResult: (cb: (sessionId: string, result: VerificationResult) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, sessionId: string, result: VerificationResult): void => {
+      cb(sessionId, result)
+    }
+    ipcRenderer.on('harness:verification-result', handler)
+    return () => ipcRenderer.removeListener('harness:verification-result', handler)
+  },
+
+  /** 검증 설정 읽기 */
+  readVerificationConfig: (): Promise<VerificationConfig> =>
+    ipcRenderer.invoke('harness:verification-config'),
+
+  /** 검증 설정 업데이트 */
+  updateVerificationConfig: (config: Partial<VerificationConfig>): void =>
+    ipcRenderer.send('harness:verification-config-update', config),
+
+  /** Harness 메트릭 배치 업데이트 수신 (3초 간격, 변경된 세션만) */
+  onHarnessMetrics: (cb: (batch: Record<string, HarnessMetrics>) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, batch: Record<string, HarnessMetrics>): void => {
+      cb(batch)
+    }
+    ipcRenderer.on('harness:metrics-batch', handler)
+    return () => ipcRenderer.removeListener('harness:metrics-batch', handler)
+  },
+
+  // ─── Guard Rails APIs ───
+
+  /** Guard Rail 규칙 목록 읽기 */
+  getGuardrailRules: (): Promise<GuardRail[]> =>
+    ipcRenderer.invoke('harness:guardrail-rules'),
+
+  /** Guard Rail 규칙 추가 */
+  addGuardrailRule: (rule: GuardRail): Promise<void> =>
+    ipcRenderer.invoke('harness:guardrail-add', rule),
+
+  /** Guard Rail 규칙 업데이트 */
+  updateGuardrailRule: (id: string, updates: Partial<GuardRail>): void =>
+    ipcRenderer.send('harness:guardrail-update', id, updates),
+
+  /** Guard Rail 규칙 삭제 */
+  deleteGuardrailRule: (id: string): void =>
+    ipcRenderer.send('harness:guardrail-delete', id),
+
+  /** Guard Rail 위반 이벤트 수신 (실시간) */
+  onGuardrailViolation: (cb: (sessionId: string, violation: GuardRailViolation) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, sessionId: string, violation: GuardRailViolation): void => {
+      cb(sessionId, violation)
+    }
+    ipcRenderer.on('harness:guardrail-violation', handler)
+    return () => ipcRenderer.removeListener('harness:guardrail-violation', handler)
+  },
+
+  /** 세션별 Guard Rail 위반 목록 읽기 */
+  getGuardrailViolations: (sessionId: string): Promise<GuardRailViolation[]> =>
+    ipcRenderer.invoke('harness:guardrail-violations', sessionId),
+
+  /** 전체 Guard Rail 위반 목록 읽기 */
+  getAllGuardrailViolations: (): Promise<Record<string, GuardRailViolation[]>> =>
+    ipcRenderer.invoke('harness:guardrail-all-violations'),
 }
 
 /* ═══════ 자식 pane 데이터 디스패처 (O(1) 키 기반) ═══════ */

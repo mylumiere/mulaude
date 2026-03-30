@@ -12,6 +12,9 @@ import { tmpdir } from 'os'
 import type { SessionManager } from './session-manager'
 import type { NativeChatManager } from './native-chat-manager'
 import type { CowrkManager } from './cowrk-manager'
+import type { HarnessTracker } from './harness-tracker'
+import type { HarnessVerifier } from './harness-verifier'
+import type { HarnessGuardrails } from './harness-guardrails'
 import { showOrphanDialog } from './close-handler'
 import { watchPlanFile, unwatchPlanFile, listPlanFiles, resolvePlanPath } from './plan-watcher'
 import { getCachedUsageData, setHideHud, setKeychainAccess } from './statusline-manager'
@@ -575,6 +578,74 @@ export function registerCowrkIpcHandlers(cowrkManager: CowrkManager): void {
       console.error('[IPC] cowrk:remove-avatar failed:', err)
       throw err
     }
+  })
+}
+
+/**
+ * Harness Tracker IPC 핸들러를 등록합니다.
+ *
+ * 세션별 메트릭 읽기 API를 제공합니다.
+ * 배치 전송은 HarnessTracker 내부 타이머가 직접 처리합니다.
+ */
+export function registerHarnessIpcHandlers(harnessTracker: HarnessTracker, harnessVerifier: HarnessVerifier, harnessGuardrails: HarnessGuardrails): void {
+  // 전체 또는 특정 세션의 메트릭 읽기
+  ipcMain.handle('harness:metrics-read', async (_event, sessionId?: string) => {
+    try {
+      if (sessionId) {
+        return harnessTracker.getMetrics(sessionId)
+      }
+      return harnessTracker.getAllMetrics()
+    } catch (err) {
+      console.error('[IPC] harness:metrics-read failed:', err)
+      return null
+    }
+  })
+
+  // 수동 검증 실행
+  ipcMain.on('harness:run-verification', (_event, sessionId: string, type: string) => {
+    harnessVerifier.runManualVerification(sessionId, type)
+  })
+
+  // 검증 설정 읽기
+  ipcMain.handle('harness:verification-config', async () => {
+    return harnessVerifier.getConfig()
+  })
+
+  // 검증 설정 업데이트
+  ipcMain.on('harness:verification-config-update', (_event, config: Partial<import('../shared/types').VerificationConfig>) => {
+    harnessVerifier.updateConfig(config)
+  })
+
+  // ─── Guard Rails IPC ───
+
+  // 규칙 목록 읽기
+  ipcMain.handle('harness:guardrail-rules', async () => {
+    return harnessGuardrails.getRules()
+  })
+
+  // 규칙 추가
+  ipcMain.handle('harness:guardrail-add', async (_event, rule: import('../shared/types').GuardRail) => {
+    harnessGuardrails.addRule(rule)
+  })
+
+  // 규칙 업데이트
+  ipcMain.on('harness:guardrail-update', (_event, id: string, updates: Partial<import('../shared/types').GuardRail>) => {
+    harnessGuardrails.updateRule(id, updates)
+  })
+
+  // 규칙 삭제
+  ipcMain.on('harness:guardrail-delete', (_event, id: string) => {
+    harnessGuardrails.deleteRule(id)
+  })
+
+  // 세션별 위반 목록 읽기
+  ipcMain.handle('harness:guardrail-violations', async (_event, sessionId: string) => {
+    return harnessGuardrails.getViolations(sessionId)
+  })
+
+  // 전체 위반 목록 읽기
+  ipcMain.handle('harness:guardrail-all-violations', async () => {
+    return harnessGuardrails.getAllViolations()
   })
 }
 

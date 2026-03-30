@@ -31,7 +31,7 @@ import { exec, execFile } from 'child_process'
 import { promisify } from 'util'
 import { logger } from './logger'
 import { STATUSLINE_CTX_POLL_INTERVAL, USAGE_API_POLL_INTERVAL } from '../shared/constants'
-import type { UsageData } from '../shared/types'
+import type { UsageData, ContextBudget } from '../shared/types'
 
 const MULAUDE_DIR = join(homedir(), '.mulaude')
 const CTX_DIR = join(MULAUDE_DIR, 'ctx')
@@ -181,6 +181,7 @@ function pollContextData(mainWindow: BrowserWindow): void {
     if (files.length === 0) return
 
     const batch: Record<string, number> = {}
+    const budgetBatch: Record<string, ContextBudget> = {}
     for (const file of files) {
       try {
         const raw = readFileSync(join(CTX_DIR, file), 'utf-8')
@@ -191,6 +192,9 @@ function pollContextData(mainWindow: BrowserWindow): void {
         const ctx = data.context_window
         if (ctx) {
           let pct: number | null = null
+          let usedTokens = 0
+          let totalTokens = 0
+
           if (typeof ctx.used_percentage === 'number') {
             pct = ctx.used_percentage
           } else if (typeof ctx.percentage === 'number') {
@@ -200,7 +204,22 @@ function pollContextData(mainWindow: BrowserWindow): void {
           } else if (typeof ctx.used === 'number' && typeof ctx.total === 'number' && ctx.total > 0) {
             pct = Math.round((ctx.used / ctx.total) * 100)
           }
-          if (pct !== null) batch[sessionId] = pct
+
+          // 토큰 수 추출 (다양한 필드명 대응)
+          if (typeof ctx.used_tokens === 'number') usedTokens = ctx.used_tokens
+          else if (typeof ctx.used === 'number') usedTokens = ctx.used
+          if (typeof ctx.total_tokens === 'number') totalTokens = ctx.total_tokens
+          else if (typeof ctx.total === 'number') totalTokens = ctx.total
+
+          if (pct !== null) {
+            batch[sessionId] = pct
+            budgetBatch[sessionId] = {
+              usedPct: pct,
+              usedTokens,
+              totalTokens,
+              breakdown: { filesRead: 0, turnsConsumed: 0, agentsActive: 0 }
+            }
+          }
         }
       } catch {
         // 개별 파일 파싱 실패 무시
@@ -209,6 +228,7 @@ function pollContextData(mainWindow: BrowserWindow): void {
 
     if (Object.keys(batch).length > 0 && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('statusline:context-batch', batch)
+      mainWindow.webContents.send('statusline:context-budget-batch', budgetBatch)
     }
   } catch {}
 }

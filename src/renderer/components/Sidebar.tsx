@@ -11,7 +11,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { Settings, Plus, BookOpen, Route, Keyboard, MessageSquareWarning, X, Eye, Bot } from 'lucide-react'
-import type { ProjectGroup, SessionStatus, UsageData, AgentInfo, CowrkAgentState } from '../../shared/types'
+import type { ProjectGroup, SessionStatus, UsageData, AgentInfo, CowrkAgentState, ContextBudget, WorkflowHint, WorkflowActionType } from '../../shared/types'
 import { type Locale, t } from '../i18n'
 import ProjectHeader from './sidebar/ProjectHeader'
 import SessionRow from './sidebar/SessionRow'
@@ -56,12 +56,20 @@ interface SidebarProps {
   /** 외부에서 단축키 모달 열기 (⌘/) */
   shortcutsOpen?: boolean
   onShortcutsClose?: () => void
+  /** Harness 도구 사용 요약 (세션별) */
+  toolSummaries?: Record<string, string>
+  /** Context Budget 상세 (세션별) */
+  contextBudgetMap?: Record<string, ContextBudget>
   /** Cowrk 에이전트 목록 */
   cowrkAgents?: CowrkAgentState[]
   cowrkActiveAgent?: string | null
   cowrkChatMessages?: Record<string, import('../../shared/types').CowrkChatMessage[]>
   onSelectCowrkAgent?: (name: string) => void
   onCreateCowrkAgent?: () => void
+  /** 세션별 최고 우선순위 워크플로우 힌트 */
+  workflowTopHints?: Record<string, WorkflowHint | null>
+  /** 워크플로우 액션 실행 콜백 */
+  onWorkflowAction?: (hint: WorkflowHint, action: WorkflowActionType) => void
 }
 
 export default function Sidebar({
@@ -92,11 +100,15 @@ export default function Sidebar({
   onRestartTutorial,
   shortcutsOpen,
   onShortcutsClose,
+  toolSummaries,
+  contextBudgetMap,
   cowrkAgents,
   cowrkActiveAgent,
   cowrkChatMessages,
   onSelectCowrkAgent,
-  onCreateCowrkAgent
+  onCreateCowrkAgent,
+  workflowTopHints,
+  onWorkflowAction
 }: SidebarProps): JSX.Element {
   const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(new Set())
   const [collapsedAgents, setCollapsedAgents] = useState<Set<string>>(new Set())
@@ -241,11 +253,15 @@ export default function Sidebar({
                                 contextPercent={contextPercents[session.id]}
                                 needsAttention={attentionSessions.has(session.id)}
                                 claudeSessionId={claudeSessionIds?.[session.id]}
+                                toolSummary={toolSummaries?.[session.id]}
+                                contextBudget={contextBudgetMap?.[session.id]}
                                 shortcut={idx < 9 ? `⌘${idx + 1}` : ''}
                                 locale={locale}
                                 onSelect={() => onSelectSession(session.id)}
                                 onDestroy={() => onDestroySession(session.id)}
                                 onUpdateName={(name) => onUpdateSessionName(session.id, name)}
+                                workflowHint={workflowTopHints?.[session.id]}
+                                onWorkflowAction={onWorkflowAction}
                                 previewAction={onTogglePreview ? (
                                   <button
                                     className={`sidebar-preview-btn${previewSessions?.has(session.id) ? ' sidebar-preview-btn--active' : ''}`}

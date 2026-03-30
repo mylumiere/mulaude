@@ -130,6 +130,32 @@ export const PREVIEW_SIGTERM_GRACE = 1000
 /** 미지원 프로젝트 토스트 알림 표시 시간 (ms) */
 export const PREVIEW_ALERT_TIMEOUT = 3000
 
+/* ═══════ Harness ═══════ */
+
+/** Harness 메트릭 배치 전송 간격 (ms) */
+export const HARNESS_METRICS_POLL_INTERVAL = 3000
+/** Harness 타임라인 최대 엔트리 수 */
+export const HARNESS_MAX_TIMELINE = 100
+/** Verification 디바운스 (ms) — Edit/Write 후 대기 */
+export const HARNESS_VERIFY_DEBOUNCE = 2000
+/** Verification 타임아웃 (ms) */
+export const HARNESS_VERIFY_TIMEOUT = 30000
+
+/* ═══════ Workflow Assist ═══════ */
+
+/** 넛지 평가 디바운스 (ms) */
+export const WORKFLOW_EVALUATE_DEBOUNCE = 3000
+/** reviewSuggestion 트리거: 최소 수정 파일 수 */
+export const WORKFLOW_REVIEW_FILE_THRESHOLD = 10
+/** noPlan 트리거: 최소 턴 수 */
+export const WORKFLOW_NOPLAN_TURN_THRESHOLD = 3
+/** noPlan 트리거: 최소 수정 파일 수 */
+export const WORKFLOW_NOPLAN_FILE_THRESHOLD = 5
+/** contextHigh 트리거: context % 임계값 */
+export const WORKFLOW_CONTEXT_HIGH_THRESHOLD = 80
+/** repeatedErrors 트리거: 최소 연속 에러 수 */
+export const WORKFLOW_ERROR_COUNT_THRESHOLD = 3
+
 /* ═══════ Plan ═══════ */
 
 /** 플랜 트리거 쿨다운 (ms) — 동일 세션 내 중복 감지 방지 */

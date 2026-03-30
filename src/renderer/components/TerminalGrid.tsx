@@ -14,14 +14,15 @@
  */
 
 import { useCallback, useMemo, useState } from 'react'
-import { X, Maximize2, Minimize2, Eye, EyeOff, FileText } from 'lucide-react'
+import { X, Maximize2, Minimize2, Eye, EyeOff, FileText, Activity } from 'lucide-react'
 import TerminalView from './TerminalView'
 import type { PermissionMode } from './TerminalView'
 import AgentPanel from './AgentPanel'
 import PlanPanel from './PlanPanel'
 import type { PlanInfo } from '../hooks/usePlanManager'
 import PreviewPanel from './PreviewPanel'
-import type { SessionInfo, AgentInfo, SessionStatus } from '../../shared/types'
+import HarnessPanel from './HarnessPanel'
+import type { SessionInfo, AgentInfo, SessionStatus, HarnessMetrics, GuardRailViolation, WorkflowHint, WorkflowActionType } from '../../shared/types'
 import type {
   PaneTreeState,
   PaneNode,
@@ -97,6 +98,24 @@ interface TerminalGridProps {
   /** 퍼미션 모드 순환 콜백 */
   onCycleMode?: (sessionId: string) => void
 
+  // Harness 관련
+  harnessSessions?: Set<string>
+  harnessRatios?: Record<string, number>
+  harnessMetrics?: Record<string, HarnessMetrics>
+  teamAgentsForHarness?: Record<string, AgentInfo[]>
+  hookAgentsForHarness?: Record<string, AgentInfo[]>
+  onToggleHarness?: (sessionId: string) => void
+  onCloseHarness?: (sessionId: string) => void
+  onHarnessResize?: (sessionId: string) => (e: React.MouseEvent) => void
+  /** Guard Rail 위반 (세션별) */
+  guardrailViolations?: Record<string, GuardRailViolation[]>
+
+  // Workflow Assist 관련
+  /** 세션별 워크플로우 힌트 */
+  workflowHints?: Record<string, WorkflowHint[]>
+  /** 워크플로우 액션 실행 콜백 */
+  onWorkflowAction?: (hint: WorkflowHint, action: WorkflowActionType) => void
+
   // Plan 관련
   planSessions?: Set<string>
   planInfos?: Record<string, PlanInfo>
@@ -150,6 +169,17 @@ export default function TerminalGrid({
   processOrders,
   permissionModes,
   onCycleMode,
+  harnessSessions,
+  harnessRatios,
+  harnessMetrics,
+  teamAgentsForHarness,
+  hookAgentsForHarness,
+  onToggleHarness,
+  onCloseHarness,
+  onHarnessResize,
+  guardrailViolations,
+  workflowHints,
+  onWorkflowAction,
   planSessions,
   planInfos,
   planRatios,
@@ -317,6 +347,13 @@ export default function TerminalGrid({
               </button>
             )}
             <button
+              className={`terminal-grid-pane-preview-toggle${harnessSessions?.has(leaf.sessionId) ? ' terminal-grid-pane-preview-toggle--active' : ''}`}
+              onClick={(e) => { e.stopPropagation(); onToggleHarness?.(leaf.sessionId) }}
+              title={t(locale, 'harness.title')}
+            >
+              <Activity size={10} />
+            </button>
+            <button
               className={`terminal-grid-pane-preview-toggle${planSessions?.has(leaf.sessionId) ? ' terminal-grid-pane-preview-toggle--active' : ''}`}
               onClick={(e) => { e.stopPropagation(); onTogglePlan?.(leaf.sessionId) }}
               title={t(locale, 'plan.title')}
@@ -436,10 +473,29 @@ export default function TerminalGrid({
               )
             }
 
+            const hasHarness = harnessSessions?.has(leaf.sessionId)
+            if (hasHarness) {
+              sidePanels.push(
+                <HarnessPanel
+                  key="harness"
+                  sessionId={leaf.sessionId}
+                  metrics={harnessMetrics?.[leaf.sessionId] ?? null}
+                  locale={locale}
+                  onClose={() => onCloseHarness?.(leaf.sessionId)}
+                  teamAgents={teamAgentsForHarness?.[leaf.sessionId]}
+                  hookAgents={hookAgentsForHarness?.[leaf.sessionId]}
+                  violations={guardrailViolations?.[leaf.sessionId]}
+                  workflowHints={workflowHints?.[leaf.sessionId]}
+                  onWorkflowAction={onWorkflowAction}
+                />
+              )
+            }
+
             if (sidePanels.length === 0) return terminalContent
 
             // 사이드 패널이 있으면 분할 렌더링
-            const sideRatio = hasPreview ? previewRatio : planRatio
+            const harnessRatio = harnessRatios?.[leaf.sessionId] ?? PREVIEW_DEFAULT_RATIO
+            const sideRatio = hasPreview ? previewRatio : hasPlan ? planRatio : harnessRatio
 
             return (
               <div className="terminal-split">
@@ -448,7 +504,7 @@ export default function TerminalGrid({
                 </div>
                 <div
                   className="terminal-split-handle"
-                  onMouseDown={hasPreview ? onPreviewResize(leaf.sessionId) : onPlanResize?.(leaf.sessionId)}
+                  onMouseDown={hasPreview ? onPreviewResize(leaf.sessionId) : hasPlan ? onPlanResize?.(leaf.sessionId) : onHarnessResize?.(leaf.sessionId)}
                 />
                 <div className="terminal-split-preview" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                   {sidePanels}
