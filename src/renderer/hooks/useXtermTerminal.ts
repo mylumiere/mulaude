@@ -86,6 +86,8 @@ export function useXtermTerminal({
   const fitAddonRef = useRef<FitAddon | null>(null)
   const recapturingRef = useRef(false)
   const pendingDataRef = useRef<string[]>([])
+  /** recapture 세대 카운터 — 빠른 줌 토글 시 이전 recapture 무효화 */
+  const recaptureGenRef = useRef(0)
 
   // 터미널 초기화
   useEffect(() => {
@@ -145,7 +147,8 @@ export function useXtermTerminal({
       // Cmd 조합은 앱 단축키 → window로 전달 (Cmd+Shift+Enter = 줌 토글 등)
       if (event.metaKey) {
         // Cmd+V: 클립보드 이미지 붙여넣기 (xterm 포커스 상태에서만 호출됨)
-        if (event.code === 'KeyV' && event.type === 'keydown') {
+        // Cmd+Shift+V(뷰어 토글)에서는 클립보드 접근 안 함
+        if (event.code === 'KeyV' && event.type === 'keydown' && !event.shiftKey) {
           window.api.saveClipboardImage().then((filePath) => {
             if (filePath) onData(filePath)
           }).catch(() => {})
@@ -244,14 +247,19 @@ export function useXtermTerminal({
         if (newCols !== prevCols && onRecapture) {
           // cols 변경: tmux 스크롤백을 재캡처하여 xterm 버퍼 교체
           // recapture 중 PTY 데이터는 pendingDataRef에 버퍼링 → 완료 후 재생
+          // 세대 카운터: 빠른 줌 토글 시 이전 recapture의 콜백을 무효화하여 경쟁 조건 방지
+          recaptureGenRef.current++
+          const gen = recaptureGenRef.current
           recapturingRef.current = true
           pendingDataRef.current = []
           const term = xtermRef.current
 
           onRecapture(newCols, newRows).then((screen) => {
+            if (gen !== recaptureGenRef.current) return // stale — 새 recapture 진행 중
             if (screen && term) {
               term.reset()
               term.write(screen, () => {
+                if (gen !== recaptureGenRef.current) return // stale
                 // 캡처 내용이 완전히 파싱된 후 버퍼링된 PTY 데이터 재생
                 const pending = pendingDataRef.current
                 pendingDataRef.current = []
@@ -262,6 +270,7 @@ export function useXtermTerminal({
                 term.refresh(0, term.rows - 1)
               })
             } else {
+              if (gen !== recaptureGenRef.current) return // stale
               // 캡처 실패: 버퍼링된 PTY 데이터 재생 후 xterm reflow 유지
               const pending = pendingDataRef.current
               pendingDataRef.current = []
@@ -274,6 +283,7 @@ export function useXtermTerminal({
               }
             }
           }).catch(() => {
+            if (gen !== recaptureGenRef.current) return // stale
             const pending = pendingDataRef.current
             pendingDataRef.current = []
             recapturingRef.current = false
