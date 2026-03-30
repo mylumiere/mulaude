@@ -25,14 +25,10 @@ import { usePlanTrigger } from './hooks/usePlanTrigger'
 import { usePreviewManager } from './hooks/usePreviewManager'
 import { usePreviewTrigger } from './hooks/usePreviewTrigger'
 import { useCowrkAgents } from './hooks/useCowrkAgents'
-import { useHarnessMetrics } from './hooks/useHarnessMetrics'
-import { useHarnessPanel } from './hooks/useHarnessPanel'
-import { useGuardrails } from './hooks/useGuardrails'
-import { useWorkflowAssist } from './hooks/useWorkflowAssist'
 import CowrkChatPanel from './components/cowrk/CowrkChatPanel'
 import CowrkCreateDialog from './components/cowrk/CowrkCreateDialog'
 import type { PermissionMode } from './components/TerminalView'
-import type { AppMode, SessionInfo } from '../shared/types'
+import type { SessionInfo } from '../shared/types'
 
 const PERMISSION_CYCLE: PermissionMode[] = ['default', 'acceptEdits', 'plan']
 
@@ -45,8 +41,18 @@ export default function App(): JSX.Element {
   const { sessionStatuses, contextPercents, teamAgents, hookAgents, claudeSessionIds, initSession, cleanupSession } =
     useSessionStatus({ locale: settings.locale, updateSessionSubtitleRef })
 
-  // Plan 관리
-  const planManager = usePlanManager()
+  // Plan 관리 (usePlanTrigger → notifyPlanClose → usePlanManager)
+  const openPlanRef = useRef<(sessionId: string, filePath: string) => void>(() => {})
+  const planSessionsRef = useRef<Set<string>>(new Set())
+  const { notifyClose: notifyPlanClose } = usePlanTrigger({
+    openPlan: (...args) => openPlanRef.current(...args),
+    planSessionsRef
+  })
+  const planManager = usePlanManager({ notifyPlanClose })
+
+  // ref 동기화 (순환 의존 해소)
+  openPlanRef.current = planManager.openPlan
+  planSessionsRef.current = planManager.planSessions
 
   // 터미널 출력에서 트리거 키워드 감지 → Preview 자동 열기
   // (usePreviewManager보다 먼저 선언 — notifyClose를 전달하기 위한 중간 ref)
@@ -80,12 +86,6 @@ export default function App(): JSX.Element {
   // ref 연결 (초기 렌더 완료 후 실제 함수 참조)
   updateSessionSubtitleRef.current = sessionManager.updateSessionSubtitle
   sessionsRef.current = sessionManager.sessions
-
-  // 터미널 출력에서 플랜 파일 경로 감지 → Plan 자동 열기
-  usePlanTrigger({
-    openPlan: planManager.openPlan,
-    planSessionsRef: planManager.planSessionsRef
-  })
 
   // Plan 토글: 열려있으면 닫기, 닫혀있으면 최근 플랜 파일 열기 / 없으면 파일 선택
   const handleTogglePlan = useCallback(async (sessionId: string) => {
@@ -165,66 +165,8 @@ export default function App(): JSX.Element {
   const tutorial = useTutorial(sessionManager.sessions.length)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
 
-  // Harness 메트릭
-  const { harnessMetrics, getToolSummary, contextBudgets } = useHarnessMetrics()
-
-  // 세션별 도구 요약 (Sidebar에 전달)
-  const toolSummaries = useMemo(() => {
-    const result: Record<string, string> = {}
-    for (const id of Object.keys(harnessMetrics)) {
-      const summary = getToolSummary(id)
-      if (summary) result[id] = summary
-    }
-    return result
-  }, [harnessMetrics, getToolSummary])
-
-  // Context Budget: claudeSessionId → mulaudeSessionId 매핑 + breakdown 보강
-  const contextBudgetMap = useMemo(() => {
-    const result: Record<string, import('../shared/types').ContextBudget> = {}
-    for (const [claudeId, budget] of Object.entries(contextBudgets)) {
-      // claudeSessionIds는 { mulaudeId: claudeId } 매핑
-      const mulaudeId = Object.entries(claudeSessionIds).find(([, cid]) => cid === claudeId)?.[0]
-      if (!mulaudeId) continue
-      const metrics = harnessMetrics[mulaudeId]
-      result[mulaudeId] = {
-        ...budget,
-        breakdown: {
-          filesRead: metrics?.filesRead.length ?? 0,
-          turnsConsumed: metrics?.turnCount ?? 0,
-          agentsActive: metrics?.agentSpawnCount ?? 0
-        }
-      }
-    }
-    return result
-  }, [contextBudgets, claudeSessionIds, harnessMetrics])
-
-  // Harness 패널
-  const harnessPanel = useHarnessPanel()
-
-  // Guard Rails
-  const guardrails = useGuardrails()
-
-  // App mode (terminal 모드에서는 항상 'terminal')
-  const [appMode, setAppMode] = useState<AppMode>('terminal')
-  useEffect(() => { window.api.getAppMode().then(setAppMode) }, [])
-
   // Cowrk (영속 AI 팀원)
   const cowrk = useCowrkAgents()
-
-  // Workflow Assist (넛지 엔진)
-  const workflowAssist = useWorkflowAssist({
-    sessionStatuses,
-    harnessMetrics,
-    contextPercents,
-    planSessions: planManager.planSessions,
-    appMode,
-    sessions: sessionManager.sessions,
-    cowrkAgents: cowrk.agents,
-    onTogglePlan: handleTogglePlan,
-    onSelectCowrkAgent: cowrk.openChat,
-    onCreateCowrkAgent: () => cowrk.setCreating(true),
-    onAddSession: sessionManager.addSession
-  })
 
   // 세션별 퍼미션 모드 상태
   const [permissionModes, setPermissionModes] = useState<Record<string, PermissionMode>>({})
@@ -267,12 +209,6 @@ export default function App(): JSX.Element {
         ? terminalLayout.getFocusedSessionId()
         : sessionManager.activeSessionId
       if (sid) previewManager.handleTogglePreview(sid)
-    },
-    toggleHarness: () => {
-      const sid = terminalLayout.isGridMode
-        ? terminalLayout.getFocusedSessionId()
-        : sessionManager.activeSessionId
-      if (sid) harnessPanel.toggleHarness(sid)
     },
     openSettings: () => settings.setShowSettings(true),
     openShortcuts: () => setShortcutsOpen(true),
@@ -337,8 +273,6 @@ export default function App(): JSX.Element {
           claudeSessionIds={claudeSessionIds}
           isGridMode={terminalLayout.isGridMode}
           gridSessionIds={gridSessionIds}
-          toolSummaries={toolSummaries}
-          contextBudgetMap={contextBudgetMap}
           previewSessions={previewManager.previewSessions}
           onTogglePreview={previewManager.handleTogglePreview}
           onRestartTutorial={tutorial.restart}
@@ -349,8 +283,6 @@ export default function App(): JSX.Element {
           cowrkChatMessages={cowrk.chatMessages}
           onSelectCowrkAgent={cowrk.openChat}
           onCreateCowrkAgent={() => cowrk.setCreating(true)}
-          workflowTopHints={workflowAssist.topHints}
-          onWorkflowAction={workflowAssist.executeAction}
         />
         <div className="resize-handle" onMouseDown={settings.handleResizeStart} />
         <div className="terminal-area">
@@ -395,17 +327,6 @@ export default function App(): JSX.Element {
               processOrders={previewManager.processOrders}
               permissionModes={permissionModes}
               onCycleMode={cyclePermissionMode}
-              harnessSessions={harnessPanel.harnessSessions}
-              harnessRatios={harnessPanel.harnessRatios}
-              harnessMetrics={harnessMetrics}
-              teamAgentsForHarness={teamAgents}
-              hookAgentsForHarness={hookAgents}
-              onToggleHarness={harnessPanel.toggleHarness}
-              onCloseHarness={harnessPanel.closeHarness}
-              onHarnessResize={harnessPanel.handleHarnessResize}
-              guardrailViolations={guardrails.violations}
-              workflowHints={workflowAssist.hints}
-              onWorkflowAction={workflowAssist.executeAction}
               planSessions={planManager.planSessions}
               planInfos={planManager.planInfos}
               planRatios={planManager.planRatios}
@@ -479,10 +400,6 @@ export default function App(): JSX.Element {
           onNotifChange={settings.handleNotifChange}
           sessions={sessionManager.sessions}
           onClose={() => settings.setShowSettings(false)}
-          guardrailRules={guardrails.rules}
-          onGuardrailAdd={guardrails.addRule}
-          onGuardrailUpdate={guardrails.updateRule}
-          onGuardrailDelete={guardrails.deleteRule}
         />
       )}
     </div>

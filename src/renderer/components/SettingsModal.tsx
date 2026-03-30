@@ -1,29 +1,22 @@
 /**
  * SettingsModal - 앱 설정 모달
  *
- * 탭 구조: 외형 | 알림 | 가드레일 | 고급
+ * 탭 구조: 외형 | 알림 | 고급
  * 모든 변경은 즉시 적용 (auto-save 패턴).
  */
 
 import { useState, useEffect, useCallback } from 'react'
-import { X, Plus, Trash2 } from 'lucide-react'
+import { X } from 'lucide-react'
 import { type Locale, LOCALES, t } from '../i18n'
 import { THEMES } from '../themes'
 import {
   type FontSize, type NotifSettings, type NotifEvent,
   FONT_SIZES, NOTIF_EVENTS
 } from '../settings'
-import type { SessionInfo, GuardRail } from '../../shared/types'
+import type { SessionInfo } from '../../shared/types'
 import './SettingsModal.css'
 
-type SettingsTab = 'appearance' | 'notifications' | 'guardrails' | 'advanced'
-
-/** Guard Rail 타입별 그룹 정의 */
-const GUARDRAIL_GROUPS: { type: GuardRail['type']; labelKey: string }[] = [
-  { type: 'protected_file', labelKey: 'harness.protectedFiles' },
-  { type: 'blocked_command', labelKey: 'harness.blockedCommands' },
-  { type: 'approval_gate', labelKey: 'harness.approvalGates' },
-]
+type SettingsTab = 'appearance' | 'notifications' | 'advanced'
 
 interface SettingsModalProps {
   locale: Locale
@@ -40,11 +33,6 @@ interface SettingsModalProps {
   onNotifChange: (settings: NotifSettings) => void
   sessions: SessionInfo[]
   onClose: () => void
-  /** Guard Rails */
-  guardrailRules: GuardRail[]
-  onGuardrailAdd: (rule: GuardRail) => void
-  onGuardrailUpdate: (id: string, updates: Partial<GuardRail>) => void
-  onGuardrailDelete: (id: string) => void
 }
 
 export default function SettingsModal({
@@ -61,17 +49,11 @@ export default function SettingsModal({
   notifSettings,
   onNotifChange,
   sessions,
-  onClose,
-  guardrailRules,
-  onGuardrailAdd,
-  onGuardrailUpdate,
-  onGuardrailDelete
+  onClose
 }: SettingsModalProps): JSX.Element {
   const [activeTab, setActiveTab] = useState<SettingsTab>('appearance')
   const [notifTab, setNotifTab] = useState<'global' | string>('global')
   const [keychainConfirm, setKeychainConfirm] = useState(false)
-  /** 새 패턴 입력 상태 (type → input text) */
-  const [newPatterns, setNewPatterns] = useState<Record<string, string>>({})
 
   /** 키체인 토글 — 켤 때는 확인 단계 표시, 끌 때는 바로 적용 */
   const handleKeychainToggle = useCallback(() => {
@@ -123,15 +105,6 @@ export default function SettingsModal({
 
   const hasOverride = notifTab !== 'global' && !!notifSettings.perSession[notifTab]
 
-  // ─── Guard Rail 핸들러 ───
-  const handleAddPattern = (type: GuardRail['type']): void => {
-    const pattern = (newPatterns[type] || '').trim()
-    if (!pattern) return
-    const id = `${type.charAt(0)}${type.charAt(type.indexOf('_') + 1)}-${Date.now()}`
-    onGuardrailAdd({ id, type, pattern, action: 'alert', enabled: true })
-    setNewPatterns(prev => ({ ...prev, [type]: '' }))
-  }
-
   // ─── ESC 키로 닫기 ───
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent): void => {
@@ -144,7 +117,6 @@ export default function SettingsModal({
   const TABS: { id: SettingsTab; labelKey: string }[] = [
     { id: 'appearance', labelKey: 'settings.tab.appearance' },
     { id: 'notifications', labelKey: 'settings.tab.notifications' },
-    { id: 'guardrails', labelKey: 'settings.tab.guardrails' },
     { id: 'advanced', labelKey: 'settings.tab.advanced' },
   ]
 
@@ -261,59 +233,6 @@ export default function SettingsModal({
                   </button>
                 )}
               </div>
-            </div>
-          )}
-
-          {/* ──── Guard Rails 탭 ──── */}
-          {activeTab === 'guardrails' && (
-            <div className="settings-section">
-              {GUARDRAIL_GROUPS.map(({ type, labelKey }) => {
-                const groupRules = guardrailRules.filter(r => r.type === type)
-                return (
-                  <div key={type} className="guardrail-group">
-                    <label className="settings-label">{t(locale, labelKey)}</label>
-                    <div className="guardrail-list">
-                      {groupRules.map(rule => (
-                        <div key={rule.id} className="guardrail-row">
-                          <button
-                            className={`notif-toggle ${rule.enabled ? 'notif-toggle--on' : ''}`}
-                            onClick={() => onGuardrailUpdate(rule.id, { enabled: !rule.enabled })}
-                          >
-                            <div className="notif-toggle-knob" />
-                          </button>
-                          <span className={`guardrail-pattern ${!rule.enabled ? 'guardrail-pattern--disabled' : ''}`}>
-                            {rule.pattern}
-                          </span>
-                          <button
-                            className="guardrail-delete-btn"
-                            onClick={() => onGuardrailDelete(rule.id)}
-                            title="Delete"
-                          >
-                            <Trash2 size={12} />
-                          </button>
-                        </div>
-                      ))}
-                      <div className="guardrail-add-row">
-                        <input
-                          className="guardrail-input"
-                          type="text"
-                          placeholder={t(locale, 'harness.addPattern')}
-                          value={newPatterns[type] || ''}
-                          onChange={e => setNewPatterns(prev => ({ ...prev, [type]: e.target.value }))}
-                          onKeyDown={e => { if (e.key === 'Enter') handleAddPattern(type) }}
-                        />
-                        <button
-                          className="guardrail-add-btn"
-                          onClick={() => handleAddPattern(type)}
-                          disabled={!(newPatterns[type] || '').trim()}
-                        >
-                          <Plus size={12} />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
             </div>
           )}
 

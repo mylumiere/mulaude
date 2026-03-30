@@ -14,6 +14,10 @@ export interface PlanInfo {
   content: string
 }
 
+interface UsePlanManagerParams {
+  notifyPlanClose: (sessionId: string) => void
+}
+
 interface UsePlanManagerReturn {
   planSessions: Set<string>
   planInfos: Record<string, PlanInfo>
@@ -26,7 +30,7 @@ interface UsePlanManagerReturn {
   planSessionsRef: React.MutableRefObject<Set<string>>
 }
 
-export function usePlanManager(): UsePlanManagerReturn {
+export function usePlanManager({ notifyPlanClose }: UsePlanManagerParams): UsePlanManagerReturn {
   const [planSessions, setPlanSessions] = useState<Set<string>>(() => {
     return new Set(loadPlanSessions())
   })
@@ -74,7 +78,9 @@ export function usePlanManager(): UsePlanManagerReturn {
     })
     // IPC: 파일 감시 해제
     window.api.unwatchPlanFile(sessionId)
-  }, [persist])
+    // PTY 버퍼 클리어 + 쿨다운 설정 — 즉시 재트리거 방지
+    notifyPlanClose(sessionId)
+  }, [persist, notifyPlanClose])
 
   const cleanupPlan = useCallback((sessionId: string) => {
     closePlan(sessionId)

@@ -8,11 +8,9 @@
 
 import { memo, useRef, useState, useCallback, useEffect } from 'react'
 import { X } from 'lucide-react'
-import type { SessionInfo, SessionStatus, ContextBudget as ContextBudgetType, WorkflowHint, WorkflowActionType } from '../../../shared/types'
+import type { SessionInfo, SessionStatus } from '../../../shared/types'
 import type { Locale } from '../../i18n'
 import { t } from '../../i18n'
-import ContextBudget from './ContextBudget'
-import HintBadge from './HintBadge'
 
 interface SessionRowProps {
   session: SessionInfo
@@ -26,20 +24,12 @@ interface SessionRowProps {
   needsAttention: boolean
   /** Claude session ID (칩 표시용) */
   claudeSessionId?: string
-  /** Harness 도구 사용 요약 (예: "Read:12 Edit:5 Bash:8") */
-  toolSummary?: string
-  /** Context Budget 상세 데이터 (있으면 진행률 바로 표시) */
-  contextBudget?: ContextBudgetType
   shortcut: string
   locale: Locale
   onSelect: () => void
   onDestroy: () => void
   onUpdateName: (name: string) => void
   previewAction?: React.ReactNode
-  /** 워크플로우 힌트 (최고 우선순위 1개) */
-  workflowHint?: WorkflowHint | null
-  /** 워크플로우 액션 실행 콜백 */
-  onWorkflowAction?: (hint: WorkflowHint, action: WorkflowActionType) => void
 }
 
 export default memo(function SessionRow({
@@ -51,16 +41,12 @@ export default memo(function SessionRow({
   contextPercent,
   needsAttention,
   claudeSessionId,
-  toolSummary,
-  contextBudget,
   shortcut,
   locale,
   onSelect,
   onDestroy,
   onUpdateName,
   previewAction,
-  workflowHint,
-  onWorkflowAction
 }: SessionRowProps): JSX.Element {
   const rowRef = useRef<HTMLDivElement>(null)
   const [isEditing, setIsEditing] = useState(false)
@@ -161,23 +147,13 @@ export default memo(function SessionRow({
               ? t(locale, 'session.shell')
               : status?.label || (status ? t(locale, `legend.${status.state}`) : '')}
           </span>
-          {contextBudget ? (
-            <ContextBudget budget={contextBudget} locale={locale} />
-          ) : contextPercent != null ? (
+          {contextPercent != null ? (
             <span className={`session-row-ctx ${contextPercent >= 80 ? 'session-row-ctx--warn' : ''}`}>
               ctx {contextPercent}%
             </span>
           ) : null}
-          {toolSummary && (
-            <span className="session-row-tools" title={t(locale, 'harness.toolUsage')}>
-              {toolSummary}
-            </span>
-          )}
         </div>
       </div>
-      {workflowHint && onWorkflowAction && (
-        <HintBadge hint={workflowHint} locale={locale} onAction={onWorkflowAction} />
-      )}
       {shortcut && <span className="session-shortcut">{shortcut}</span>}
       <div className="session-row-actions">
         {previewAction}
