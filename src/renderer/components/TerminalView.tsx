@@ -62,6 +62,7 @@ export default function TerminalView({ sessionId, isActive, themeId, contextPerc
     isActive,
     isFocused,
     onData: (data) => window.api.writeSession(sessionId, data),
+    onSendKeys: (data) => window.api.sendKeysToPane(sessionId, data),
     onResize: (cols, rows) => window.api.resizeSession(sessionId, cols, rows),
     onRecapture: (cols, rows) => window.api.captureScreen(sessionId, cols, rows),
     onScroll: (direction, lines) => window.api.scrollSession(sessionId, direction, lines),

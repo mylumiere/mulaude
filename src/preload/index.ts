@@ -60,6 +60,10 @@ const api = {
   scrollSession: (id: string, direction: 'up' | 'down', lines?: number): void =>
     ipcRenderer.send('session:scroll', id, direction, lines ?? 1),
 
+  /** tmux pane에 리터럴 키 시퀀스 직접 전송 (tmux input parser 우회) */
+  sendKeysToPane: (id: string, data: string): void =>
+    ipcRenderer.send('session:send-keys', id, data),
+
   /** 전체 세션 데이터 이벤트를 수신합니다 (상태 파싱용 글로벌 리스너) */
   onSessionData: (callback: (id: string, data: string) => void): (() => void) => {
     globalDataCallbacks.add(callback)

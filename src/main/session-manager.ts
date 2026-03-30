@@ -39,6 +39,7 @@ import {
   captureFullScrollbackAsync,
   setAutoBreakPaneHook,
   scrollTmuxPaneAsync,
+  sendKeysToPaneAsync,
   listMulaudeTmuxSessions
 } from './tmux-utils'
 import { ChildPaneStreamer } from './child-pane-streamer'
@@ -721,6 +722,19 @@ export class SessionManager {
     if (!session?.tmuxSessionName) return
     scrollTmuxPaneAsync(this.tmuxPath, session.tmuxSessionName, direction, lines).catch((err) => {
       console.warn(`[SessionManager] tmux scroll failed for ${id}:`, (err as Error).message)
+    })
+  }
+
+  /**
+   * tmux pane에 리터럴 키 시퀀스를 직접 전송합니다 (fire-and-forget).
+   * ptyProcess.write()와 달리 tmux input parser를 우회합니다.
+   */
+  sendKeys(id: string, data: string): void {
+    if (!this.tmuxPath) return
+    const session = this.sessions.get(id)
+    if (!session?.tmuxSessionName) return
+    sendKeysToPaneAsync(this.tmuxPath, session.tmuxSessionName, data).catch((err) => {
+      console.warn(`[SessionManager] tmux sendKeys failed for ${id}:`, (err as Error).message)
     })
   }
 

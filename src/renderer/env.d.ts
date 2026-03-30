@@ -11,6 +11,7 @@ interface Window {
     writeSession: (id: string, data: string) => void
     resizeSession: (id: string, cols: number, rows: number) => void
     scrollSession: (id: string, direction: 'up' | 'down', lines?: number) => void
+    sendKeysToPane: (id: string, data: string) => void
     onSessionData: (callback: (id: string, data: string) => void) => () => void
     onSessionDataById: (id: string, callback: (data: string) => void) => () => void
     captureScreen: (id: string, cols?: number, rows?: number) => Promise<string | null>

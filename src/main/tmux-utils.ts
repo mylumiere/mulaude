@@ -669,3 +669,23 @@ export async function scrollTmuxPaneAsync(
   const cmd = direction === 'up' ? 'scroll-up' : 'scroll-down'
   await execTmuxAsync(tmuxPath, ['send-keys', '-t', target, '-X', '-N', String(lines), cmd])
 }
+
+/**
+ * tmux pane에 리터럴 키 시퀀스를 직접 전송합니다.
+ *
+ * ptyProcess.write()는 tmux 클라이언트의 stdin에 쓰므로
+ * tmux input parser가 CSI u 등의 시퀀스를 가로채 변환할 수 있습니다.
+ * send-keys -l은 pane의 PTY에 직접 써서 이 문제를 우회합니다.
+ *
+ * @param tmuxPath - tmux 실행 파일 경로
+ * @param sessionName - tmux 세션명
+ * @param data - 전송할 리터럴 데이터
+ */
+export async function sendKeysToPaneAsync(
+  tmuxPath: string,
+  sessionName: string,
+  data: string
+): Promise<void> {
+  const target = `${sessionName}:0.0`
+  await execTmuxAsync(tmuxPath, ['send-keys', '-t', target, '-l', data])
+}

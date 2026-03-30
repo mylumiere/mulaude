@@ -226,6 +226,11 @@ export function registerIpcHandlers(
     sessionManager.scroll(id, direction, lines)
   })
 
+  // tmux pane에 리터럴 키 시퀀스 직접 전송 (tmux input parser 우회)
+  ipcMain.on('session:send-keys', (_event, id: string, data: string) => {
+    sessionManager.sendKeys(id, data)
+  })
+
   // 폴더 선택 다이얼로그
   ipcMain.handle('dialog:openDirectory', async (event) => {
     const parentWindow = BrowserWindow.fromWebContents(event.sender) ?? undefined

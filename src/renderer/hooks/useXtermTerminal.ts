@@ -44,6 +44,8 @@ interface UseXtermTerminalParams {
   /** cols 변경 시 스크롤백 재캡처 콜백 (tmux reflow된 내용 복원)
    *  cols/rows를 전달하면 main에서 tmux resize를 await한 후 캡처 (atomic) */
   onRecapture?: (cols: number, rows: number) => Promise<string | null>
+  /** tmux pane에 리터럴 키 시퀀스를 직접 전송하는 콜백 (tmux input parser 우회) */
+  onSendKeys?: (data: string) => void
   /** 마우스 휠 스크롤 콜백 (tmux copy-mode 스크롤용)
    *  제공 시 휠 이벤트를 가로채서 이 콜백 호출, 미제공 시 xterm 기본 처리 */
   onScroll?: (direction: 'up' | 'down', lines: number) => void
@@ -74,6 +76,7 @@ export function useXtermTerminal({
   isActive,
   isFocused,
   onData,
+  onSendKeys,
   onResize,
   onRecapture,
   onScroll,
@@ -160,10 +163,12 @@ export function useXtermTerminal({
         onShiftTab?.()
         return true // xterm이 PTY로 전달
       }
-      // Shift+Enter → \n(LF) 전송으로 줄바꿈 (Enter는 xterm이 \r 전송 → 제출)
-      // keydown에서만 전송, keypress/keyup은 차단 (xterm이 \r 중복 전송 방지)
+      // Shift+Enter → CSI u 시퀀스를 tmux pane에 직접 전송으로 줄바꿈
+      // ptyProcess.write()는 tmux input parser가 CSI u를 가로채 \r로 변환하므로,
+      // tmux send-keys -l로 pane PTY에 직접 전송하여 우회합니다.
+      // \x1b[13;2u = kitty keyboard protocol: codepoint 13(CR) + modifier 2(Shift)
       if (event.key === 'Enter' && event.shiftKey) {
-        if (event.type === 'keydown') onData('\n')
+        if (event.type === 'keydown') onSendKeys?.('\x1b[13;2u')
         return false
       }
       if (event.type !== 'keydown') return true
