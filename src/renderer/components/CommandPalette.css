@@ -1,0 +1,160 @@
+/**
+ * CommandPalette — ⌘K 커맨드 팔레트 스타일
+ *
+ * SettingsModal.css 패턴: overlay + centered modal + animation
+ * 상단 20% 위치에 배치 (VS Code 스타일)
+ */
+
+.cmd-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+  display: flex;
+  justify-content: center;
+  padding-top: 15vh;
+  z-index: 200;
+  animation: cmd-overlay-in 0.1s ease;
+  -webkit-app-region: no-drag;
+}
+
+@keyframes cmd-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.cmd-palette {
+  width: 480px;
+  max-width: 90vw;
+  max-height: 400px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md), var(--shadow-glow);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: cmd-palette-in 0.15s var(--ease-out-expo);
+  align-self: flex-start;
+}
+
+@keyframes cmd-palette-in {
+  from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ─── 입력 ─── */
+
+.cmd-input-wrapper {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.cmd-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 0.95rem;
+  caret-color: var(--accent-primary);
+}
+
+.cmd-input::placeholder {
+  color: var(--text-muted);
+}
+
+/* ─── 리스트 ─── */
+
+.cmd-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 0;
+  min-height: 0;
+}
+
+.cmd-empty {
+  padding: 20px 16px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+/* ─── 그룹 ─── */
+
+.cmd-group {
+  margin-bottom: 2px;
+}
+
+.cmd-group-header {
+  padding: 6px 16px 4px;
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+}
+
+/* ─── 액션 아이템 ─── */
+
+.cmd-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 16px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  transition: background 0.08s;
+}
+
+.cmd-item:hover,
+.cmd-item--selected {
+  background: var(--bg-glass-hover);
+  color: var(--text-primary);
+}
+
+.cmd-item--selected {
+  background: var(--accent-primary-soft);
+}
+
+.cmd-item-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.cmd-item--selected .cmd-item-icon {
+  color: var(--text-primary);
+}
+
+.cmd-item-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cmd-item-shortcut {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  font-family: var(--font-ui);
+  color: var(--text-muted);
+  background: var(--bg-glass);
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid var(--border-subtle);
+}

@@ -43,6 +43,12 @@ interface UseKeyboardShortcutsParams {
   getFocusedSessionId?: () => string | null
   /** 프리뷰 토글 */
   togglePreview?: () => void
+  /** Diff 토글 */
+  toggleDiff?: () => void
+  /** Viewer 토글 */
+  toggleViewer?: () => void
+  /** 커맨드 팔레트 열기 */
+  openCommandPalette?: () => void
   /** 설정 열기 */
   openSettings?: () => void
   /** 단축키 모달 열기 */
@@ -66,6 +72,9 @@ export function useKeyboardShortcuts({
   reopenClosedPane,
   toggleZoom,
   togglePreview,
+  toggleDiff,
+  toggleViewer,
+  openCommandPalette,
   focusDirection,
   isGridMode,
   getFocusedSessionId,
@@ -100,6 +109,11 @@ export function useKeyboardShortcuts({
         e.preventDefault(); createProject(); return
       }
 
+      // ── 커맨드 팔레트 (Cmd+K) ──
+      if (e.key === 'k' && !e.altKey && !e.shiftKey) {
+        e.preventDefault(); openCommandPalette?.(); return
+      }
+
       if (e.key === ',' && !e.altKey && !e.shiftKey) {
         e.preventDefault(); openSettings?.(); return
       }
@@ -125,6 +139,20 @@ export function useKeyboardShortcuts({
       if (e.key === 'p' && e.shiftKey && !e.altKey && !e.ctrlKey) {
         e.preventDefault()
         togglePreview?.()
+        return
+      }
+
+      // ── Diff 토글 (Cmd+Shift+D) ──
+      if (e.key === 'd' && e.shiftKey && !e.altKey && !e.ctrlKey) {
+        e.preventDefault()
+        toggleDiff?.()
+        return
+      }
+
+      // ── Viewer 토글 (Cmd+Shift+V) ──
+      if (e.key === 'v' && e.shiftKey && !e.altKey && !e.ctrlKey) {
+        e.preventDefault()
+        toggleViewer?.()
         return
       }
 
@@ -220,5 +248,5 @@ export function useKeyboardShortcuts({
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [projects, activeSessionId, sessions, createProject, selectSession, focusedPane, setFocusedPane, getChildPaneIndices, sessionsWithPanes, closePane, reopenClosedPane, toggleZoom, togglePreview, focusDirection, isGridMode, getFocusedSessionId, openSettings, openShortcuts, tutorialPhase, tutorialStep])
+  }, [projects, activeSessionId, sessions, createProject, selectSession, focusedPane, setFocusedPane, getChildPaneIndices, sessionsWithPanes, closePane, reopenClosedPane, toggleZoom, togglePreview, toggleDiff, toggleViewer, openCommandPalette, focusDirection, isGridMode, getFocusedSessionId, openSettings, openShortcuts, tutorialPhase, tutorialStep])
 }

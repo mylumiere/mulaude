@@ -195,6 +195,46 @@ export interface ChatInputRequestBlock {
   responseLabel?: string
 }
 
+/* ═══════ Diff Viewer 타입 ═══════ */
+
+/** git diff 파일 단위 정보 */
+export interface DiffFile {
+  path: string
+  status: 'added' | 'modified' | 'deleted' | 'renamed'
+  oldPath?: string
+  additions: number
+  deletions: number
+  hunks: DiffHunk[]
+}
+
+/** diff hunk (변경 블록) */
+export interface DiffHunk {
+  header: string
+  oldStart: number
+  oldLines: number
+  newStart: number
+  newLines: number
+  lines: DiffLine[]
+}
+
+/** diff 개별 라인 */
+export interface DiffLine {
+  type: 'context' | 'add' | 'delete'
+  content: string
+  oldLineNo?: number
+  newLineNo?: number
+}
+
+/* ═══════ Viewer (파일 뷰어) 타입 ═══════ */
+
+/** 뷰어 파일 콘텐츠 */
+export interface ViewerContent {
+  filePath: string
+  type: 'markdown' | 'image'
+  /** markdown: utf-8 텍스트, image: base64 data URI */
+  data: string
+}
+
 /* ═══════ Cowrk (영속 AI 팀원) 타입 ═══════ */
 
 /** Cowrk 에이전트 상태 (렌더러 표시용) */

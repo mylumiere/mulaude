@@ -130,6 +130,20 @@ export const PREVIEW_SIGTERM_GRACE = 1000
 /** 미지원 프로젝트 토스트 알림 표시 시간 (ms) */
 export const PREVIEW_ALERT_TIMEOUT = 3000
 
+/* ═══════ Diff ═══════ */
+
+/** PostToolUse(Edit/Write) 후 diff 재요청 디바운스 (ms) */
+export const DIFF_DEBOUNCE = 300
+/** Diff 패널 기본 분할 비율 */
+export const DIFF_DEFAULT_RATIO = 0.5
+
+/* ═══════ Viewer ═══════ */
+
+/** PostToolUse(Edit/Write) 후 viewer 재요청 디바운스 (ms) */
+export const VIEWER_DEBOUNCE = 300
+/** Viewer 패널 기본 분할 비율 */
+export const VIEWER_DEFAULT_RATIO = 0.5
+
 /* ═══════ Plan ═══════ */
 
 /** 플랜 트리거 쿨다운 (ms) — 동일 세션 내 중복 감지 방지 */

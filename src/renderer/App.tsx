@@ -6,11 +6,14 @@
  */
 
 import { useRef, useCallback, useMemo, useState, useEffect } from 'react'
+import { FileText, Eye, GitCompareArrows, BookOpen, FolderPlus, Maximize2, Settings, Keyboard } from 'lucide-react'
 import Sidebar from './components/Sidebar'
 import TerminalGrid from './components/TerminalGrid'
 import SettingsModal from './components/SettingsModal'
 import TmuxMissingBanner from './components/TmuxMissingBanner'
 import TutorialOverlay from './components/TutorialOverlay'
+import CommandPalette from './components/CommandPalette'
+import type { CommandAction } from './components/CommandPalette'
 import { t } from './i18n'
 import { useSettings } from './hooks/useSettings'
 import { useSessionStatus } from './hooks/useSessionStatus'
@@ -24,6 +27,8 @@ import { usePlanManager } from './hooks/usePlanManager'
 import { usePlanTrigger } from './hooks/usePlanTrigger'
 import { usePreviewManager } from './hooks/usePreviewManager'
 import { usePreviewTrigger } from './hooks/usePreviewTrigger'
+import { useDiffManager } from './hooks/useDiffManager'
+import { useViewerManager } from './hooks/useViewerManager'
 import { useCowrkAgents } from './hooks/useCowrkAgents'
 import CowrkChatPanel from './components/cowrk/CowrkChatPanel'
 import CowrkCreateDialog from './components/cowrk/CowrkCreateDialog'
@@ -77,18 +82,29 @@ export default function App(): JSX.Element {
   openPreviewWithUrlRef.current = previewManager.openPreviewWithUrl
   previewSessionsRef.current = previewManager.previewSessions
 
+  // Diff 관리
+  const diffManager = useDiffManager()
+
+  // Viewer 관리
+  const viewerManager = useViewerManager()
+
   const sessionManager = useSessionManager({
     locale: settings.locale,
     initSession,
-    cleanupSession: (id) => { cleanupSession(id); settings.cleanupSessionTheme(id); planManager.cleanupPlan(id); previewManager.cleanupPreview(id); window.api.stopPreview(id) }
+    cleanupSession: (id) => { cleanupSession(id); settings.cleanupSessionTheme(id); planManager.cleanupPlan(id); previewManager.cleanupPreview(id); diffManager.cleanupDiff(id); viewerManager.cleanupViewer(id); window.api.stopPreview(id) }
   })
 
   // ref 연결 (초기 렌더 완료 후 실제 함수 참조)
   updateSessionSubtitleRef.current = sessionManager.updateSessionSubtitle
   sessionsRef.current = sessionManager.sessions
 
-  // Plan 토글: 열려있으면 닫기, 닫혀있으면 최근 플랜 파일 열기 / 없으면 파일 선택
+  // Plan 토글 (배타적: 다른 사이드 패널 닫기)
   const handleTogglePlan = useCallback(async (sessionId: string) => {
+    // 다른 패널 닫기
+    if (previewManager.previewSessions.has(sessionId)) previewManager.closePreview(sessionId)
+    if (diffManager.diffSessions.has(sessionId)) diffManager.closeDiff(sessionId)
+    if (viewerManager.viewerSessions.has(sessionId)) viewerManager.closeViewer(sessionId)
+
     if (planManager.planSessionsRef.current.has(sessionId)) {
       planManager.closePlan(sessionId)
       return
@@ -98,14 +114,37 @@ export default function App(): JSX.Element {
       if (files.length > 0) {
         planManager.openPlan(sessionId, files[0].path)
       } else {
-        // 플랜 파일 없음 → 파일 선택 다이얼로그
         const filePath = await window.api.openPlanFileDialog(sessionId)
         if (filePath) {
           planManager.openPlan(sessionId, filePath)
         }
       }
     } catch { /* 무시 */ }
-  }, [planManager])
+  }, [planManager, previewManager, diffManager, viewerManager])
+
+  // Preview 토글 래핑 (배타적)
+  const handleTogglePreview = useCallback(async (sessionId: string) => {
+    if (planManager.planSessionsRef.current.has(sessionId)) planManager.closePlan(sessionId)
+    if (diffManager.diffSessions.has(sessionId)) diffManager.closeDiff(sessionId)
+    if (viewerManager.viewerSessions.has(sessionId)) viewerManager.closeViewer(sessionId)
+    await previewManager.handleTogglePreview(sessionId)
+  }, [planManager, previewManager, diffManager, viewerManager])
+
+  // Diff 토글 (배타적)
+  const handleToggleDiff = useCallback((sessionId: string) => {
+    if (planManager.planSessionsRef.current.has(sessionId)) planManager.closePlan(sessionId)
+    if (previewManager.previewSessions.has(sessionId)) previewManager.closePreview(sessionId)
+    if (viewerManager.viewerSessions.has(sessionId)) viewerManager.closeViewer(sessionId)
+    diffManager.handleToggleDiff(sessionId)
+  }, [planManager, previewManager, diffManager, viewerManager])
+
+  // Viewer 토글 (배타적)
+  const handleToggleViewer = useCallback((sessionId: string) => {
+    if (planManager.planSessionsRef.current.has(sessionId)) planManager.closePlan(sessionId)
+    if (previewManager.previewSessions.has(sessionId)) previewManager.closePreview(sessionId)
+    if (diffManager.diffSessions.has(sessionId)) diffManager.closeDiff(sessionId)
+    viewerManager.handleToggleViewer(sessionId)
+  }, [planManager, previewManager, diffManager, viewerManager])
 
   // 세션 복원 후 미리보기 프로세스 재실행
   useEffect(() => {
@@ -164,6 +203,7 @@ export default function App(): JSX.Element {
 
   const tutorial = useTutorial(sessionManager.sessions.length)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
 
   // Cowrk (영속 AI 팀원)
   const cowrk = useCowrkAgents()
@@ -178,6 +218,91 @@ export default function App(): JSX.Element {
       return { ...prev, [sessionId]: next }
     })
   }, [])
+
+  // 커맨드 팔레트 액션 레지스트리
+  const commandActions = useMemo((): CommandAction[] => {
+    const getFocusedSid = (): string | null =>
+      terminalLayout.isGridMode
+        ? terminalLayout.getFocusedSessionId()
+        : sessionManager.activeSessionId
+
+    return [
+      {
+        id: 'toggle-plan',
+        labelKey: 'cmdPalette.togglePlan',
+        icon: <FileText size={14} />,
+        category: 'panel',
+        requiresSession: true,
+        execute: () => { const sid = getFocusedSid(); if (sid) handleTogglePlan(sid) }
+      },
+      {
+        id: 'toggle-preview',
+        labelKey: 'cmdPalette.togglePreview',
+        icon: <Eye size={14} />,
+        shortcut: '⌘⇧P',
+        category: 'panel',
+        requiresSession: true,
+        execute: () => { const sid = getFocusedSid(); if (sid) handleTogglePreview(sid) }
+      },
+      {
+        id: 'toggle-diff',
+        labelKey: 'cmdPalette.toggleDiff',
+        icon: <GitCompareArrows size={14} />,
+        shortcut: '⌘⇧D',
+        category: 'panel',
+        requiresSession: true,
+        execute: () => { const sid = getFocusedSid(); if (sid) handleToggleDiff(sid) }
+      },
+      {
+        id: 'toggle-viewer',
+        labelKey: 'cmdPalette.toggleViewer',
+        icon: <BookOpen size={14} />,
+        shortcut: '⌘⇧V',
+        category: 'panel',
+        requiresSession: true,
+        execute: () => { const sid = getFocusedSid(); if (sid) handleToggleViewer(sid) }
+      },
+      {
+        id: 'new-project',
+        labelKey: 'cmdPalette.newProject',
+        icon: <FolderPlus size={14} />,
+        shortcut: '⌘N',
+        category: 'session',
+        execute: () => sessionManager.createProject()
+      },
+      {
+        id: 'zoom-toggle',
+        labelKey: 'cmdPalette.zoomToggle',
+        icon: <Maximize2 size={14} />,
+        shortcut: '⌘⇧Enter',
+        category: 'view',
+        execute: () => terminalLayout.toggleZoom()
+      },
+      {
+        id: 'open-settings',
+        labelKey: 'cmdPalette.openSettings',
+        icon: <Settings size={14} />,
+        shortcut: '⌘,',
+        category: 'settings',
+        execute: () => settings.setShowSettings(true)
+      },
+      {
+        id: 'show-shortcuts',
+        labelKey: 'cmdPalette.showShortcuts',
+        icon: <Keyboard size={14} />,
+        shortcut: '⌘/',
+        category: 'settings',
+        execute: () => setShortcutsOpen(true)
+      }
+    ].filter(a => {
+      if (a.requiresSession && !getFocusedSid()) return false
+      return true
+    })
+  }, [
+    terminalLayout, sessionManager.activeSessionId, sessionManager.createProject,
+    handleTogglePlan, handleTogglePreview, handleToggleDiff, handleToggleViewer,
+    settings.setShowSettings
+  ]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // 드래그 스텝: 그리드 모드 진입 시 자동 진행
   useEffect(() => {
@@ -208,8 +333,21 @@ export default function App(): JSX.Element {
       const sid = terminalLayout.isGridMode
         ? terminalLayout.getFocusedSessionId()
         : sessionManager.activeSessionId
-      if (sid) previewManager.handleTogglePreview(sid)
+      if (sid) handleTogglePreview(sid)
     },
+    toggleDiff: () => {
+      const sid = terminalLayout.isGridMode
+        ? terminalLayout.getFocusedSessionId()
+        : sessionManager.activeSessionId
+      if (sid) handleToggleDiff(sid)
+    },
+    toggleViewer: () => {
+      const sid = terminalLayout.isGridMode
+        ? terminalLayout.getFocusedSessionId()
+        : sessionManager.activeSessionId
+      if (sid) handleToggleViewer(sid)
+    },
+    openCommandPalette: () => setCommandPaletteOpen(true),
     openSettings: () => settings.setShowSettings(true),
     openShortcuts: () => setShortcutsOpen(true),
     tutorialPhase: tutorial.phase,
@@ -315,7 +453,7 @@ export default function App(): JSX.Element {
               blockCenterDrop={tutorial.phase === 'steps' && tutorial.steps[tutorial.currentStep]?.action === 'drag'}
               previewSessions={previewManager.previewSessions}
               previewRatios={previewManager.previewRatios}
-              onTogglePreview={previewManager.handleTogglePreview}
+              onTogglePreview={handleTogglePreview}
               onClosePreview={previewManager.handleClosePreview}
               onPreviewResize={previewManager.handlePreviewResize}
               pendingUrls={previewManager.pendingUrls}
@@ -334,6 +472,20 @@ export default function App(): JSX.Element {
               onClosePlan={planManager.closePlan}
               onPlanResize={planManager.handlePlanResize}
               onSwitchPlanFile={planManager.switchFile}
+              diffSessions={diffManager.diffSessions}
+              diffData={diffManager.diffData}
+              diffRatios={diffManager.diffRatios}
+              onToggleDiff={handleToggleDiff}
+              onCloseDiff={diffManager.closeDiff}
+              onDiffResize={diffManager.handleDiffResize}
+              onRefreshDiff={(sid) => window.api.fetchDiff(sid)}
+              viewerSessions={viewerManager.viewerSessions}
+              viewerData={viewerManager.viewerData}
+              viewerRatios={viewerManager.viewerRatios}
+              onToggleViewer={handleToggleViewer}
+              onCloseViewer={viewerManager.closeViewer}
+              onViewerResize={viewerManager.handleViewerResize}
+              onRefreshViewer={viewerManager.refreshViewer}
             />
           ) : (
             <div className="empty-state">
@@ -384,6 +536,13 @@ export default function App(): JSX.Element {
         onClose={() => cowrk.setCreating(false)}
         onCreate={cowrk.createAgent}
       />
+      {commandPaletteOpen && (
+        <CommandPalette
+          locale={settings.locale}
+          actions={commandActions}
+          onClose={() => setCommandPaletteOpen(false)}
+        />
+      )}
       {settings.showSettings && (
         <SettingsModal
           locale={settings.locale}

@@ -1,5 +1,41 @@
 # Mulaude 발전 아이디어
 
+## 핵심 방향성: AI 기반 멀티플렉서
+
+> Mulaude는 **IDE가 아니라 AI 기반 멀티플렉서**다.
+>
+> VS Code/Cursor처럼 에디터를 중심에 놓는 것이 아니라,
+> **여러 AI 세션의 작업 흐름을 시각화하고 오케스트레이션**하는 것이 핵심이다.
+>
+> 사이드 패널 시스템(Plan/Preview/Diff/...)은 AI가 하는 작업을 관찰하는 **창**이며,
+> 커맨드 팔레트(⌘K)는 이 패널들과 액션을 통합 접근하는 허브다.
+>
+> **패널 확장 원칙**:
+> - AI 작업 흐름에서 가치 있는 정보를 노출하는 패널을 계속 추가
+> - 배타적 제어(한 번에 하나)로 집중력 유지
+> - 각 패널은 Main Process에서 데이터를 수집하고, Renderer에서 시각화
+
+### 현재 구현된 패널
+
+| 패널 | 단축키 | 데이터 소스 | 설명 |
+|------|--------|-------------|------|
+| Plan | — | Claude stdout 파싱 | AI의 실행 계획 표시 |
+| Preview | ⌘⇧P | child_process(dev server) | 웹 미리보기 |
+| Diff | ⌘⇧D | git diff HEAD | AI가 수정한 코드 변경사항 |
+
+### 탐색 대상 추가 패널
+
+| 패널 | 데이터 소스 | 설명 |
+|------|-------------|------|
+| Error Log | Hook(PostToolUse Bash 실패) | 에러 출력을 구조화하여 표시 |
+| Test Results | Hook(PostToolUse Bash + test 명령) | 테스트 실행 결과 시각화 (pass/fail/skip) |
+| Tool Activity | Hook(Pre/PostToolUse) | AI의 도구 사용 내역 타임라인 |
+| File Changes | Hook(PostToolUse Edit/Write) | 세션에서 수정된 파일 목록 (git status와 별개) |
+| Context Usage | Statusline API | 컨텍스트 윈도우 사용량 상세 시각화 |
+| Cost Tracker | OAuth Usage API | 실시간 토큰 소비량 + 비용 추정 |
+
+---
+
 ## 1. 세션 관리 고도화
 
 ### 1-1. 세션 스냅샷 & 복원

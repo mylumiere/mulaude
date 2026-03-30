@@ -1,0 +1,315 @@
+/**
+ * DiffPanel — git diff 인라인 뷰어 스타일
+ *
+ * PlanPanel과 동일한 밝은 배경 + 깔끔한 레이아웃 패턴
+ */
+
+.diff-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #ffffff;
+  color: #1a1a2e;
+  border-left: 1px solid #e5e5e5;
+  overflow: hidden;
+}
+
+/* ─── 헤더 ─── */
+
+.diff-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid #e5e5e5;
+  background: #fafafa;
+  min-height: 36px;
+  flex-shrink: 0;
+}
+
+.diff-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+.diff-panel-stats {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.diff-stat-count {
+  color: #888;
+}
+
+.diff-stat-add {
+  color: #22863a;
+  font-weight: 500;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 11px;
+}
+
+.diff-stat-del {
+  color: #cb2431;
+  font-weight: 500;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 11px;
+}
+
+.diff-panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.diff-panel-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #666;
+  transition: background 0.15s, color 0.15s;
+}
+
+.diff-panel-btn:hover {
+  background: #f0f0f0;
+  color: #333;
+}
+
+/* ─── 빈 상태 ─── */
+
+.diff-panel-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  color: #999;
+  font-size: 13px;
+}
+
+/* ─── 파일 목록 ─── */
+
+.diff-file-list {
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid #e5e5e5;
+  max-height: 180px;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.diff-file-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid #f3f3f3;
+  cursor: pointer;
+  text-align: left;
+  font-size: 12px;
+  transition: background 0.1s;
+}
+
+.diff-file-item:last-child {
+  border-bottom: none;
+}
+
+.diff-file-item:hover {
+  background: #f5f5f5;
+}
+
+.diff-file-item--selected {
+  background: #eef2ff;
+}
+
+.diff-file-path {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  color: #333;
+}
+
+.diff-file-stats {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* ─── 상태 뱃지 ─── */
+
+.diff-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 3px;
+  flex-shrink: 0;
+  font-family: 'SF Mono', monospace;
+}
+
+.diff-badge--modified {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.diff-badge--added {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.diff-badge--deleted {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.diff-badge--renamed {
+  background: #fef9c3;
+  color: #a16207;
+}
+
+/* ─── Diff 내용 ─── */
+
+.diff-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
+.diff-file-section {
+  margin-bottom: 0;
+}
+
+.diff-file-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: #f6f8fa;
+  border-bottom: 1px solid #e5e5e5;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.diff-file-header-path {
+  color: #333;
+  font-weight: 500;
+}
+
+/* ─── Hunk ─── */
+
+.diff-hunk {
+  border-bottom: 1px solid #eee;
+}
+
+.diff-hunk-header {
+  padding: 4px 12px;
+  background: #f0f4ff;
+  color: #6366f1;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 11px;
+  border-bottom: 1px solid #e5e5e5;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.diff-file-header + .diff-hunk .diff-hunk-header {
+  top: 30px;
+}
+
+/* ─── 라인 ─── */
+
+.diff-line {
+  display: flex;
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 12px;
+  line-height: 20px;
+  border-bottom: none;
+}
+
+.diff-line--add {
+  background: #e6ffec;
+}
+
+.diff-line--delete {
+  background: #ffebe9;
+}
+
+.diff-line--context {
+  background: #ffffff;
+}
+
+.diff-line-no {
+  display: inline-block;
+  width: 40px;
+  padding: 0 6px;
+  text-align: right;
+  color: #aaa;
+  flex-shrink: 0;
+  user-select: none;
+  font-size: 11px;
+}
+
+.diff-line-no--old {
+  border-right: 1px solid #eee;
+}
+
+.diff-line-no--new {
+  border-right: 1px solid #eee;
+}
+
+.diff-line--add .diff-line-no--new {
+  color: #22863a;
+}
+
+.diff-line--delete .diff-line-no--old {
+  color: #cb2431;
+}
+
+.diff-line-marker {
+  display: inline-block;
+  width: 16px;
+  text-align: center;
+  flex-shrink: 0;
+  user-select: none;
+  color: #888;
+  font-weight: 500;
+}
+
+.diff-line--add .diff-line-marker {
+  color: #22863a;
+}
+
+.diff-line--delete .diff-line-marker {
+  color: #cb2431;
+}
+
+.diff-line-content {
+  flex: 1;
+  white-space: pre;
+  padding-right: 12px;
+  min-width: 0;
+}

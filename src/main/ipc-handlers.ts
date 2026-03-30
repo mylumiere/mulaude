@@ -14,6 +14,8 @@ import type { NativeChatManager } from './native-chat-manager'
 import type { CowrkManager } from './cowrk-manager'
 import { showOrphanDialog } from './close-handler'
 import { watchPlanFile, unwatchPlanFile, listPlanFiles, resolvePlanPath } from './plan-watcher'
+import { fetchDiff, registerDiffSession, unregisterDiffSession } from './diff-manager'
+import { fetchViewerContent, registerViewerSession, unregisterViewerSession } from './viewer-manager'
 import { getCachedUsageData, setHideHud, setKeychainAccess } from './statusline-manager'
 import { launchPreview, stopPreview, writeLaunchConfig } from './preview-launcher'
 import type { UsageData } from '../shared/types'
@@ -356,6 +358,44 @@ export function registerIpcHandlers(
     })
     if (result.canceled || result.filePaths.length === 0) return null
     return result.filePaths[0]
+  })
+
+  // ─── Diff Viewer IPC ───
+
+  // git diff 실행 요청
+  ipcMain.handle('diff:fetch', async (_event, sessionId: string) => {
+    const session = sessionManager.getSessionList().find(s => s.id === sessionId)
+    if (!session) return []
+    return fetchDiff(sessionId, session.workingDir)
+  })
+
+  // auto-refresh 등록
+  ipcMain.on('diff:register', (_event, sessionId: string) => {
+    const session = sessionManager.getSessionList().find(s => s.id === sessionId)
+    if (session) registerDiffSession(sessionId, session.workingDir)
+  })
+
+  // auto-refresh 해제
+  ipcMain.on('diff:unregister', (_event, sessionId: string) => {
+    unregisterDiffSession(sessionId)
+  })
+
+  // ─── Viewer IPC ───
+
+  // 파일 읽기 요청
+  ipcMain.handle('viewer:fetch', async (_event, sessionId: string, filePath: string) => {
+    return fetchViewerContent(sessionId, filePath)
+  })
+
+  // auto-refresh 등록
+  ipcMain.on('viewer:register', (_event, sessionId: string) => {
+    const session = sessionManager.getSessionList().find(s => s.id === sessionId)
+    if (session) registerViewerSession(sessionId, session.workingDir)
+  })
+
+  // auto-refresh 해제
+  ipcMain.on('viewer:unregister', (_event, sessionId: string) => {
+    unregisterViewerSession(sessionId)
   })
 }
 

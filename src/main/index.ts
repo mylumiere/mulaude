@@ -25,6 +25,9 @@ import { setupCloseHandler, dt, setLocale, getCloseAction, resetCloseAction } fr
 import { logger } from './logger'
 import { unwatchAllPlans } from './plan-watcher'
 import { stopAllPreviews } from './preview-launcher'
+import { isDiffActive, debouncedRefresh, cleanupAllDiffs } from './diff-manager'
+import { isViewerActive, viewerOnFileChange, cleanupAllViewers } from './viewer-manager'
+import { DIFF_DEBOUNCE, VIEWER_DEBOUNCE } from '../shared/constants'
 import { CowrkManager } from './cowrk-manager'
 import { SCREEN_VISIBILITY_MARGIN, WINDOW_SAVE_DEBOUNCE } from '../shared/constants'
 import type { AppMode } from '../shared/types'
@@ -266,6 +269,8 @@ app.whenReady().then(() => {
       nativeChatManager.destroyAll()
       nativeChatManager.getSessionStore().saveImmediate()
       unwatchAllPlans()
+      cleanupAllDiffs()
+      cleanupAllViewers()
       cowrkManager.destroyAll()
       stopAllPreviews()
       hooksManager.cleanup()
@@ -282,10 +287,29 @@ app.whenReady().then(() => {
     setupSessionDataForwarding(mainWindow, sessionManager)
     setupCloseHandler(mainWindow, sessionManager)
 
-    // Hook 이벤트 → 렌더러 전달
+    // Hook 이벤트 → 렌더러 전달 + diff auto-refresh
     hooksManager.onEvent((sessionId, event) => {
       if (!mainWindow.isDestroyed()) {
         mainWindow.webContents.send('session:hook', sessionId, event)
+      }
+      // PostToolUse(Edit/Write) → diff 패널이 열려있으면 자동 갱신
+      if (
+        event.hook_event_name === 'PostToolUse' &&
+        (event.tool_name === 'Edit' || event.tool_name === 'Write') &&
+        isDiffActive(sessionId)
+      ) {
+        debouncedRefresh(sessionId, DIFF_DEBOUNCE)
+      }
+      // PostToolUse(Edit/Write) → viewer 패널이 열려있으면 자동 갱신
+      if (
+        event.hook_event_name === 'PostToolUse' &&
+        (event.tool_name === 'Edit' || event.tool_name === 'Write') &&
+        isViewerActive(sessionId)
+      ) {
+        const filePath = event.tool_input?.file_path as string | undefined
+        if (filePath) {
+          viewerOnFileChange(sessionId, filePath, VIEWER_DEBOUNCE)
+        }
       }
     })
 
@@ -317,6 +341,8 @@ app.whenReady().then(() => {
       sessionManager.getSessionStore().saveImmediate()
       resetCloseAction()
       unwatchAllPlans()
+      cleanupAllDiffs()
+      cleanupAllViewers()
       cowrkManager.destroyAll()
       stopAllPreviews()
       cleanupPanePolling()

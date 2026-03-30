@@ -14,14 +14,16 @@
  */
 
 import { useCallback, useMemo, useState } from 'react'
-import { X, Maximize2, Minimize2, Eye, EyeOff, FileText } from 'lucide-react'
+import { X, Maximize2, Minimize2 } from 'lucide-react'
 import TerminalView from './TerminalView'
 import type { PermissionMode } from './TerminalView'
 import AgentPanel from './AgentPanel'
 import PlanPanel from './PlanPanel'
 import type { PlanInfo } from '../hooks/usePlanManager'
 import PreviewPanel from './PreviewPanel'
-import type { SessionInfo, AgentInfo, SessionStatus } from '../../shared/types'
+import DiffPanel from './DiffPanel'
+import ViewerPanel from './ViewerPanel'
+import type { SessionInfo, AgentInfo, SessionStatus, DiffFile, ViewerContent } from '../../shared/types'
 import type {
   PaneTreeState,
   PaneNode,
@@ -105,6 +107,24 @@ interface TerminalGridProps {
   onClosePlan?: (sessionId: string) => void
   onPlanResize?: (sessionId: string) => (e: React.MouseEvent) => void
   onSwitchPlanFile?: (sessionId: string, filePath: string) => void
+
+  // Diff 관련
+  diffSessions?: Set<string>
+  diffData?: Record<string, DiffFile[]>
+  diffRatios?: Record<string, number>
+  onToggleDiff?: (sessionId: string) => void
+  onCloseDiff?: (sessionId: string) => void
+  onDiffResize?: (sessionId: string) => (e: React.MouseEvent) => void
+  onRefreshDiff?: (sessionId: string) => void
+
+  // Viewer 관련
+  viewerSessions?: Set<string>
+  viewerData?: Record<string, ViewerContent>
+  viewerRatios?: Record<string, number>
+  onToggleViewer?: (sessionId: string) => void
+  onCloseViewer?: (sessionId: string) => void
+  onViewerResize?: (sessionId: string) => (e: React.MouseEvent) => void
+  onRefreshViewer?: (sessionId: string) => void
 }
 
 /** childPaneMap 폴백용 빈 Map (매 렌더링 새 인스턴스 방지) */
@@ -156,7 +176,21 @@ export default function TerminalGrid({
   onTogglePlan,
   onClosePlan,
   onPlanResize,
-  onSwitchPlanFile
+  onSwitchPlanFile,
+  diffSessions,
+  diffData,
+  diffRatios,
+  onToggleDiff,
+  onCloseDiff,
+  onDiffResize,
+  onRefreshDiff,
+  viewerSessions,
+  viewerData,
+  viewerRatios,
+  onToggleViewer,
+  onCloseViewer,
+  onViewerResize,
+  onRefreshViewer
 }: TerminalGridProps): JSX.Element {
   const [dropTarget, setDropTarget] = useState<{
     paneId: string; position: DropPosition
@@ -316,20 +350,6 @@ export default function TerminalGrid({
                 {t(locale, `mode.${permissionModes[leaf.sessionId]}`)}
               </button>
             )}
-            <button
-              className={`terminal-grid-pane-preview-toggle${planSessions?.has(leaf.sessionId) ? ' terminal-grid-pane-preview-toggle--active' : ''}`}
-              onClick={(e) => { e.stopPropagation(); onTogglePlan?.(leaf.sessionId) }}
-              title={t(locale, 'plan.title')}
-            >
-              <FileText size={10} />
-            </button>
-            <button
-              className={`terminal-grid-pane-preview-toggle${previewSessions.has(leaf.sessionId) ? ' terminal-grid-pane-preview-toggle--active' : ''}`}
-              onClick={(e) => { e.stopPropagation(); onTogglePreview(leaf.sessionId) }}
-              title={t(locale, 'shortcuts.preview')}
-            >
-              {previewSessions.has(leaf.sessionId) ? <EyeOff size={10} /> : <Eye size={10} />}
-            </button>
             {isGridMode && isZoomed && (
               <button
                 className="terminal-grid-pane-zoom-exit"
@@ -405,11 +425,18 @@ export default function TerminalGrid({
               />
             )
 
-            // 사이드 패널 수 계산 (preview + plan)
-            const sidePanels: JSX.Element[] = []
+            // 사이드 패널 계산 (배타적: preview / plan / diff / viewer 중 하나만)
+            const hasDiff = diffSessions?.has(leaf.sessionId) && diffData?.[leaf.sessionId]
+            const diffRatio = diffRatios?.[leaf.sessionId] ?? PREVIEW_DEFAULT_RATIO
+            const hasViewer = viewerSessions?.has(leaf.sessionId)
+            const viewerRatio = viewerRatios?.[leaf.sessionId] ?? PREVIEW_DEFAULT_RATIO
+
+            let sidePanel: JSX.Element | null = null
+            let sideRatio = PREVIEW_DEFAULT_RATIO
+            let sideResizeHandler: ((e: React.MouseEvent) => void) | undefined
 
             if (hasPreview) {
-              sidePanels.push(
+              sidePanel = (
                 <PreviewPanel
                   key="preview"
                   sessionId={leaf.sessionId}
@@ -420,10 +447,10 @@ export default function TerminalGrid({
                   processOrder={processOrders?.[leaf.sessionId]}
                 />
               )
-            }
-
-            if (hasPlan) {
-              sidePanels.push(
+              sideRatio = previewRatio
+              sideResizeHandler = onPreviewResize(leaf.sessionId)
+            } else if (hasPlan) {
+              sidePanel = (
                 <PlanPanel
                   key="plan"
                   sessionId={leaf.sessionId}
@@ -434,12 +461,37 @@ export default function TerminalGrid({
                   onSwitchFile={(sid, fp) => onSwitchPlanFile?.(sid, fp)}
                 />
               )
+              sideRatio = planRatio
+              sideResizeHandler = onPlanResize?.(leaf.sessionId)
+            } else if (hasDiff) {
+              sidePanel = (
+                <DiffPanel
+                  key="diff"
+                  sessionId={leaf.sessionId}
+                  files={diffData![leaf.sessionId]}
+                  locale={locale}
+                  onClose={() => onCloseDiff?.(leaf.sessionId)}
+                  onRefresh={() => onRefreshDiff?.(leaf.sessionId)}
+                />
+              )
+              sideRatio = diffRatio
+              sideResizeHandler = onDiffResize?.(leaf.sessionId)
+            } else if (hasViewer) {
+              sidePanel = (
+                <ViewerPanel
+                  key="viewer"
+                  sessionId={leaf.sessionId}
+                  content={viewerData?.[leaf.sessionId] ?? null}
+                  locale={locale}
+                  onClose={() => onCloseViewer?.(leaf.sessionId)}
+                  onRefresh={() => onRefreshViewer?.(leaf.sessionId)}
+                />
+              )
+              sideRatio = viewerRatio
+              sideResizeHandler = onViewerResize?.(leaf.sessionId)
             }
 
-            if (sidePanels.length === 0) return terminalContent
-
-            // 사이드 패널이 있으면 분할 렌더링
-            const sideRatio = hasPreview ? previewRatio : planRatio
+            if (!sidePanel) return terminalContent
 
             return (
               <div className="terminal-split">
@@ -448,10 +500,10 @@ export default function TerminalGrid({
                 </div>
                 <div
                   className="terminal-split-handle"
-                  onMouseDown={hasPreview ? onPreviewResize(leaf.sessionId) : onPlanResize?.(leaf.sessionId)}
+                  onMouseDown={sideResizeHandler}
                 />
                 <div className="terminal-split-preview" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                  {sidePanels}
+                  {sidePanel}
                 </div>
               </div>
             )

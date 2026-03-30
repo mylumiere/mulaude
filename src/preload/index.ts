@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
-import type { SessionInfo, HookEvent, UsageData, TmuxPaneInfo, AgentInfo, AppMode, NativeInputRequest, CowrkAgentState } from '../shared/types'
+import type { SessionInfo, HookEvent, UsageData, TmuxPaneInfo, AgentInfo, AppMode, NativeInputRequest, CowrkAgentState, DiffFile, ViewerContent } from '../shared/types'
 
 /**
  * Preload 스크립트 - contextBridge를 통해 렌더러에 안전한 API를 노출합니다.
@@ -358,6 +358,52 @@ const api = {
     }
     ipcRenderer.on('plan:content-update', handler)
     return () => ipcRenderer.removeListener('plan:content-update', handler)
+  },
+
+  // ─── Diff Viewer APIs ───
+
+  /** git diff HEAD 실행 요청 */
+  fetchDiff: (sessionId: string): Promise<DiffFile[]> =>
+    ipcRenderer.invoke('diff:fetch', sessionId),
+
+  /** diff auto-refresh 등록 */
+  registerDiffSession: (sessionId: string): void =>
+    ipcRenderer.send('diff:register', sessionId),
+
+  /** diff auto-refresh 해제 */
+  unregisterDiffSession: (sessionId: string): void =>
+    ipcRenderer.send('diff:unregister', sessionId),
+
+  /** diff 결과 수신 (auto-refresh 포함) */
+  onDiffResult: (cb: (sessionId: string, files: DiffFile[]) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, sessionId: string, files: DiffFile[]): void => {
+      cb(sessionId, files)
+    }
+    ipcRenderer.on('diff:result', handler)
+    return () => ipcRenderer.removeListener('diff:result', handler)
+  },
+
+  // ─── Viewer APIs ───
+
+  /** 파일 읽기 요청 (sessionId, filePath) → ViewerContent */
+  fetchViewerContent: (sessionId: string, filePath: string): Promise<ViewerContent | null> =>
+    ipcRenderer.invoke('viewer:fetch', sessionId, filePath),
+
+  /** viewer auto-refresh 등록 */
+  registerViewerSession: (sessionId: string): void =>
+    ipcRenderer.send('viewer:register', sessionId),
+
+  /** viewer auto-refresh 해제 */
+  unregisterViewerSession: (sessionId: string): void =>
+    ipcRenderer.send('viewer:unregister', sessionId),
+
+  /** viewer 결과 수신 (auto-refresh 포함) */
+  onViewerResult: (cb: (sessionId: string, content: ViewerContent) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, sessionId: string, content: ViewerContent): void => {
+      cb(sessionId, content)
+    }
+    ipcRenderer.on('viewer:result', handler)
+    return () => ipcRenderer.removeListener('viewer:result', handler)
   },
 
   // ─── Cowrk (영속 AI 팀원) APIs ───
