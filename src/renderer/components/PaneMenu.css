@@ -1,0 +1,102 @@
+/* ========================================
+ * PaneMenu — 패인 헤더 드롭다운 메뉴
+ * ======================================== */
+
+.pane-menu {
+  position: relative;
+}
+
+.pane-menu-trigger {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition-fast), background var(--transition-fast);
+  opacity: 0.7;
+}
+
+.pane-menu-trigger:hover,
+.pane-menu-trigger--open {
+  opacity: 1;
+  color: var(--accent-primary);
+  background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
+}
+
+/* 드롭다운 */
+.pane-menu-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 180px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  padding: 4px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+/* 메뉴 항목 */
+.pane-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 5px 8px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+  text-align: left;
+}
+
+.pane-menu-item:hover {
+  background: var(--bg-glass);
+  color: var(--text-primary);
+}
+
+.pane-menu-item--active {
+  color: var(--accent-primary);
+}
+
+.pane-menu-item--active:hover {
+  color: var(--accent-primary);
+}
+
+/* 체크마크 영역 (고정 너비) */
+.pane-menu-item-check {
+  width: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--accent-primary);
+}
+
+.pane-menu-item-icon {
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+
+.pane-menu-item-label {
+  flex: 1;
+}
+
+/* 단축키 표시 */
+.pane-menu-item-shortcut {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  opacity: 0.6;
+  margin-left: auto;
+}

@@ -15,6 +15,7 @@
 
 import { useCallback, useMemo, useState } from 'react'
 import { X, Maximize2, Minimize2 } from 'lucide-react'
+import PaneMenu from './PaneMenu'
 import TerminalView from './TerminalView'
 import type { PermissionMode } from './TerminalView'
 import AgentPanel from './AgentPanel'
@@ -350,6 +351,17 @@ export default function TerminalGrid({
                 {t(locale, `mode.${permissionModes[leaf.sessionId]}`)}
               </button>
             )}
+            <PaneMenu
+              locale={locale}
+              hasPlan={!!(planSessions?.has(leaf.sessionId) && planInfos?.[leaf.sessionId])}
+              hasPreview={previewSessions.has(leaf.sessionId)}
+              hasDiff={!!diffSessions?.has(leaf.sessionId)}
+              hasViewer={!!viewerSessions?.has(leaf.sessionId)}
+              onTogglePlan={() => onTogglePlan?.(leaf.sessionId)}
+              onTogglePreview={() => onTogglePreview(leaf.sessionId)}
+              onToggleDiff={() => onToggleDiff?.(leaf.sessionId)}
+              onToggleViewer={() => onToggleViewer?.(leaf.sessionId)}
+            />
             {isGridMode && isZoomed && (
               <button
                 className="terminal-grid-pane-zoom-exit"
