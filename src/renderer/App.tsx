@@ -434,6 +434,7 @@ export default function App(): JSX.Element {
               contextPercents={contextPercents}
               sessionStatuses={sessionStatuses}
               sessionAgents={teamAgents}
+              hookAgents={hookAgents}
               claudeSessionIds={claudeSessionIds}
               sessionsWithPanes={sessionsWithPanes}
               childPaneMap={childPaneMap}

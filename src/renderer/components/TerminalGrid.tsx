@@ -47,6 +47,8 @@ interface TerminalGridProps {
   contextPercents: Record<string, number>
   sessionStatuses: Record<string, SessionStatus>
   sessionAgents: Record<string, AgentInfo[]>
+  /** Hook Task 에이전트 (bg 작업 카운터 표시용) */
+  hookAgents?: Record<string, AgentInfo[]>
   /** 부모 Claude session ID (패인 헤더 칩 표시용) */
   claudeSessionIds?: Record<string, string>
   sessionsWithPanes: Set<string>
@@ -140,6 +142,7 @@ export default function TerminalGrid({
   contextPercents,
   sessionStatuses,
   sessionAgents,
+  hookAgents,
   claudeSessionIds,
   sessionsWithPanes,
   childPaneMap,
@@ -351,6 +354,14 @@ export default function TerminalGrid({
                 {t(locale, `mode.${permissionModes[leaf.sessionId]}`)}
               </button>
             )}
+            {(() => {
+              const hookEntry = hookAgents?.[leaf.sessionId]?.[0]
+              return hookEntry ? (
+                <span className={`terminal-grid-agent-badge terminal-grid-agent-badge--${hookEntry.status}`}>
+                  {hookEntry.name}
+                </span>
+              ) : null
+            })()}
             <PaneMenu
               locale={locale}
               hasPlan={!!(planSessions?.has(leaf.sessionId) && planInfos?.[leaf.sessionId])}

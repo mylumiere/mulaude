@@ -321,6 +321,35 @@
   gap: 2px;
 }
 
+/* 에이전트 카운터 뱃지 */
+.terminal-grid-agent-badge {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  font-weight: 500;
+  padding: 0 4px;
+  line-height: 16px;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+
+.terminal-grid-agent-badge--running {
+  color: var(--status-agent);
+  background: rgba(52, 211, 153, 0.1);
+  border: 1px solid rgba(52, 211, 153, 0.2);
+  animation: agent-badge-pulse 2s ease-in-out infinite;
+}
+
+.terminal-grid-agent-badge--completed {
+  color: var(--text-muted);
+  background: rgba(78, 78, 110, 0.1);
+  border: 1px solid rgba(78, 78, 110, 0.15);
+}
+
+@keyframes agent-badge-pulse {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 1; }
+}
+
 /* 퍼미션 모드 칩 (패인 헤더 내) */
 .terminal-grid-mode-chip {
   background: none;
