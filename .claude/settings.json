@@ -1,0 +1,57 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path // .tool_response.filePath' | { read -r f; case \"$f\" in *.ts|*.tsx) cd /Users/kakao/Desktop/mulaude && npx tsc --noEmit --pretty 2>&1 | tail -20;; esac; } 2>/dev/null || true",
+            "timeout": 30,
+            "statusMessage": "TypeScript 타입 체크..."
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"systemMessage\":\"컴팩트 전: 현재 작업 중인 파일, 미완료 작업, 중요 결정사항을 요약해서 보존하세요.\"}'",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"systemMessage\":\"작업 완료 시: 이번 세션에서 결정된 아키텍처/패턴/원칙이 있다면 메모리에 기록하세요.\"}'",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(npm run:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx electron-vite:*)",
+      "Bash(git:*)",
+      "Bash(node:*)",
+      "Bash(tmux:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(wc:*)",
+      "Bash(pkill:*)",
+      "Bash(gh:*)",
+      "WebSearch"
+    ]
+  }
+}
