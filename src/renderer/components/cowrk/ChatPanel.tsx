@@ -1022,16 +1022,16 @@ interface AgentDraft {
   permission: string
 }
 
-/** 추천 에이전트 프리셋 */
-const AGENT_PRESETS = [
-  { icon: '🔍', label: 'Code Reviewer', desc: 'Bugs, security, performance', prompt: 'A code reviewer focused on finding bugs, security vulnerabilities, and performance issues. Thorough but concise.' },
-  { icon: '🏗️', label: 'Architect', desc: 'System design & patterns', prompt: 'A system architect who evaluates design decisions, suggests patterns, and thinks about scalability and maintainability.' },
-  { icon: '📋', label: 'PM', desc: 'Progress & priorities', prompt: 'A product manager who tracks progress, manages priorities, and keeps the big picture in mind. Organized and pragmatic.' },
-  { icon: '🧪', label: 'QA Engineer', desc: 'Edge cases & testing', prompt: 'A QA engineer who thinks about edge cases, test strategies, and what could break. Paranoid in a good way.' },
-  { icon: '😈', label: "Devil's Advocate", desc: 'Challenges every decision', prompt: "A devil's advocate who challenges every decision and assumption. Forces you to justify your choices. Breaks confirmation bias." },
-  { icon: '👤', label: 'User Simulator', desc: 'End-user perspective', prompt: 'Simulates a non-technical end user. Points out confusing UX, missing affordances, and accessibility issues.' },
-  { icon: '📝', label: 'Doc Writer', desc: 'Documentation & READMEs', prompt: 'A technical writer who creates clear documentation, READMEs, and code comments. Makes complex things understandable.' },
-  { icon: '🎓', label: 'Mentor', desc: 'Teaches & explains', prompt: 'A patient mentor who explains concepts clearly, provides examples, and helps you learn new technologies.' },
+/** 추천 에이전트 프리셋 (i18n 키 기반) */
+const AGENT_PRESETS: Array<{ icon: string; labelKey: string; descKey: string; prompt: string }> = [
+  { icon: '🔍', labelKey: 'preset.reviewer', descKey: 'preset.reviewerDesc', prompt: 'A code reviewer focused on finding bugs, security vulnerabilities, and performance issues. Thorough but concise.' },
+  { icon: '🏗️', labelKey: 'preset.architect', descKey: 'preset.architectDesc', prompt: 'A system architect who evaluates design decisions, suggests patterns, and thinks about scalability and maintainability.' },
+  { icon: '📋', labelKey: 'preset.pm', descKey: 'preset.pmDesc', prompt: 'A product manager who tracks progress, manages priorities, and keeps the big picture in mind. Organized and pragmatic.' },
+  { icon: '🧪', labelKey: 'preset.qa', descKey: 'preset.qaDesc', prompt: 'A QA engineer who thinks about edge cases, test strategies, and what could break. Paranoid in a good way.' },
+  { icon: '😈', labelKey: 'preset.devil', descKey: 'preset.devilDesc', prompt: "A devil's advocate who challenges every decision and assumption. Forces you to justify your choices. Breaks confirmation bias." },
+  { icon: '👤', labelKey: 'preset.user', descKey: 'preset.userDesc', prompt: 'Simulates a non-technical end user. Points out confusing UX, missing affordances, and accessibility issues.' },
+  { icon: '📝', labelKey: 'preset.doc', descKey: 'preset.docDesc', prompt: 'A technical writer who creates clear documentation, READMEs, and code comments. Makes complex things understandable.' },
+  { icon: '🎓', labelKey: 'preset.mentor', descKey: 'preset.mentorDesc', prompt: 'A patient mentor who explains concepts clearly, provides examples, and helps you learn new technologies.' },
 ]
 
 function CreateAgentWizard({ locale, onBack, onClose, onCreated, isFullscreen, onToggleFullscreen }: WizardProps): JSX.Element {
@@ -1143,13 +1143,13 @@ function CreateAgentWizard({ locale, onBack, onClose, onCreated, isFullscreen, o
             <div className="tc-presets-grid">
               {AGENT_PRESETS.map(preset => (
                 <button
-                  key={preset.label}
+                  key={preset.labelKey}
                   className="tc-preset-card"
                   onClick={() => generateFromPrompt(preset.prompt)}
                 >
                   <span className="tc-preset-icon">{preset.icon}</span>
-                  <span className="tc-preset-label">{preset.label}</span>
-                  <span className="tc-preset-desc">{preset.desc}</span>
+                  <span className="tc-preset-label">{t(locale, preset.labelKey)}</span>
+                  <span className="tc-preset-desc">{t(locale, preset.descKey)}</span>
                 </button>
               ))}
             </div>
