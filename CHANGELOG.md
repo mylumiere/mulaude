@@ -1,5 +1,51 @@
 # Changelog
 
+## [1.3.0] - 2026-04-12
+
+### Team Chat & Agent Orchestration — AI 팀 오케스트레이션
+
+에이전트들이 팀을 구성하여 그룹 채팅방에서 순차 토론합니다.
+통합 Chat 패널(⌘⇧G)로 어디서든 에이전트/팀과 대화하고, 프로젝트 작업을 방해하지 않습니다.
+
+#### Team Chat
+- **팀 채팅방**: 멤버가 순차적으로 응답 (A → B → C), 이전 응답을 참고하며 토론
+- **프리프로세싱 오케스트레이터**: 사용자 메시지 분석 → 응답할 멤버/순서를 AI가 결정
+  - "reviewer만 답해" → reviewer만 응답
+  - "PM부터" → PM → reviewer 순서 변경
+- **팀 CRUD**: `~/.mulaude/cowrk/teams.json` 레지스트리 + `teams/{name}/history.jsonl`
+
+#### 통합 Chat 패널
+- **Push 레이아웃**: 터미널 영역을 밀어내고 오른쪽에 배치 (floating 아님)
+- **⌘⇧G 토글**: Projects 탭에서 벗어나지 않고 언제든 채팅 가능
+- **리스트 뷰**: Agents 섹션 + Teams 섹션 (안 읽은 메시지 뱃지)
+- **채팅 뷰**: Flat 메시지 스타일 (Slack/Cursor 패턴), 연속 메시지 그룹핑
+- **설정 뷰**: 페르소나 편집, 권한 변경, 멤버 관리, 프로젝트 폴더 지정
+- **전체화면 토글**: 터미널 숨기고 채팅에 집중
+- **채팅 히스토리 로드**: history.jsonl에서 이전 대화 복원
+
+#### 에이전트 전문화
+- **권한 토글**: Read(조언만) → Edit(파일 수정) → Full(Bash 포함) — `--allowedTools` 플래그
+- **대화형 에이전트 생성 위자드**: AI가 사용자 설명 기반으로 페르소나 초안 생성
+- **8가지 추천 프리셋**: Code Reviewer, Architect, PM, QA, Devil's Advocate, User Simulator, Doc Writer, Mentor
+- **마크다운 렌더링**: `**볼드**`, `*이탤릭*`, `` `코드` ``, 코드블록
+
+#### UI 개선
+- 사이드바: Agents 탭 제거 → Chat 버튼(안 읽은 뱃지 표시)으로 통합
+- 에이전트별 고유 색상, composing 인디케이터, 진행 바
+- Dark Observatory 테마 변수 전면 적용
+- i18n: ~70개 키 × 4개 언어 (en/ko/ja/zh)
+
+#### 새 파일
+- `src/main/cowrk/team-store.ts` — 팀 레지스트리 CRUD
+- `src/renderer/hooks/useTeamChat.ts` — 팀 상태 관리 훅
+- `src/renderer/components/cowrk/ChatPanel.tsx` — 통합 채팅 패널
+- `src/renderer/components/cowrk/TeamChat.css` — 채팅 전용 스타일
+- `src/renderer/components/cowrk/TeamChatPanel.tsx` — 팀 채팅 뷰
+- `src/renderer/components/cowrk/TeamCreateDialog.tsx` — 팀 생성 모달
+- `src/renderer/components/cowrk/TeamSection.tsx` — 팀 사이드바 섹션
+
+---
+
 ## [1.2.0] - 2026-03-18
 
 ### Cowrk Agents — 영속적 AI 팀원

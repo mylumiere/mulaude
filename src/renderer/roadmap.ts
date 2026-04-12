@@ -72,6 +72,18 @@ export const ROADMAP: Milestone[] = [
   },
   {
     version: 'v1.3',
+    title: 'Team Chat & Agent Orchestration',
+    features: [
+      { title: 'Team Chat', desc: '에이전트 그룹 채팅방 — 순차 토론 + 프리프로세싱 오케스트레이터', status: 'done' },
+      { title: 'Unified Chat Panel', desc: '⌘⇧G 통합 채팅 패널 — Push 레이아웃, 리스트/채팅/설정 뷰', status: 'done' },
+      { title: 'Agent Permissions', desc: '에이전트 권한 토글 (Read/Edit/Full) — 파일 수정 허용', status: 'done' },
+      { title: 'Agent Wizard', desc: '대화형 에이전트 생성 — AI가 페르소나 초안 생성 + 8가지 프리셋', status: 'done' },
+      { title: 'Agent Settings', desc: '에이전트/팀 설정 뷰 — 페르소나 편집, 멤버 관리, 프로젝트 폴더', status: 'done' },
+      { title: 'Chat History', desc: '채팅 히스토리 영속화 + 안 읽은 메시지 뱃지', status: 'done' },
+    ]
+  },
+  {
+    version: 'v1.4',
     title: 'Quality of Life',
     features: [
       { title: 'Pin Sessions', desc: '중요 세션을 사이드바 상단에 고정', status: 'planned' },
@@ -82,7 +94,7 @@ export const ROADMAP: Milestone[] = [
     ]
   },
   {
-    version: 'v1.4',
+    version: 'v1.5',
     title: 'Search & Export',
     features: [
       { title: 'Conversation Search', desc: '모든 세션 대화를 전문 검색 (⌘⇧F)', status: 'planned' },
@@ -91,7 +103,7 @@ export const ROADMAP: Milestone[] = [
     ]
   },
   {
-    version: 'v1.5',
+    version: 'v1.6',
     title: 'Analytics',
     features: [
       { title: 'Usage Dashboard', desc: '일별/주별 세션 수, 토큰 사용량 그래프', status: 'planned' },
