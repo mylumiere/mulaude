@@ -30,8 +30,10 @@ import { usePreviewTrigger } from './hooks/usePreviewTrigger'
 import { useDiffManager } from './hooks/useDiffManager'
 import { useViewerManager } from './hooks/useViewerManager'
 import { useCowrkAgents } from './hooks/useCowrkAgents'
-import CowrkChatPanel from './components/cowrk/CowrkChatPanel'
+import { useTeamChat } from './hooks/useTeamChat'
+import ChatPanel from './components/cowrk/ChatPanel'
 import CowrkCreateDialog from './components/cowrk/CowrkCreateDialog'
+import TeamCreateDialog from './components/cowrk/TeamCreateDialog'
 import type { PermissionMode } from './components/TerminalView'
 import type { SessionInfo } from '../shared/types'
 
@@ -207,6 +209,9 @@ export default function App(): JSX.Element {
 
   // Cowrk (영속 AI 팀원)
   const cowrk = useCowrkAgents()
+  const teamChat = useTeamChat()
+  const [chatPanelOpen, setChatPanelOpen] = useState(false)
+  const [chatFullscreen, setChatFullscreen] = useState(false)
 
   // 세션별 퍼미션 모드 상태
   const [permissionModes, setPermissionModes] = useState<Record<string, PermissionMode>>({})
@@ -347,6 +352,7 @@ export default function App(): JSX.Element {
         : sessionManager.activeSessionId
       if (sid) handleToggleViewer(sid)
     },
+    toggleTeamChat: () => setChatPanelOpen(prev => !prev),
     openCommandPalette: () => setCommandPaletteOpen(true),
     openSettings: () => settings.setShowSettings(true),
     openShortcuts: () => setShortcutsOpen(true),
@@ -416,14 +422,29 @@ export default function App(): JSX.Element {
           onRestartTutorial={tutorial.restart}
           shortcutsOpen={shortcutsOpen}
           onShortcutsClose={() => setShortcutsOpen(false)}
+          onToggleChat={() => setChatPanelOpen(prev => !prev)}
+          chatOpen={chatPanelOpen}
+          chatUnreadCount={(() => {
+            try {
+              const lr = JSON.parse(localStorage.getItem('mulaude-chat-lastread') || '{}') as Record<string, number>
+              let count = 0
+              for (const [name, msgs] of Object.entries(cowrk.chatMessages)) {
+                const lastReadTs = lr[name] || 0
+                count += msgs.filter(m => m.timestamp > lastReadTs && m.role !== 'user').length
+              }
+              for (const [name, msgs] of Object.entries(teamChat.teamChatMessages)) {
+                const lastReadTs = lr[name] || 0
+                count += msgs.filter(m => m.timestamp > lastReadTs && m.role !== 'user').length
+              }
+              return count
+            } catch { return 0 }
+          })()}
           cowrkAgents={cowrk.agents}
           cowrkActiveAgent={cowrk.activeAgent}
           cowrkChatMessages={cowrk.chatMessages}
-          onSelectCowrkAgent={cowrk.openChat}
-          onCreateCowrkAgent={() => cowrk.setCreating(true)}
         />
         <div className="resize-handle" onMouseDown={settings.handleResizeStart} />
-        <div className="terminal-area">
+        <div className={`terminal-area${chatPanelOpen ? ' terminal-area--with-team' : ''}${chatFullscreen ? ' terminal-area--hidden' : ''}`}>
           {sessionManager.sessions.length > 0 ? (
             <TerminalGrid
               tree={terminalLayout.tree}
@@ -499,6 +520,40 @@ export default function App(): JSX.Element {
             </div>
           )}
         </div>
+        {/* ─── 통합 Chat Panel (⌘⇧G) ─── */}
+        {chatPanelOpen && (
+          <ChatPanel
+            locale={settings.locale}
+            projectDir={activeSession?.workingDir}
+            agents={cowrk.agents}
+            agentMessages={cowrk.chatMessages}
+            onAskAgent={(name, msg, dir) => {
+              // user 메시지를 chatMessages에 추가하고 IPC 전송
+              cowrk.openChat(name)
+              // 약간의 딜레이로 openChat이 activeAgent를 설정한 후 askAgent 호출
+              setTimeout(() => cowrk.askAgent(msg, dir), 0)
+            }}
+            onCancelAgent={(name) => window.api.cowrkCancel(name)}
+            onDeleteAgent={async (name) => { await cowrk.deleteAgent(name) }}
+            onCreateAgent={() => cowrk.setCreating(true)}
+            onSetAvatar={cowrk.setAvatar}
+            teams={teamChat.teams}
+            teamMessages={teamChat.teamChatMessages}
+            onAskTeam={(name, msg, dir) => {
+              teamChat.openTeamChat(name)
+              setTimeout(() => teamChat.askTeam(msg, dir), 0)
+            }}
+            onCancelTeam={(name) => window.api.teamCancel(name)}
+            onDeleteTeam={async (name) => { await teamChat.deleteTeam(name) }}
+            onCreateTeam={() => teamChat.setCreatingTeam(true)}
+            onClose={() => { setChatPanelOpen(false); setChatFullscreen(false) }}
+            isFullscreen={chatFullscreen}
+            onToggleFullscreen={() => setChatFullscreen(prev => !prev)}
+            onRefreshAgents={(updated) => cowrk.setAgents(updated)}
+            onLoadAgentHistory={cowrk.loadHistory}
+            onLoadTeamHistory={teamChat.loadHistory}
+          />
+        )}
       </div>
       {sessionManager.tmuxMissing && (
         <TmuxMissingBanner
@@ -513,30 +568,21 @@ export default function App(): JSX.Element {
         onLocaleChange={settings.handleLocaleChange}
         onThemeChange={settings.handleThemeChange}
       />
-      {cowrk.activeAgent && (() => {
-        const activeAgentData = cowrk.agents.find(a => a.name === cowrk.activeAgent)
-        return (
-          <CowrkChatPanel
-            agentName={cowrk.activeAgent}
-            messages={cowrk.chatMessages[cowrk.activeAgent] || []}
-            isStreaming={activeAgentData?.status === 'thinking'}
-            locale={settings.locale}
-            onSend={(msg) => cowrk.askAgent(msg, activeSession?.workingDir)}
-            onCancel={cowrk.cancelAgent}
-            onClose={cowrk.closeChat}
-            onDelete={() => cowrk.deleteAgent(cowrk.activeAgent!)}
-            projectDir={activeSession?.workingDir}
-            avatarPath={activeAgentData?.avatarPath}
-            onAvatarChange={(base64) => cowrk.setAvatar(cowrk.activeAgent!, base64)}
-          />
-        )
-      })()}
       <CowrkCreateDialog
         isOpen={cowrk.isCreating}
         locale={settings.locale}
         onClose={() => cowrk.setCreating(false)}
         onCreate={cowrk.createAgent}
       />
+
+      <TeamCreateDialog
+        isOpen={teamChat.isCreatingTeam}
+        agents={cowrk.agents}
+        locale={settings.locale}
+        onClose={() => teamChat.setCreatingTeam(false)}
+        onCreate={teamChat.createTeam}
+      />
+
       {commandPaletteOpen && (
         <CommandPalette
           locale={settings.locale}

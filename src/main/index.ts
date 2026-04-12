@@ -17,7 +17,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { SessionManager } from './session-manager'
 import { HooksManager } from './hooks-manager'
 import { NativeChatManager } from './native-chat-manager'
-import { registerIpcHandlers, registerNativeIpcHandlers, registerCowrkIpcHandlers, cleanupPasteImages } from './ipc-handlers'
+import { registerIpcHandlers, registerNativeIpcHandlers, registerCowrkIpcHandlers, registerTeamIpcHandlers, cleanupPasteImages } from './ipc-handlers'
 import { setupSessionDataForwarding } from './session-forwarder'
 import { setupPanePolling, setupChildPaneForwarding } from './pane-poller'
 import { startWatching as startStatuslineWatching, cleanup as cleanupStatusline } from './statusline-manager'
@@ -224,6 +224,35 @@ app.whenReady().then(() => {
   cowrkManager.onTurnError = (agentName, error) => {
     if (!mainWindow.isDestroyed()) {
       mainWindow.webContents.send('cowrk:turn-error', agentName, error)
+    }
+  }
+
+  // ─── Team Chat — 그룹 채팅방 ───
+  registerTeamIpcHandlers(cowrkManager)
+
+  cowrkManager.onTeamAgentStart = (teamName, agentName, index, total) => {
+    if (!mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('team:agent-start', teamName, agentName, index, total)
+    }
+  }
+  cowrkManager.onTeamStreamChunk = (teamName, agentName, chunk) => {
+    if (!mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('team:stream-chunk', teamName, agentName, chunk)
+    }
+  }
+  cowrkManager.onTeamAgentComplete = (teamName, agentName, response) => {
+    if (!mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('team:agent-complete', teamName, agentName, response)
+    }
+  }
+  cowrkManager.onTeamSequenceComplete = (teamName) => {
+    if (!mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('team:sequence-complete', teamName)
+    }
+  }
+  cowrkManager.onTeamError = (teamName, agentName, error) => {
+    if (!mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('team:error', teamName, agentName, error)
     }
   }
 

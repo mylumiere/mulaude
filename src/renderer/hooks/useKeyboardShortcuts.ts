@@ -53,6 +53,8 @@ interface UseKeyboardShortcutsParams {
   openSettings?: () => void
   /** 단축키 모달 열기 */
   openShortcuts?: () => void
+  /** Team Chat 토글 */
+  toggleTeamChat?: () => void
   /** 튜토리얼 상태 (활성 시 허용된 키만 통과) */
   tutorialPhase?: TutorialPhase
   tutorialStep?: TutorialStep | null
@@ -80,6 +82,7 @@ export function useKeyboardShortcuts({
   getFocusedSessionId,
   openSettings,
   openShortcuts,
+  toggleTeamChat,
   tutorialPhase,
   tutorialStep
 }: UseKeyboardShortcutsParams): void {
@@ -153,6 +156,13 @@ export function useKeyboardShortcuts({
       if (e.key === 'v' && e.shiftKey && !e.altKey && !e.ctrlKey) {
         e.preventDefault()
         toggleViewer?.()
+        return
+      }
+
+      // ── Team Chat 토글 (Cmd+Shift+G) ──
+      if (e.key.toLowerCase() === 'g' && e.shiftKey && !e.altKey && !e.ctrlKey) {
+        e.preventDefault()
+        toggleTeamChat?.()
         return
       }
 

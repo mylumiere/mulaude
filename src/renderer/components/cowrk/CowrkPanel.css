@@ -742,3 +742,358 @@
   color: rgba(255, 255, 255, 0.8);
   background: rgba(255, 255, 255, 0.05);
 }
+
+/* ═══════ Team Section (사이드바) ═══════ */
+
+.team-section {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 4px;
+}
+
+.team-section-header {
+  display: flex;
+  align-items: center;
+  padding: 6px 10px;
+  gap: 6px;
+}
+
+.team-section-title {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.4);
+  flex: 1;
+}
+
+.team-section-add {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+.team-section-add:hover {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.team-section-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 12px;
+}
+.team-section-empty p {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+  margin: 0;
+}
+
+/* ─── 팀 아바타 스택 (사이드바) ─── */
+
+.team-avatar-stack {
+  display: flex;
+  align-items: center;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.team-avatar-item {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  overflow: hidden;
+  position: relative;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.team-avatar-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.team-avatar-item span {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.team-avatar-more {
+  background: rgba(255, 255, 255, 0.15);
+}
+.team-avatar-more span {
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.team-status-dot {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.team-status-running {
+  background: var(--cowrk-thinking, #f0b429);
+  animation: team-pulse 1.5s ease-in-out infinite;
+}
+@keyframes team-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.team-preview-agent {
+  color: rgba(150, 180, 255, 0.7);
+  font-weight: 500;
+}
+
+/* ─── 팀 헤더 아바타 (채팅 패널) ─── */
+
+.team-header-avatars {
+  display: flex;
+  align-items: center;
+}
+
+.team-header-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  overflow: hidden;
+  position: relative;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.team-header-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.team-header-avatar span {
+  font-size: 9px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.team-member-count {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.35);
+  padding: 1px 5px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* ─── 진행 인디케이터 ─── */
+
+.team-progress-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(240, 180, 41, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  font-size: 11px;
+  color: rgba(240, 180, 41, 0.9);
+}
+
+.team-progress-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #f0b429;
+  animation: team-pulse 1.5s ease-in-out infinite;
+}
+
+/* ─── 메시지 에이전트 헤더 ─── */
+
+.team-msg-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+.team-msg-avatar {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.team-msg-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.team-msg-avatar span {
+  font-size: 9px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* ─── 팀 생성 다이얼로그: 멤버 선택 ─── */
+
+.team-no-agents {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+  text-align: center;
+  padding: 12px 0;
+  margin: 0;
+}
+
+.team-member-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.team-member-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.team-member-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.team-member-item--selected {
+  background: rgba(150, 180, 255, 0.08);
+}
+
+.team-member-check {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: transparent;
+  flex-shrink: 0;
+}
+.team-member-check--on {
+  border-color: rgba(150, 180, 255, 0.6);
+  background: rgba(150, 180, 255, 0.15);
+  color: rgba(150, 180, 255, 0.9);
+}
+
+.team-member-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.team-member-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.team-member-avatar span {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.team-member-name {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+  flex: 1;
+}
+
+.team-member-order {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+}
+
+.team-member-badge {
+  font-size: 10px;
+  color: rgba(150, 180, 255, 0.7);
+  padding: 1px 5px;
+  border-radius: 8px;
+  background: rgba(150, 180, 255, 0.1);
+  margin-right: 2px;
+}
+
+.team-member-move {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 10px;
+  padding: 0 3px;
+  cursor: pointer;
+  line-height: 1.4;
+}
+.team-member-move:hover:not(:disabled) {
+  color: rgba(255, 255, 255, 0.8);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+.team-member-move:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+/* ─── Team Composing 인디케이터 ─── */
+
+.team-composing {
+  padding: 4px 0;
+  opacity: 0.7;
+}
+
+/* ─── Agents 탭 통합 스크롤 레이아웃 ─── */
+
+.agents-tab-scroll {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.agents-tab-section {
+  padding-bottom: 4px;
+}
+
+.agents-tab-section-header {
+  display: flex;
+  align-items: center;
+  padding: 8px 10px 4px;
+  gap: 6px;
+}
+
+.agents-tab-section-title {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.4);
+  flex: 1;
+}

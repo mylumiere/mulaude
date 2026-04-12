@@ -30,6 +30,8 @@ export interface AgentMeta {
   totalTokensUsed: number
   lastUsedAt: string | null
   personaHash: string
+  /** 권한 수준 (기본: read) */
+  permission?: import('../../shared/types').AgentPermission
 }
 
 /** 대화 히스토리 엔트리 (history.jsonl 한 줄) */
@@ -46,4 +48,37 @@ export interface ProjectContext {
   cwd: string
   claudeMd: string | null
   tree: string
+}
+
+/* ═══════ Team Chat 내부 타입 ═══════ */
+
+/** teams.json 전체 구조 */
+export interface TeamRegistry {
+  version: 1
+  teams: TeamEntry[]
+}
+
+/** 팀 정의 (teams.json에 저장) */
+export interface TeamEntry {
+  name: string
+  members: string[]
+  createdAt: string
+  lastUsedAt: string | null
+}
+
+/** 팀 채팅 히스토리 엔트리 (team history.jsonl 한 줄) */
+export interface TeamHistoryEntry {
+  ts: string
+  role: 'user' | 'agent'
+  agentName?: string
+  content: string
+}
+
+/** 팀 오케스트레이션 런타임 상태 */
+export interface TeamOrchestration {
+  teamName: string
+  members: string[]
+  currentIndex: number
+  cancelled: boolean
+  responses: Array<{ agentName: string; response: string }>
 }

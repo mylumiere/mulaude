@@ -217,6 +217,17 @@ body.resizing iframe {
   min-height: 0;
   background: var(--bg-deep);
   position: relative;
+  transition: flex var(--transition-normal, 0.25s cubic-bezier(0.16, 1, 0.3, 1));
+}
+
+/* Team Chat 패널이 열리면 terminal-area가 줄어듦 */
+.terminal-area--with-team {
+  flex: 1 1 0;
+}
+
+/* Chat 전체화면 시 terminal-area 숨김 */
+.terminal-area--hidden {
+  display: none !important;
 }
 
 .terminal-wrapper {

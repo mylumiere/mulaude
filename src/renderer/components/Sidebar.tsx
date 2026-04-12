@@ -10,14 +10,13 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
-import { Settings, Plus, BookOpen, Route, Keyboard, MessageSquareWarning, X, Eye, Bot } from 'lucide-react'
-import type { ProjectGroup, SessionStatus, UsageData, AgentInfo, CowrkAgentState } from '../../shared/types'
+import { Settings, Plus, BookOpen, Route, Keyboard, MessageSquareWarning, X, Eye, MessageSquare } from 'lucide-react'
+import type { ProjectGroup, SessionStatus, UsageData, AgentInfo } from '../../shared/types'
 import { type Locale, t } from '../i18n'
 import ProjectHeader from './sidebar/ProjectHeader'
 import SessionRow from './sidebar/SessionRow'
 import AgentTree from './sidebar/AgentTree'
 import UsageGauge from './sidebar/UsageGauge'
-import CowrkSection from './cowrk/CowrkSection'
 import RoadmapModal from './RoadmapModal'
 import ShortcutsModal from './ShortcutsModal'
 import './Sidebar.css'
@@ -56,12 +55,11 @@ interface SidebarProps {
   /** 외부에서 단축키 모달 열기 (⌘/) */
   shortcutsOpen?: boolean
   onShortcutsClose?: () => void
-  /** Cowrk 에이전트 목록 */
-  cowrkAgents?: CowrkAgentState[]
-  cowrkActiveAgent?: string | null
-  cowrkChatMessages?: Record<string, import('../../shared/types').CowrkChatMessage[]>
-  onSelectCowrkAgent?: (name: string) => void
-  onCreateCowrkAgent?: () => void
+  /** 채팅 패널 토글 */
+  onToggleChat?: () => void
+  chatOpen?: boolean
+  /** 전체 안 읽은 메시지 수 */
+  chatUnreadCount?: number
 }
 
 export default function Sidebar({
@@ -92,18 +90,15 @@ export default function Sidebar({
   onRestartTutorial,
   shortcutsOpen,
   onShortcutsClose,
-  cowrkAgents,
-  cowrkActiveAgent,
-  cowrkChatMessages,
-  onSelectCowrkAgent,
-  onCreateCowrkAgent,
+  onToggleChat,
+  chatOpen,
+  chatUnreadCount,
 }: SidebarProps): JSX.Element {
   const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(new Set())
   const [collapsedAgents, setCollapsedAgents] = useState<Set<string>>(new Set())
   const [showRoadmap, setShowRoadmap] = useState(false)
   const [showShortcuts, setShowShortcuts] = useState(false)
-  /** 사이드바 탭: projects (기본) 또는 agents (cowrk) */
-  const [sidebarTab, setSidebarTab] = useState<'projects' | 'agents'>('projects')
+  // Agents 탭은 ChatPanel(⌘⇧G)로 이동 — 사이드바는 Projects 전용
   const [nudgeDismissed, setNudgeDismissed] = useState(() => {
     try { return localStorage.getItem('mulaude-split-nudge-dismissed') === '1' } catch { return false }
   })
@@ -148,35 +143,12 @@ export default function Sidebar({
     })
   }
 
-  const hasCowrk = !!(cowrkAgents && onSelectCowrkAgent && onCreateCowrkAgent)
-
   return (
     <div className="sidebar" style={{ width }}>
       <div className="sidebar-drag-region" />
 
       <div className="sidebar-header">
-        {hasCowrk ? (
-          <div className="sidebar-tabs">
-            <button
-              className={`sidebar-tab${sidebarTab === 'projects' ? ' sidebar-tab--active' : ''}`}
-              onClick={() => setSidebarTab('projects')}
-            >
-              {t(locale, 'sidebar.title')}
-            </button>
-            <button
-              className={`sidebar-tab${sidebarTab === 'agents' ? ' sidebar-tab--active' : ''}`}
-              onClick={() => setSidebarTab('agents')}
-            >
-              <Bot size={11} />
-              Agents
-              {cowrkAgents!.length > 0 && (
-                <span className="sidebar-tab-badge">{cowrkAgents!.length}</span>
-              )}
-            </button>
-          </div>
-        ) : (
-          <span className="sidebar-title">{t(locale, 'sidebar.title')}</span>
-        )}
+        <span className="sidebar-title">{t(locale, 'sidebar.title')}</span>
         <div className="sidebar-header-actions">
           {onRestartTutorial && (
             <button className="sidebar-icon-btn sidebar-tutorial-btn" onClick={onRestartTutorial} title={t(locale, 'tutorial.restart')}>
@@ -186,22 +158,13 @@ export default function Sidebar({
           <button className="sidebar-icon-btn sidebar-settings-btn" onClick={onOpenSettings} title={t(locale, 'settings.title')}>
             <Settings size={14} />
           </button>
-          {sidebarTab === 'projects' && (
-            <button className="sidebar-add-btn" onClick={onCreateProject} title={`${t(locale, 'sidebar.addProject')} (⌘N)`}>
-              <Plus size={14} />
-            </button>
-          )}
-          {sidebarTab === 'agents' && onCreateCowrkAgent && (
-            <button className="sidebar-add-btn" onClick={onCreateCowrkAgent} title={t(locale, 'cowrk.newAgentBtn')}>
-              <Plus size={14} />
-            </button>
-          )}
+          <button className="sidebar-add-btn" onClick={onCreateProject} title={`${t(locale, 'sidebar.addProject')} (⌘N)`}>
+            <Plus size={14} />
+          </button>
         </div>
       </div>
 
-      {/* ─── Projects 탭 ─── */}
-      {sidebarTab === 'projects' && (
-        <>
+      {/* ─── Projects ─── */}
           <div className="sidebar-list sidebar-list--with-legend">
             {projects.length === 0 ? (
               <div className="sidebar-empty">{t(locale, 'sidebar.empty')}</div>
@@ -287,19 +250,22 @@ export default function Sidebar({
               <button className="split-nudge-close" onClick={dismissNudge}><X size={12} /></button>
             </div>
           )}
-        </>
-      )}
-
-      {/* ─── Agents 탭 ─── */}
-      {sidebarTab === 'agents' && cowrkAgents && onSelectCowrkAgent && onCreateCowrkAgent && (
-        <CowrkSection
-          agents={cowrkAgents}
-          activeAgent={cowrkActiveAgent ?? null}
-          chatMessages={cowrkChatMessages || {}}
-          locale={locale}
-          onSelectAgent={onSelectCowrkAgent}
-          onCreateAgent={onCreateCowrkAgent}
-        />
+      {/* 채팅 패널 버튼 (⌘⇧G) */}
+      {onToggleChat && (
+        <div className="sidebar-chat-btn-wrapper">
+          <button
+            className={`sidebar-chat-btn${chatOpen ? ' sidebar-chat-btn--active' : ''}`}
+            onClick={onToggleChat}
+            title="Chat (⌘⇧G)"
+          >
+            <MessageSquare size={14} />
+            <span>Chat</span>
+            {(chatUnreadCount ?? 0) > 0 && (
+              <span className="sidebar-chat-unread">{chatUnreadCount}</span>
+            )}
+            <span className="sidebar-chat-shortcut">⌘⇧G</span>
+          </button>
+        </div>
       )}
 
       <UsageGauge usageData={usageData} locale={locale} />

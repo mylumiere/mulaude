@@ -39,6 +39,29 @@ export const DEFAULTS = {
   treeMaxEntries: 200,
 } as const
 
+/** ═══════ Team Chat 경로 ═══════ */
+
+export const TEAM_PATHS = {
+  teams: join(COWRK_HOME, 'teams.json'),
+  teamsDir: join(COWRK_HOME, 'teams'),
+} as const
+
+/** 팀 서브 파일 경로 */
+export const teamFiles = (name: string) => {
+  const dir = join(TEAM_PATHS.teamsDir, name)
+  return {
+    dir,
+    history: join(dir, 'history.jsonl'),
+  }
+}
+
+/** 팀 기본값 */
+export const TEAM_DEFAULTS = {
+  maxTeamHistoryTurns: 30,
+  maxKbSnippetChars: 8000,
+  maxKbResults: 5,
+} as const
+
 /** 기본 페르소나 (미지정 시) */
 export const DEFAULT_PERSONA = `# AI Assistant
 ## Expertise

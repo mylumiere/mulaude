@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
-import type { SessionInfo, HookEvent, UsageData, TmuxPaneInfo, AgentInfo, AppMode, NativeInputRequest, CowrkAgentState, DiffFile, ViewerContent } from '../shared/types'
+import type { SessionInfo, HookEvent, UsageData, TmuxPaneInfo, AgentInfo, AppMode, NativeInputRequest, CowrkAgentState, DiffFile, ViewerContent, TeamState } from '../shared/types'
 
 /**
  * Preload 스크립트 - contextBridge를 통해 렌더러에 안전한 API를 노출합니다.
@@ -466,6 +466,79 @@ const api = {
   /** Cowrk 에이전트 아바타 삭제 */
   cowrkRemoveAvatar: (name: string): Promise<void> =>
     ipcRenderer.invoke('cowrk:remove-avatar', name),
+
+  /** Cowrk 에이전트 권한 변경 */
+  cowrkSetPermission: (name: string, permission: string): Promise<void> =>
+    ipcRenderer.invoke('cowrk:set-permission', name, permission),
+
+  /** 대화형 에이전트 생성 (설명 → config) */
+  cowrkGenerateAgent: (description: string): Promise<{ name: string; persona: string; permission: string }> =>
+    ipcRenderer.invoke('cowrk:generate-agent', description),
+
+  /** Cowrk 에이전트 채팅 히스토리 로드 */
+  cowrkLoadHistory: (name: string): Promise<Array<{ role: string; content: string; ts: string }>> =>
+    ipcRenderer.invoke('cowrk:load-history', name),
+
+  /** 팀 채팅 히스토리 로드 */
+  teamLoadHistory: (name: string): Promise<Array<{ role: string; agentName?: string; content: string; ts: string }>> =>
+    ipcRenderer.invoke('team:load-history', name),
+
+  // ─── Team Chat (팀 채팅방) APIs ───
+
+  /** 팀 목록 조회 */
+  teamList: (): Promise<TeamState[]> =>
+    ipcRenderer.invoke('team:list'),
+
+  /** 팀 생성 */
+  teamCreate: (name: string, members: string[]): Promise<TeamState> =>
+    ipcRenderer.invoke('team:create', name, members),
+
+  /** 팀 삭제 */
+  teamDelete: (name: string): Promise<void> =>
+    ipcRenderer.invoke('team:delete', name),
+
+  /** 팀에게 질문 (순차 오케스트레이션 시작) */
+  teamAsk: (teamName: string, message: string, projectDir?: string): void =>
+    ipcRenderer.send('team:ask', teamName, message, projectDir),
+
+  /** 팀 오케스트레이션 취소 */
+  teamCancel: (teamName: string): void =>
+    ipcRenderer.send('team:cancel', teamName),
+
+  /** 팀 에이전트 턴 시작 수신 (composing 인디케이터) */
+  onTeamAgentStart: (cb: (teamName: string, agentName: string, index: number, total: number) => void): (() => void) => {
+    const handler = (_e: Electron.IpcRendererEvent, t: string, a: string, i: number, n: number): void => cb(t, a, i, n)
+    ipcRenderer.on('team:agent-start', handler)
+    return () => ipcRenderer.removeListener('team:agent-start', handler)
+  },
+
+  /** 팀 스트림 청크 수신 */
+  onTeamStreamChunk: (cb: (teamName: string, agentName: string, chunk: string) => void): (() => void) => {
+    const handler = (_e: Electron.IpcRendererEvent, t: string, a: string, c: string): void => cb(t, a, c)
+    ipcRenderer.on('team:stream-chunk', handler)
+    return () => ipcRenderer.removeListener('team:stream-chunk', handler)
+  },
+
+  /** 팀 에이전트 턴 완료 수신 */
+  onTeamAgentComplete: (cb: (teamName: string, agentName: string, response: string) => void): (() => void) => {
+    const handler = (_e: Electron.IpcRendererEvent, t: string, a: string, r: string): void => cb(t, a, r)
+    ipcRenderer.on('team:agent-complete', handler)
+    return () => ipcRenderer.removeListener('team:agent-complete', handler)
+  },
+
+  /** 팀 시퀀스 전체 완료 수신 */
+  onTeamSequenceComplete: (cb: (teamName: string) => void): (() => void) => {
+    const handler = (_e: Electron.IpcRendererEvent, t: string): void => cb(t)
+    ipcRenderer.on('team:sequence-complete', handler)
+    return () => ipcRenderer.removeListener('team:sequence-complete', handler)
+  },
+
+  /** 팀 에러 수신 */
+  onTeamError: (cb: (teamName: string, agentName: string, error: string) => void): (() => void) => {
+    const handler = (_e: Electron.IpcRendererEvent, t: string, a: string, e: string): void => cb(t, a, e)
+    ipcRenderer.on('team:error', handler)
+    return () => ipcRenderer.removeListener('team:error', handler)
+  },
 
 }
 

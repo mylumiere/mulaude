@@ -237,6 +237,9 @@ export interface ViewerContent {
 
 /* ═══════ Cowrk (영속 AI 팀원) 타입 ═══════ */
 
+/** 에이전트 권한 수준 */
+export type AgentPermission = 'read' | 'edit' | 'full'
+
 /** Cowrk 에이전트 상태 (렌더러 표시용) */
 export interface CowrkAgentState {
   name: string
@@ -248,6 +251,8 @@ export interface CowrkAgentState {
   status: 'idle' | 'thinking' | 'error'
   /** 프로필 이미지 절대 경로 (렌더러에서 file:// 로 로드) */
   avatarPath?: string
+  /** 에이전트 권한 수준 (기본: read) */
+  permission: AgentPermission
 }
 
 /** Cowrk 채팅 메시지 */
@@ -256,4 +261,47 @@ export interface CowrkChatMessage {
   content: string
   timestamp: number
   isStreaming?: boolean
+}
+
+/* ═══════ Team Chat (팀 채팅방) 타입 ═══════ */
+
+/** 팀 정보 */
+export interface TeamInfo {
+  name: string
+  /** 팀에 속한 에이전트 이름 (순서 = 응답 순서) */
+  members: string[]
+  createdAt: string
+  lastUsedAt: string | null
+}
+
+/** 팀 채팅 메시지 (그룹 채팅 — 발신자 식별 필요) */
+export interface TeamChatMessage {
+  role: 'user' | 'agent'
+  /** agent일 때 응답 에이전트명 */
+  agentName?: string
+  content: string
+  timestamp: number
+  isStreaming?: boolean
+}
+
+/** 팀 오케스트레이션 상태 */
+export type TeamStatus = 'idle' | 'running' | 'cancelled' | 'error'
+
+/** 팀 상태 (렌더러 표시용) */
+export interface TeamState extends TeamInfo {
+  status: TeamStatus
+  /** 현재 응답 중인 에이전트 (running 상태에서만) */
+  currentAgent?: string
+  /** 시퀀스에서 완료된 에이전트 수 */
+  completedCount?: number
+}
+
+/* ═══════ Obsidian Knowledge Base 타입 ═══════ */
+
+/** 에이전트별 KB 설정 */
+export interface KnowledgeScope {
+  /** Obsidian vault 절대 경로 */
+  vaultPath: string
+  /** 접근 허용 폴더 (vault root 기준 상대 경로) */
+  allowedFolders: string[]
 }

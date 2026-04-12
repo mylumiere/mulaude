@@ -226,8 +226,21 @@ export function useCowrkAgents(): UseCowrkAgentsReturn {
     setActiveAgent(null)
   }, [])
 
+  const loadHistory = useCallback((name: string, messages: CowrkChatMessage[]) => {
+    setChatMessages(prev => {
+      if (prev[name] && prev[name].length > 0) return prev // 이미 로드됨
+      return { ...prev, [name]: messages }
+    })
+  }, [])
+
+  const refreshAgents = useCallback(async () => {
+    const updated = await window.api.cowrkListAgents()
+    setAgents(updated)
+  }, [])
+
   return {
     agents,
+    setAgents,
     chatMessages,
     activeAgent,
     isCreating,
@@ -239,5 +252,7 @@ export function useCowrkAgents(): UseCowrkAgentsReturn {
     closeChat,
     setCreating: setIsCreating,
     setAvatar,
+    refreshAgents,
+    loadHistory,
   }
 }

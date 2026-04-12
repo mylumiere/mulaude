@@ -602,6 +602,36 @@ export function registerCowrkIpcHandlers(cowrkManager: CowrkManager): void {
     cowrkManager.cancelAgent(agentName)
   })
 
+  // 에이전트 권한 변경
+  ipcMain.handle('cowrk:set-permission', async (_event, name: string, permission: string) => {
+    try {
+      await cowrkManager.setPermission(name, permission as 'read' | 'edit' | 'full')
+    } catch (err) {
+      console.error('[IPC] cowrk:set-permission failed:', err)
+      throw err
+    }
+  })
+
+  // 대화형 에이전트 생성 어시스턴트
+  ipcMain.handle('cowrk:generate-agent', async (_event, description: string) => {
+    try {
+      return await cowrkManager.generateAgentConfig(description)
+    } catch (err) {
+      console.error('[IPC] cowrk:generate-agent failed:', err)
+      throw err
+    }
+  })
+
+  // 에이전트 채팅 히스토리 로드
+  ipcMain.handle('cowrk:load-history', async (_event, name: string) => {
+    try {
+      return await cowrkManager.loadAgentHistory(name)
+    } catch (err) {
+      console.error('[IPC] cowrk:load-history failed:', err)
+      return []
+    }
+  })
+
   // 에이전트 아바타 설정 (base64 → avatar.png 저장)
   ipcMain.handle('cowrk:set-avatar', async (_event, name: string, base64: string) => {
     try {
@@ -620,6 +650,57 @@ export function registerCowrkIpcHandlers(cowrkManager: CowrkManager): void {
       console.error('[IPC] cowrk:remove-avatar failed:', err)
       throw err
     }
+  })
+}
+
+/**
+ * Team Chat IPC 핸들러를 등록합니다.
+ *
+ * CowrkManager의 팀 CRUD + 오케스트레이션 API를 IPC로 노출합니다.
+ */
+export function registerTeamIpcHandlers(cowrkManager: CowrkManager): void {
+  ipcMain.handle('team:list', async () => {
+    try {
+      return await cowrkManager.listTeams()
+    } catch (err) {
+      console.error('[IPC] team:list failed:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('team:create', async (_event, name: string, members: string[]) => {
+    try {
+      return await cowrkManager.createTeam(name, members)
+    } catch (err) {
+      console.error('[IPC] team:create failed:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('team:delete', async (_event, name: string) => {
+    try {
+      await cowrkManager.deleteTeam(name)
+    } catch (err) {
+      console.error('[IPC] team:delete failed:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('team:load-history', async (_event, name: string) => {
+    try {
+      return await cowrkManager.loadTeamHistory(name)
+    } catch (err) {
+      console.error('[IPC] team:load-history failed:', err)
+      return []
+    }
+  })
+
+  ipcMain.on('team:ask', (_event, teamName: string, message: string, projectDir?: string) => {
+    cowrkManager.askTeam(teamName, message, projectDir)
+  })
+
+  ipcMain.on('team:cancel', (_event, teamName: string) => {
+    cowrkManager.cancelTeam(teamName)
   })
 }
 
