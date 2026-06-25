@@ -1,0 +1,148 @@
+/**
+ * ReviewPanel — Codex 리뷰 패널 스타일
+ *
+ * ViewerPanel/DiffPanel과 동일한 밝은 배경 + 깔끔한 레이아웃 패턴
+ */
+
+.review-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #ffffff;
+  color: #1a1a2e;
+  border-left: 1px solid #e5e5e5;
+  overflow: hidden;
+}
+
+/* ─── 헤더 ─── */
+
+.review-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid #e5e5e5;
+  background: #fafafa;
+  min-height: 36px;
+  flex-shrink: 0;
+}
+
+.review-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a2e;
+  min-width: 0;
+}
+
+.review-panel-status {
+  font-size: 11px;
+  font-weight: 500;
+  color: #7c3aed;
+  margin-left: 4px;
+}
+
+.review-panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.review-panel-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #666;
+  transition: background 0.15s, color 0.15s;
+}
+
+.review-panel-btn:hover:not(:disabled) {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.review-panel-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* ─── 콘텐츠 ─── */
+
+.review-panel-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
+.review-markdown {
+  padding: 16px;
+}
+
+/* ─── 로딩 ─── */
+
+.review-panel-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex: 1;
+  height: 100%;
+  color: #7c3aed;
+  font-size: 13px;
+}
+
+.review-spin {
+  animation: review-spin 1s linear infinite;
+}
+
+@keyframes review-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ─── 빈 상태 ─── */
+
+.review-panel-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #999;
+  font-size: 13px;
+}
+
+/* ─── 에러 ─── */
+
+.review-panel-error {
+  padding: 16px;
+}
+
+.review-panel-error-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #dc2626;
+  margin-bottom: 8px;
+}
+
+.review-panel-error-msg {
+  font-size: 12px;
+  font-family: var(--font-mono);
+  color: #666;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 4px;
+  padding: 10px;
+  margin: 0;
+}

@@ -26,6 +26,7 @@ import { logger } from './logger'
 import { unwatchAllPlans } from './plan-watcher'
 import { stopAllPreviews } from './preview-launcher'
 import { isDiffActive, debouncedRefresh, cleanupAllDiffs } from './diff-manager'
+import { cleanupAllReviews } from './review-manager'
 import { isViewerActive, viewerOnFileChange, cleanupAllViewers } from './viewer-manager'
 import { DIFF_DEBOUNCE, VIEWER_DEBOUNCE } from '../shared/constants'
 import { CowrkManager } from './cowrk-manager'
@@ -299,6 +300,7 @@ app.whenReady().then(() => {
       nativeChatManager.getSessionStore().saveImmediate()
       unwatchAllPlans()
       cleanupAllDiffs()
+      cleanupAllReviews()
       cleanupAllViewers()
       cowrkManager.destroyAll()
       stopAllPreviews()
@@ -371,6 +373,7 @@ app.whenReady().then(() => {
       resetCloseAction()
       unwatchAllPlans()
       cleanupAllDiffs()
+      cleanupAllReviews()
       cleanupAllViewers()
       cowrkManager.destroyAll()
       stopAllPreviews()

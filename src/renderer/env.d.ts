@@ -54,6 +54,12 @@ interface Window {
     setHudHidden: (hide: boolean) => void
     setKeychainAccess: (enabled: boolean) => void
     checkOrphanSessions: () => Promise<{ found: number; cleaned: boolean }>
+    // Codex Review APIs
+    runReview: (sessionId: string) => void
+    cancelReview: (sessionId: string) => void
+    onReviewChunk: (cb: (sessionId: string, text: string) => void) => () => void
+    onReviewResult: (cb: (sessionId: string, text: string) => void) => () => void
+    onReviewError: (cb: (sessionId: string, error: string) => void) => () => void
     // Plan Viewer APIs
     watchPlanFile: (sessionId: string, filePath: string) => void
     unwatchPlanFile: (sessionId: string) => void

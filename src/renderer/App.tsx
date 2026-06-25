@@ -6,7 +6,7 @@
  */
 
 import { useRef, useCallback, useMemo, useState, useEffect } from 'react'
-import { FileText, Eye, GitCompareArrows, BookOpen, FolderPlus, Maximize2, Settings, Keyboard } from 'lucide-react'
+import { FileText, Eye, GitCompareArrows, BookOpen, FolderPlus, Maximize2, Settings, Keyboard, Sparkles } from 'lucide-react'
 import Sidebar from './components/Sidebar'
 import TerminalGrid from './components/TerminalGrid'
 import SettingsModal from './components/SettingsModal'
@@ -28,6 +28,7 @@ import { usePlanTrigger } from './hooks/usePlanTrigger'
 import { usePreviewManager } from './hooks/usePreviewManager'
 import { usePreviewTrigger } from './hooks/usePreviewTrigger'
 import { useDiffManager } from './hooks/useDiffManager'
+import { useReviewManager } from './hooks/useReviewManager'
 import { useViewerManager } from './hooks/useViewerManager'
 import { useCowrkAgents } from './hooks/useCowrkAgents'
 import { useTeamChat } from './hooks/useTeamChat'
@@ -87,13 +88,16 @@ export default function App(): JSX.Element {
   // Diff 관리
   const diffManager = useDiffManager()
 
+  // Review 관리 (Codex)
+  const reviewManager = useReviewManager()
+
   // Viewer 관리
   const viewerManager = useViewerManager()
 
   const sessionManager = useSessionManager({
     locale: settings.locale,
     initSession,
-    cleanupSession: (id) => { cleanupSession(id); settings.cleanupSessionTheme(id); planManager.cleanupPlan(id); previewManager.cleanupPreview(id); diffManager.cleanupDiff(id); viewerManager.cleanupViewer(id); window.api.stopPreview(id) }
+    cleanupSession: (id) => { cleanupSession(id); settings.cleanupSessionTheme(id); planManager.cleanupPlan(id); previewManager.cleanupPreview(id); diffManager.cleanupDiff(id); reviewManager.cleanupReview(id); viewerManager.cleanupViewer(id); window.api.stopPreview(id) }
   })
 
   // ref 연결 (초기 렌더 완료 후 실제 함수 참조)
@@ -105,6 +109,7 @@ export default function App(): JSX.Element {
     // 다른 패널 닫기
     if (previewManager.previewSessions.has(sessionId)) previewManager.closePreview(sessionId)
     if (diffManager.diffSessions.has(sessionId)) diffManager.closeDiff(sessionId)
+    if (reviewManager.reviewSessions.has(sessionId)) reviewManager.closeReview(sessionId)
     if (viewerManager.viewerSessions.has(sessionId)) viewerManager.closeViewer(sessionId)
 
     if (planManager.planSessionsRef.current.has(sessionId)) {
@@ -122,31 +127,43 @@ export default function App(): JSX.Element {
         }
       }
     } catch { /* 무시 */ }
-  }, [planManager, previewManager, diffManager, viewerManager])
+  }, [planManager, previewManager, diffManager, reviewManager, viewerManager])
 
   // Preview 토글 래핑 (배타적)
   const handleTogglePreview = useCallback(async (sessionId: string) => {
     if (planManager.planSessionsRef.current.has(sessionId)) planManager.closePlan(sessionId)
     if (diffManager.diffSessions.has(sessionId)) diffManager.closeDiff(sessionId)
+    if (reviewManager.reviewSessions.has(sessionId)) reviewManager.closeReview(sessionId)
     if (viewerManager.viewerSessions.has(sessionId)) viewerManager.closeViewer(sessionId)
     await previewManager.handleTogglePreview(sessionId)
-  }, [planManager, previewManager, diffManager, viewerManager])
+  }, [planManager, previewManager, diffManager, reviewManager, viewerManager])
 
   // Diff 토글 (배타적)
   const handleToggleDiff = useCallback((sessionId: string) => {
     if (planManager.planSessionsRef.current.has(sessionId)) planManager.closePlan(sessionId)
     if (previewManager.previewSessions.has(sessionId)) previewManager.closePreview(sessionId)
+    if (reviewManager.reviewSessions.has(sessionId)) reviewManager.closeReview(sessionId)
     if (viewerManager.viewerSessions.has(sessionId)) viewerManager.closeViewer(sessionId)
     diffManager.handleToggleDiff(sessionId)
-  }, [planManager, previewManager, diffManager, viewerManager])
+  }, [planManager, previewManager, diffManager, reviewManager, viewerManager])
+
+  // Review 토글 (배타적, Codex)
+  const handleToggleReview = useCallback((sessionId: string) => {
+    if (planManager.planSessionsRef.current.has(sessionId)) planManager.closePlan(sessionId)
+    if (previewManager.previewSessions.has(sessionId)) previewManager.closePreview(sessionId)
+    if (diffManager.diffSessions.has(sessionId)) diffManager.closeDiff(sessionId)
+    if (viewerManager.viewerSessions.has(sessionId)) viewerManager.closeViewer(sessionId)
+    reviewManager.handleToggleReview(sessionId)
+  }, [planManager, previewManager, diffManager, reviewManager, viewerManager])
 
   // Viewer 토글 (배타적)
   const handleToggleViewer = useCallback((sessionId: string) => {
     if (planManager.planSessionsRef.current.has(sessionId)) planManager.closePlan(sessionId)
     if (previewManager.previewSessions.has(sessionId)) previewManager.closePreview(sessionId)
     if (diffManager.diffSessions.has(sessionId)) diffManager.closeDiff(sessionId)
+    if (reviewManager.reviewSessions.has(sessionId)) reviewManager.closeReview(sessionId)
     viewerManager.handleToggleViewer(sessionId)
-  }, [planManager, previewManager, diffManager, viewerManager])
+  }, [planManager, previewManager, diffManager, reviewManager, viewerManager])
 
   // 세션 복원 후 미리보기 프로세스 재실행
   useEffect(() => {
@@ -259,6 +276,14 @@ export default function App(): JSX.Element {
         execute: () => { const sid = getFocusedSid(); if (sid) handleToggleDiff(sid) }
       },
       {
+        id: 'codex-review',
+        labelKey: 'cmdPalette.codexReview',
+        icon: <Sparkles size={14} />,
+        category: 'panel',
+        requiresSession: true,
+        execute: () => { const sid = getFocusedSid(); if (sid) handleToggleReview(sid) }
+      },
+      {
         id: 'toggle-viewer',
         labelKey: 'cmdPalette.toggleViewer',
         icon: <BookOpen size={14} />,
@@ -312,7 +337,7 @@ export default function App(): JSX.Element {
     })
   }, [
     terminalLayout, sessionManager.activeSessionId, sessionManager.createProject,
-    handleTogglePlan, handleTogglePreview, handleToggleDiff, handleToggleViewer,
+    handleTogglePlan, handleTogglePreview, handleToggleDiff, handleToggleReview, handleToggleViewer,
     settings.setShowSettings
   ]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -508,6 +533,12 @@ export default function App(): JSX.Element {
               onCloseDiff={diffManager.closeDiff}
               onDiffResize={diffManager.handleDiffResize}
               onRefreshDiff={(sid) => window.api.fetchDiff(sid)}
+              reviewSessions={reviewManager.reviewSessions}
+              reviewData={reviewManager.reviewData}
+              reviewRatios={reviewManager.reviewRatios}
+              onCloseReview={reviewManager.closeReview}
+              onReviewResize={reviewManager.handleReviewResize}
+              onRerunReview={reviewManager.rerunReview}
               viewerSessions={viewerManager.viewerSessions}
               viewerData={viewerManager.viewerData}
               viewerRatios={viewerManager.viewerRatios}

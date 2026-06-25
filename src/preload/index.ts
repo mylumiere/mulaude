@@ -387,6 +387,43 @@ const api = {
     return () => ipcRenderer.removeListener('diff:result', handler)
   },
 
+  // ─── Codex Review APIs ───
+
+  /** Codex 리뷰 실행 요청 (git diff HEAD → codex exec) */
+  runReview: (sessionId: string): void =>
+    ipcRenderer.send('review:run', sessionId),
+
+  /** 진행 중인 리뷰 취소 */
+  cancelReview: (sessionId: string): void =>
+    ipcRenderer.send('review:cancel', sessionId),
+
+  /** 리뷰 스트리밍 청크 수신 (누적 텍스트) */
+  onReviewChunk: (cb: (sessionId: string, text: string) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, sessionId: string, text: string): void => {
+      cb(sessionId, text)
+    }
+    ipcRenderer.on('review:chunk', handler)
+    return () => ipcRenderer.removeListener('review:chunk', handler)
+  },
+
+  /** 리뷰 완료 수신 (최종 텍스트, 빈 문자열이면 변경 없음) */
+  onReviewResult: (cb: (sessionId: string, text: string) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, sessionId: string, text: string): void => {
+      cb(sessionId, text)
+    }
+    ipcRenderer.on('review:result', handler)
+    return () => ipcRenderer.removeListener('review:result', handler)
+  },
+
+  /** 리뷰 에러 수신 */
+  onReviewError: (cb: (sessionId: string, error: string) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, sessionId: string, error: string): void => {
+      cb(sessionId, error)
+    }
+    ipcRenderer.on('review:error', handler)
+    return () => ipcRenderer.removeListener('review:error', handler)
+  },
+
   // ─── Viewer APIs ───
 
   /** 파일 읽기 요청 (sessionId, filePath) → ViewerContent */

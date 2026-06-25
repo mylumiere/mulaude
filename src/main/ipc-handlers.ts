@@ -16,6 +16,7 @@ import { showOrphanDialog } from './close-handler'
 import { watchPlanFile, unwatchPlanFile, listPlanFiles, resolvePlanPath } from './plan-watcher'
 import { fetchDiff, registerDiffSession, unregisterDiffSession } from './diff-manager'
 import { fetchViewerContent, registerViewerSession, unregisterViewerSession } from './viewer-manager'
+import { runReview, cancelReview } from './review-manager'
 import { getCachedUsageData, setHideHud, setKeychainAccess } from './statusline-manager'
 import { launchPreview, stopPreview, writeLaunchConfig } from './preview-launcher'
 import type { UsageData, CliType } from '../shared/types'
@@ -384,6 +385,19 @@ export function registerIpcHandlers(
   // auto-refresh 해제
   ipcMain.on('diff:unregister', (_event, sessionId: string) => {
     unregisterDiffSession(sessionId)
+  })
+
+  // ─── Codex Review IPC ───
+
+  // 리뷰 실행 요청 (git diff HEAD → codex exec --json)
+  ipcMain.on('review:run', (_event, sessionId: string) => {
+    const session = sessionManager.getSessionList().find(s => s.id === sessionId)
+    if (session) runReview(sessionId, session.workingDir)
+  })
+
+  // 진행 중인 리뷰 취소
+  ipcMain.on('review:cancel', (_event, sessionId: string) => {
+    cancelReview(sessionId)
   })
 
   // ─── Viewer IPC ───

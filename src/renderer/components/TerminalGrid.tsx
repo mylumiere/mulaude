@@ -23,6 +23,8 @@ import PlanPanel from './PlanPanel'
 import type { PlanInfo } from '../hooks/usePlanManager'
 import PreviewPanel from './PreviewPanel'
 import DiffPanel from './DiffPanel'
+import ReviewPanel from './ReviewPanel'
+import type { ReviewState } from '../hooks/useReviewManager'
 import ViewerPanel from './ViewerPanel'
 import type { SessionInfo, AgentInfo, SessionStatus, DiffFile, ViewerContent } from '../../shared/types'
 import type {
@@ -120,6 +122,14 @@ interface TerminalGridProps {
   onDiffResize?: (sessionId: string) => (e: React.MouseEvent) => void
   onRefreshDiff?: (sessionId: string) => void
 
+  // Review 관련 (Codex)
+  reviewSessions?: Set<string>
+  reviewData?: Record<string, ReviewState>
+  reviewRatios?: Record<string, number>
+  onCloseReview?: (sessionId: string) => void
+  onReviewResize?: (sessionId: string) => (e: React.MouseEvent) => void
+  onRerunReview?: (sessionId: string) => void
+
   // Viewer 관련
   viewerSessions?: Set<string>
   viewerData?: Record<string, ViewerContent>
@@ -188,6 +198,12 @@ export default function TerminalGrid({
   onCloseDiff,
   onDiffResize,
   onRefreshDiff,
+  reviewSessions,
+  reviewData,
+  reviewRatios,
+  onCloseReview,
+  onReviewResize,
+  onRerunReview,
   viewerSessions,
   viewerData,
   viewerRatios,
@@ -448,9 +464,11 @@ export default function TerminalGrid({
               />
             )
 
-            // 사이드 패널 계산 (배타적: preview / plan / diff / viewer 중 하나만)
+            // 사이드 패널 계산 (배타적: preview / plan / diff / review / viewer 중 하나만)
             const hasDiff = diffSessions?.has(leaf.sessionId) && diffData?.[leaf.sessionId]
             const diffRatio = diffRatios?.[leaf.sessionId] ?? PREVIEW_DEFAULT_RATIO
+            const hasReview = reviewSessions?.has(leaf.sessionId)
+            const reviewRatio = reviewRatios?.[leaf.sessionId] ?? PREVIEW_DEFAULT_RATIO
             const hasViewer = viewerSessions?.has(leaf.sessionId)
             const viewerRatio = viewerRatios?.[leaf.sessionId] ?? PREVIEW_DEFAULT_RATIO
 
@@ -499,6 +517,19 @@ export default function TerminalGrid({
               )
               sideRatio = diffRatio
               sideResizeHandler = onDiffResize?.(leaf.sessionId)
+            } else if (hasReview) {
+              sidePanel = (
+                <ReviewPanel
+                  key="review"
+                  sessionId={leaf.sessionId}
+                  review={reviewData?.[leaf.sessionId]}
+                  locale={locale}
+                  onClose={() => onCloseReview?.(leaf.sessionId)}
+                  onRerun={() => onRerunReview?.(leaf.sessionId)}
+                />
+              )
+              sideRatio = reviewRatio
+              sideResizeHandler = onReviewResize?.(leaf.sessionId)
             } else if (hasViewer) {
               sidePanel = (
                 <ViewerPanel

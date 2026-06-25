@@ -137,6 +137,11 @@ export const DIFF_DEBOUNCE = 300
 /** Diff 패널 기본 분할 비율 */
 export const DIFF_DEFAULT_RATIO = 0.5
 
+/* ═══════ Review (Codex) ═══════ */
+
+/** Codex 리뷰 패널 기본 분할 비율 */
+export const REVIEW_DEFAULT_RATIO = 0.5
+
 /* ═══════ Viewer ═══════ */
 
 /** PostToolUse(Edit/Write) 후 viewer 재요청 디바운스 (ms) */
