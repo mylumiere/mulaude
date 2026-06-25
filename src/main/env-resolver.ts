@@ -43,9 +43,43 @@ export function getShellEnv(): Record<string, string> {
  *   - npx cache 등
  */
 export function findClaudePath(env: Record<string, string>): string {
+  const home = env['HOME'] || process.env.HOME || ''
+  return findCliPath(env, 'claude', [
+    `${home}/.claude/local/bin/claude`,
+    '/usr/local/bin/claude',
+    '/opt/homebrew/bin/claude',
+    `${home}/.npm-global/bin/claude`,
+    '/usr/bin/claude'
+  ])
+}
+
+/**
+ * codex CLI(OpenAI Codex)의 전체 경로를 탐색합니다.
+ * findClaudePath와 동일한 전략 (which → 일반 경로 → bare fallback).
+ */
+export function findCodexPath(env: Record<string, string>): string {
+  const home = env['HOME'] || process.env.HOME || ''
+  return findCliPath(env, 'codex', [
+    `${home}/.codex/bin/codex`,
+    '/usr/local/bin/codex',
+    '/opt/homebrew/bin/codex',
+    `${home}/.npm-global/bin/codex`,
+    `${home}/.cargo/bin/codex`,
+    '/usr/bin/codex'
+  ])
+}
+
+/**
+ * CLI 바이너리의 전체 경로를 탐색하는 공통 로직.
+ *
+ * 1차: 로그인 셸에서 `which <bin>`
+ * 2차: commonPaths에서 직접 탐색 (--version 실행으로 검증)
+ * 실패 시: bare 명령어 반환
+ */
+function findCliPath(env: Record<string, string>, bin: string, commonPaths: string[]): string {
   try {
     const shell = process.env.SHELL || '/bin/zsh'
-    const result = execSync(`${shell} -ilc 'which claude'`, {
+    const result = execSync(`${shell} -ilc 'which ${bin}'`, {
       encoding: 'utf-8',
       timeout: SHELL_ENV_TIMEOUT,
       env
@@ -56,22 +90,13 @@ export function findClaudePath(env: Record<string, string>): string {
         execFileSync(result, ['--version'], { encoding: 'utf-8', timeout: CLAUDE_PATH_TIMEOUT })
         return result
       } catch {
-        console.warn(`[env-resolver] "which claude" returned ${result} but binary is not executable`)
+        console.warn(`[env-resolver] "which ${bin}" returned ${result} but binary is not executable`)
       }
     }
   } catch (err) {
-    console.warn('[env-resolver] "which claude" failed, trying common paths:', (err as Error).message)
+    console.warn(`[env-resolver] "which ${bin}" failed, trying common paths:`, (err as Error).message)
   }
 
-  // 일반적인 설치 경로 시도
-  const home = env['HOME'] || process.env.HOME || ''
-  const commonPaths = [
-    `${home}/.claude/local/bin/claude`,
-    '/usr/local/bin/claude',
-    '/opt/homebrew/bin/claude',
-    `${home}/.npm-global/bin/claude`,
-    '/usr/bin/claude'
-  ]
   for (const p of commonPaths) {
     try {
       execFileSync(p, ['--version'], { encoding: 'utf-8', timeout: CLAUDE_PATH_TIMEOUT })
@@ -81,6 +106,6 @@ export function findClaudePath(env: Record<string, string>): string {
     }
   }
 
-  console.warn('[env-resolver] Claude CLI not found in any known path, falling back to bare "claude" command')
-  return 'claude'
+  console.warn(`[env-resolver] ${bin} CLI not found in any known path, falling back to bare "${bin}" command`)
+  return bin
 }

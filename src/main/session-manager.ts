@@ -18,9 +18,9 @@
 import * as pty from 'node-pty'
 import { basename } from 'path'
 import { existsSync, statSync } from 'fs'
-import type { SessionInfo, TmuxPaneInfo } from '../shared/types'
+import type { SessionInfo, TmuxPaneInfo, CliType } from '../shared/types'
 import { DEFAULT_COLS, DEFAULT_ROWS, LEGACY_SHELL_INIT_DELAY, PANE_CAPTURE_LINES } from '../shared/constants'
-import { getShellEnv, findClaudePath } from './env-resolver'
+import { getShellEnv, findClaudePath, findCodexPath } from './env-resolver'
 import { SessionStore, type PersistedSession } from './session-store'
 import {
   execTmux,
@@ -83,6 +83,7 @@ export class SessionManager {
   private exitCallbacks: ExitCallback[] = []
   private shellEnv: Record<string, string>
   private claudePath: string
+  private codexPath: string
   /** Mulaude hooks IPC 디렉토리 (HooksManager에서 설정) */
   private ipcDir = ''
 
@@ -96,10 +97,12 @@ export class SessionManager {
   constructor() {
     this.shellEnv = getShellEnv()
     this.claudePath = findClaudePath(this.shellEnv)
+    this.codexPath = findCodexPath(this.shellEnv)
     this.tmuxPath = findTmuxPath(this.shellEnv)
     this.sessionStore = new SessionStore()
 
     console.log('[SessionManager] claude path:', this.claudePath)
+    console.log('[SessionManager] codex path:', this.codexPath)
     if (this.claudePath === 'claude') {
       console.warn('[SessionManager] Claude CLI resolved to bare "claude" — it may not be found at runtime. Install Claude CLI or check your PATH.')
     }
@@ -115,6 +118,11 @@ export class SessionManager {
   /** hooks IPC 디렉토리 설정 (세션 환경변수에 전달됨) */
   setIpcDir(dir: string): void {
     this.ipcDir = dir
+  }
+
+  /** cliType에 해당하는 실행 바이너리 경로 */
+  private cliPath(cliType: CliType): string {
+    return cliType === 'codex' ? this.codexPath : this.claudePath
   }
 
   /** tmux 사용 가능 여부 및 버전 반환 */
@@ -151,10 +159,11 @@ export class SessionManager {
    * legacy 모드:
    *   기존 방식 — pty.spawn(shell) + setTimeout → claude 실행
    *
-   * @param workingDir - claude CLI를 실행할 작업 디렉토리
+   * @param workingDir - CLI를 실행할 작업 디렉토리
+   * @param cliType - 실행할 CLI ('claude' 기본 | 'codex')
    * @returns 생성된 세션 정보
    */
-  createSession(workingDir: string): SessionInfo {
+  createSession(workingDir: string, cliType: CliType = 'claude'): SessionInfo {
     // workingDir 유효성 검증
     if (!existsSync(workingDir) || !statSync(workingDir).isDirectory()) {
       throw new Error(`Invalid working directory: "${workingDir}" does not exist or is not a directory`)
@@ -164,7 +173,7 @@ export class SessionManager {
     const name = basename(workingDir)
     const now = new Date().toISOString()
 
-    console.log(`[SessionManager] creating session ${id} in ${workingDir}`)
+    console.log(`[SessionManager] creating ${cliType} session ${id} in ${workingDir}`)
 
     // CLAUDECODE 환경변수를 제거해야 중첩 세션 에러가 발생하지 않음
     const cleanEnv = { ...this.shellEnv }
@@ -172,9 +181,9 @@ export class SessionManager {
     delete cleanEnv['CLAUDE_CODE']
 
     if (this.tmuxPath) {
-      return this.createTmuxSession(id, name, workingDir, cleanEnv, now)
+      return this.createTmuxSession(id, name, workingDir, cleanEnv, now, cliType)
     } else {
-      return this.createLegacySession(id, name, workingDir, cleanEnv)
+      return this.createLegacySession(id, name, workingDir, cleanEnv, cliType)
     }
   }
 
@@ -186,7 +195,8 @@ export class SessionManager {
     name: string,
     workingDir: string,
     cleanEnv: Record<string, string>,
-    now: string
+    now: string,
+    cliType: CliType
   ): SessionInfo {
     const tmuxPath = this.tmuxPath!
     const tmuxName = toTmuxSessionName(id)
@@ -222,7 +232,7 @@ export class SessionManager {
       const envExport = this.ipcDir
         ? `export MULAUDE_SESSION_ID='${id}' MULAUDE_IPC_DIR='${safeIpcDir}'; `
         : ''
-      sendKeysToTmux(tmuxPath, tmuxName, unsetNested + envExport + this.claudePath)
+      sendKeysToTmux(tmuxPath, tmuxName, unsetNested + envExport + this.cliPath(cliType))
     } catch (err) {
       console.error(`[SessionManager] tmux send-keys failed:`, err)
       killTmuxSession(tmuxPath, tmuxName)
@@ -257,10 +267,11 @@ export class SessionManager {
       workingDir,
       tmuxSessionName: tmuxName,
       createdAt: now,
-      lastAccessedAt: now
+      lastAccessedAt: now,
+      cliType
     })
 
-    return { id, name, workingDir, tmuxSessionName: tmuxName, createdAt: now }
+    return { id, name, workingDir, tmuxSessionName: tmuxName, createdAt: now, cliType }
   }
 
   /**
@@ -270,7 +281,8 @@ export class SessionManager {
     id: string,
     name: string,
     workingDir: string,
-    cleanEnv: Record<string, string>
+    cleanEnv: Record<string, string>,
+    cliType: CliType
   ): SessionInfo {
     const shell = process.env.SHELL || '/bin/zsh'
 
@@ -290,9 +302,9 @@ export class SessionManager {
       })
       console.log(`[SessionManager] PTY spawned (legacy), pid: ${ptyProcess.pid}`)
 
-      // 셸 초기화 후 claude 실행 (전체 경로 사용)
+      // 셸 초기화 후 CLI 실행 (전체 경로 사용)
       setTimeout(() => {
-        ptyProcess.write(this.claudePath + '\r')
+        ptyProcess.write(this.cliPath(cliType) + '\r')
       }, LEGACY_SHELL_INIT_DELAY)
     } catch (err) {
       console.error(`[SessionManager] PTY spawn failed:`, err)
@@ -303,7 +315,7 @@ export class SessionManager {
     this.sessions.set(id, session)
     this.bindPtyEvents(id, ptyProcess)
 
-    return { id, name, workingDir }
+    return { id, name, workingDir, cliType }
   }
 
   /**
@@ -459,11 +471,12 @@ export class SessionManager {
       const envExport = this.ipcDir
         ? `export MULAUDE_SESSION_ID='${persisted.id}' MULAUDE_IPC_DIR='${safeIpcDir}'; `
         : ''
-      // 저장된 Claude 세션 ID가 있으면 --resume으로 대화 이어받기
-      const resumeFlag = persisted.claudeSessionId
+      const cliType: CliType = persisted.cliType ?? 'claude'
+      // 저장된 Claude 세션 ID가 있으면 --resume으로 대화 이어받기 (codex는 --resume 미지원)
+      const resumeFlag = cliType === 'claude' && persisted.claudeSessionId
         ? ` --resume '${persisted.claudeSessionId}'`
         : ''
-      sendKeysToTmux(tmuxPath, tmuxName, unsetNested + envExport + this.claudePath + resumeFlag)
+      sendKeysToTmux(tmuxPath, tmuxName, unsetNested + envExport + this.cliPath(cliType) + resumeFlag)
     } catch (err) {
       console.error(`[SessionManager] recreate send-keys failed for ${tmuxName}:`, err)
       killTmuxSession(tmuxPath, tmuxName)
@@ -518,7 +531,8 @@ export class SessionManager {
       workingDir: persisted.workingDir,
       tmuxSessionName: tmuxName,
       createdAt: persisted.createdAt,
-      restored: true
+      restored: true,
+      cliType: persisted.cliType ?? 'claude'
     }
   }
 

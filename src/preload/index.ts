@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
-import type { SessionInfo, HookEvent, UsageData, TmuxPaneInfo, AgentInfo, AppMode, NativeInputRequest, CowrkAgentState, DiffFile, ViewerContent, TeamState } from '../shared/types'
+import type { SessionInfo, HookEvent, UsageData, TmuxPaneInfo, AgentInfo, AppMode, NativeInputRequest, CowrkAgentState, DiffFile, ViewerContent, TeamState, CliType } from '../shared/types'
 
 /**
  * Preload 스크립트 - contextBridge를 통해 렌더러에 안전한 API를 노출합니다.
@@ -36,9 +36,9 @@ const api = {
   getAppMode: (): Promise<AppMode> =>
     ipcRenderer.invoke('app:getMode'),
 
-  /** 새 Claude CLI 세션을 생성합니다 */
-  createSession: (workingDir: string): Promise<SessionInfo> =>
-    ipcRenderer.invoke('session:create', workingDir),
+  /** 새 CLI 세션을 생성합니다 (claude 기본 | codex) */
+  createSession: (workingDir: string, cliType?: CliType): Promise<SessionInfo> =>
+    ipcRenderer.invoke('session:create', workingDir, cliType),
 
   /** 특정 세션을 종료합니다 */
   destroySession: (id: string): Promise<void> =>

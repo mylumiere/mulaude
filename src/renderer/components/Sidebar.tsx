@@ -158,7 +158,7 @@ export default function Sidebar({
           <button className="sidebar-icon-btn sidebar-settings-btn" onClick={onOpenSettings} title={t(locale, 'settings.title')}>
             <Settings size={14} />
           </button>
-          <button className="sidebar-add-btn" onClick={onCreateProject} title={`${t(locale, 'sidebar.addProject')} (⌘N)`}>
+          <button className="sidebar-add-btn" onClick={() => onCreateProject()} title={`${t(locale, 'sidebar.addProject')} (⌘N)`}>
             <Plus size={14} />
           </button>
         </div>

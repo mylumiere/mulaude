@@ -273,7 +273,14 @@ export default function App(): JSX.Element {
         icon: <FolderPlus size={14} />,
         shortcut: '⌘N',
         category: 'session',
-        execute: () => sessionManager.createProject()
+        execute: () => sessionManager.createProject('claude')
+      },
+      {
+        id: 'new-codex-project',
+        labelKey: 'cmdPalette.newCodexProject',
+        icon: <FolderPlus size={14} />,
+        category: 'session',
+        execute: () => sessionManager.createProject('codex')
       },
       {
         id: 'zoom-toggle',
@@ -514,7 +521,7 @@ export default function App(): JSX.Element {
               <div className="empty-icon">⌘</div>
               <h2>Mulaude</h2>
               <p>{t(settings.locale, 'empty.subtitle')}</p>
-              <button className="empty-create-btn" onClick={sessionManager.createProject}>
+              <button className="empty-create-btn" onClick={() => sessionManager.createProject()}>
                 {t(settings.locale, 'empty.create')}
               </button>
             </div>

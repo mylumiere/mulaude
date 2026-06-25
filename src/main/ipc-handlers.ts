@@ -18,7 +18,7 @@ import { fetchDiff, registerDiffSession, unregisterDiffSession } from './diff-ma
 import { fetchViewerContent, registerViewerSession, unregisterViewerSession } from './viewer-manager'
 import { getCachedUsageData, setHideHud, setKeychainAccess } from './statusline-manager'
 import { launchPreview, stopPreview, writeLaunchConfig } from './preview-launcher'
-import type { UsageData } from '../shared/types'
+import type { UsageData, CliType } from '../shared/types'
 
 /** 이미지 파일 확장자 목록 */
 const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'tiff', 'tif']
@@ -112,15 +112,16 @@ export function registerIpcHandlers(
   setLocale: (locale: string) => void
 ): void {
   // 세션 생성
-  ipcMain.handle('session:create', async (_event, workingDir: string) => {
+  ipcMain.handle('session:create', async (_event, workingDir: string, cliType?: CliType) => {
     try {
-      const session = sessionManager.createSession(workingDir)
+      const session = sessionManager.createSession(workingDir, cliType ?? 'claude')
       return {
         id: session.id,
         name: session.name,
         workingDir: session.workingDir,
         tmuxSessionName: session.tmuxSessionName,
-        createdAt: session.createdAt
+        createdAt: session.createdAt,
+        cliType: session.cliType
       }
     } catch (err) {
       console.error('[IPC] session:create failed:', err)

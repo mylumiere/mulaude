@@ -1,11 +1,11 @@
 /// <reference types="vite/client" />
 
-import type { SessionInfo, HookEvent, UsageData, TmuxPaneInfo, AppMode, NativeInputRequest, CowrkAgentState } from '../shared/types'
+import type { SessionInfo, HookEvent, UsageData, TmuxPaneInfo, AppMode, NativeInputRequest, CowrkAgentState, CliType } from '../shared/types'
 
 interface Window {
   api: {
     getAppMode: () => Promise<AppMode>
-    createSession: (workingDir: string) => Promise<SessionInfo>
+    createSession: (workingDir: string, cliType?: CliType) => Promise<SessionInfo>
     destroySession: (id: string) => Promise<void>
     listSessions: () => Promise<SessionInfo[]>
     writeSession: (id: string, data: string) => void

@@ -43,6 +43,8 @@ export interface PersistedSession {
   mode?: 'terminal' | 'native'
   /** Claude 세션 ID (--resume에 사용, native 모드 전용) */
   claudeSessionId?: string
+  /** 세션이 실행하는 CLI (기본: 'claude') */
+  cliType?: 'claude' | 'codex'
 }
 
 /**

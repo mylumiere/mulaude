@@ -6,7 +6,7 @@
  */
 
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react'
-import type { SessionInfo, ProjectGroup } from '../../shared/types'
+import type { SessionInfo, ProjectGroup, CliType } from '../../shared/types'
 import type { Locale } from '../i18n'
 import { t } from '../i18n'
 
@@ -20,8 +20,8 @@ interface UseSessionManagerReturn {
   sessions: SessionInfo[]
   activeSessionId: string | null
   projects: ProjectGroup[]
-  createProject: () => Promise<void>
-  addSession: (workingDir: string) => Promise<void>
+  createProject: (cliType?: CliType) => Promise<void>
+  addSession: (workingDir: string, cliType?: CliType) => Promise<void>
   destroySession: (id: string) => Promise<void>
   removeProject: (workingDir: string) => Promise<void>
   selectSession: (id: string) => void
@@ -128,12 +128,12 @@ export function useSessionManager({
     setActiveSessionId(id)
   }, [])
 
-  const createProject = useCallback(async () => {
+  const createProject = useCallback(async (cliType: CliType = 'claude') => {
     const dir = await window.api.openDirectory()
     if (!dir) return
     try {
       ++sessionCounter.current
-      const session = await window.api.createSession(dir)
+      const session = await window.api.createSession(dir, cliType)
       const projectName = dir.split('/').pop() || dir
       setSessions((prev) => [...prev, { ...session, name: projectName }])
       setActiveSessionId(session.id)
@@ -151,10 +151,10 @@ export function useSessionManager({
   }, [initSession, locale])
 
   const addSession = useCallback(
-    async (workingDir: string) => {
+    async (workingDir: string, cliType: CliType = 'claude') => {
       try {
         ++sessionCounter.current
-        const session = await window.api.createSession(workingDir)
+        const session = await window.api.createSession(workingDir, cliType)
         const projectName = workingDir.split('/').pop() || workingDir
         setSessions((prev) => [...prev, { ...session, name: projectName }])
         setActiveSessionId(session.id)

@@ -51,10 +51,11 @@ export class HooksManager {
     return this.ipcDir
   }
 
-  /** hook 스크립트 설치 + settings.json에 hooks 등록 + 감시 시작 */
+  /** hook 스크립트 설치 + settings.json/hooks.json에 hooks 등록 + 감시 시작 */
   install(): void {
     this.installHookScript()
     this.installHooksConfig()
+    this.installCodexHooksConfig()
     this.startWatching()
   }
 
@@ -164,6 +165,73 @@ export class HooksManager {
       console.log('[HooksManager] hooks config installed in:', settingsPath)
     } else {
       console.log('[HooksManager] hooks already configured')
+    }
+  }
+
+  /**
+   * ~/.codex/hooks.json에 Mulaude hooks 등록 (Codex CLI 세션용)
+   *
+   * Codex는 Claude Code와 동일한 stdin JSON 스키마(hook_event_name/tool_name/
+   * tool_input/tool_response)로 hook 명령을 호출하므로 mulaude-hook.sh를 그대로
+   * 재사용합니다. settings.json과 달리 hooks.json은 hooks 전용 파일이라 최상위
+   * { "hooks": {...} } 구조를 갖습니다.
+   *
+   * ~/.codex 디렉토리가 없으면(=Codex 미설치) 아무것도 하지 않습니다.
+   */
+  private installCodexHooksConfig(): void {
+    const codexDir = join(homedir(), '.codex')
+    // Codex 미설치 시 디렉토리를 만들지 않음 (무관한 앱에 흔적 남기지 않기)
+    if (!existsSync(codexDir)) {
+      console.log('[HooksManager] ~/.codex not found, skipping Codex hooks config')
+      return
+    }
+
+    const hooksPath = join(codexDir, 'hooks.json')
+    let root: Record<string, unknown> = {}
+
+    if (existsSync(hooksPath)) {
+      try {
+        root = JSON.parse(readFileSync(hooksPath, 'utf-8'))
+      } catch (err) {
+        console.warn('[HooksManager] codex hooks.json parse failed, skipping to avoid data loss:', err)
+        return
+      }
+    }
+
+    const hookCommand = `bash "${join(homedir(), '.claude', HOOK_SCRIPT_NAME)}"`
+    const mulaudeHookGroup = {
+      matcher: '',
+      hooks: [{
+        type: 'command',
+        command: hookCommand,
+        timeout: 5
+      }]
+    }
+
+    const hooks = (root.hooks || {}) as Record<string, unknown[]>
+    const events = ['PreToolUse', 'PostToolUse', 'Stop', 'UserPromptSubmit', 'SessionStart']
+    let modified = false
+
+    for (const event of events) {
+      if (!hooks[event]) hooks[event] = []
+      const eventHooks = hooks[event] as Array<{ hooks?: Array<{ command?: string }> }>
+
+      const exists = eventHooks.some(h =>
+        h.hooks?.some(hh => hh.command?.includes(HOOK_SCRIPT_NAME))
+      )
+
+      if (!exists) {
+        eventHooks.push(mulaudeHookGroup)
+        modified = true
+      }
+    }
+
+    if (modified) {
+      root.hooks = hooks
+      writeFileSync(hooksPath, JSON.stringify(root, null, 2), 'utf-8')
+      console.log('[HooksManager] codex hooks config installed in:', hooksPath)
+    } else {
+      console.log('[HooksManager] codex hooks already configured')
     }
   }
 

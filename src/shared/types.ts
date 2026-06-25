@@ -8,6 +8,9 @@
 /** 앱 모드: terminal(기존 xterm.js) / native(stream-json 기반 채팅 UI) */
 export type AppMode = 'terminal' | 'native'
 
+/** 세션이 실행하는 CLI 종류 */
+export type CliType = 'claude' | 'codex'
+
 /** 세션 정보 */
 export interface SessionInfo {
   id: string
@@ -21,6 +24,8 @@ export interface SessionInfo {
   createdAt?: string
   /** 앱 재시작 시 복원된 세션 여부 */
   restored?: boolean
+  /** 세션이 실행하는 CLI (기본: 'claude') */
+  cliType?: CliType
 }
 
 /**
