@@ -126,7 +126,9 @@ interface TerminalGridProps {
   reviewSessions?: Set<string>
   reviewData?: Record<string, ReviewState>
   reviewRatios?: Record<string, number>
+  autoReviewSessions?: Set<string>
   onToggleReview?: (sessionId: string) => void
+  onToggleAutoReview?: (sessionId: string) => void
   onCloseReview?: (sessionId: string) => void
   onReviewResize?: (sessionId: string) => (e: React.MouseEvent) => void
   onRerunReview?: (sessionId: string) => void
@@ -202,7 +204,9 @@ export default function TerminalGrid({
   reviewSessions,
   reviewData,
   reviewRatios,
+  autoReviewSessions,
   onToggleReview,
+  onToggleAutoReview,
   onCloseReview,
   onReviewResize,
   onRerunReview,
@@ -531,8 +535,10 @@ export default function TerminalGrid({
                   sessionId={leaf.sessionId}
                   review={reviewData?.[leaf.sessionId]}
                   locale={locale}
+                  autoEnabled={!!autoReviewSessions?.has(leaf.sessionId)}
                   onClose={() => onCloseReview?.(leaf.sessionId)}
                   onRerun={() => onRerunReview?.(leaf.sessionId)}
+                  onToggleAuto={() => onToggleAutoReview?.(leaf.sessionId)}
                 />
               )
               sideRatio = reviewRatio

@@ -10,10 +10,11 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
-import { Settings, Plus, BookOpen, Route, Keyboard, MessageSquareWarning, X, Eye, MessageSquare } from 'lucide-react'
-import type { ProjectGroup, SessionStatus, UsageData, AgentInfo } from '../../shared/types'
+import { Settings, BookOpen, Route, Keyboard, MessageSquareWarning, X, Eye, MessageSquare } from 'lucide-react'
+import type { ProjectGroup, SessionStatus, UsageData, AgentInfo, CliType } from '../../shared/types'
 import { type Locale, t } from '../i18n'
 import ProjectHeader from './sidebar/ProjectHeader'
+import CliPicker from './sidebar/CliPicker'
 import SessionRow from './sidebar/SessionRow'
 import AgentTree from './sidebar/AgentTree'
 import UsageGauge from './sidebar/UsageGauge'
@@ -25,8 +26,10 @@ interface SidebarProps {
   projects: ProjectGroup[]
   activeSessionId: string | null
   onSelectSession: (id: string) => void
-  onCreateProject: () => void
-  onAddSessionToProject: (workingDir: string) => void
+  onCreateProject: (cliType?: CliType) => void
+  onAddSessionToProject: (workingDir: string, cliType?: CliType) => void
+  /** 튜토리얼 진행 중 (CLI 선택 메뉴 대신 즉시 Claude 생성) */
+  tutorialActive?: boolean
   onDestroySession: (id: string) => void
   onRemoveProject: (workingDir: string) => void
   onUpdateSessionName: (id: string, name: string) => void
@@ -68,6 +71,7 @@ export default function Sidebar({
   onSelectSession,
   onCreateProject,
   onAddSessionToProject,
+  tutorialActive,
   onDestroySession,
   onRemoveProject,
   onUpdateSessionName,
@@ -158,9 +162,13 @@ export default function Sidebar({
           <button className="sidebar-icon-btn sidebar-settings-btn" onClick={onOpenSettings} title={t(locale, 'settings.title')}>
             <Settings size={14} />
           </button>
-          <button className="sidebar-add-btn" onClick={() => onCreateProject()} title={`${t(locale, 'sidebar.addProject')} (⌘N)`}>
-            <Plus size={14} />
-          </button>
+          <CliPicker
+            className="sidebar-add-btn"
+            title={`${t(locale, 'sidebar.addProject')} (⌘N)`}
+            iconSize={14}
+            tutorialActive={tutorialActive}
+            onPick={(cliType) => onCreateProject(cliType)}
+          />
         </div>
       </div>
 
@@ -182,7 +190,8 @@ export default function Sidebar({
                       shortcut={projectShortcut}
                       locale={locale}
                       onToggleCollapse={() => toggleProjectCollapse(project.workingDir)}
-                      onAddSession={() => onAddSessionToProject(project.workingDir)}
+                      onAddSession={(cliType) => onAddSessionToProject(project.workingDir, cliType)}
+                      tutorialActive={tutorialActive}
                       onRemoveProject={() => onRemoveProject(project.workingDir)}
                     />
 

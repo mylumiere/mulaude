@@ -26,11 +26,14 @@ export interface UseReviewManagerReturn {
   reviewSessions: Set<string>
   reviewData: Record<string, ReviewState>
   reviewRatios: Record<string, number>
+  /** 자동 리뷰(턴 종료 시 재실행)가 켜진 세션 */
+  autoReviewSessions: Set<string>
   openReview: (sessionId: string) => void
   closeReview: (sessionId: string) => void
   cleanupReview: (sessionId: string) => void
   handleToggleReview: (sessionId: string) => void
   rerunReview: (sessionId: string) => void
+  toggleAutoReview: (sessionId: string) => void
   handleReviewResize: (sessionId: string) => (e: React.MouseEvent) => void
 }
 
@@ -38,6 +41,7 @@ export function useReviewManager(): UseReviewManagerReturn {
   const [reviewSessions, setReviewSessions] = useState<Set<string>>(new Set())
   const [reviewData, setReviewData] = useState<Record<string, ReviewState>>({})
   const [reviewRatios, setReviewRatios] = useState<Record<string, number>>({})
+  const [autoReviewSessions, setAutoReviewSessions] = useState<Set<string>>(new Set())
   const containerRef = useRef<HTMLElement | null>(null)
 
   const startReview = useCallback((sessionId: string) => {
@@ -69,6 +73,13 @@ export function useReviewManager(): UseReviewManagerReturn {
       delete next[sessionId]
       return next
     })
+    // 자동 리뷰는 패널이 열려있을 때만 의미 있음 → 닫으면 해제
+    setAutoReviewSessions(prev => {
+      if (!prev.has(sessionId)) return prev
+      const next = new Set(prev)
+      next.delete(sessionId)
+      return next
+    })
   }, [])
 
   const cleanupReview = useCallback((sessionId: string) => {
@@ -91,6 +102,16 @@ export function useReviewManager(): UseReviewManagerReturn {
     window.api.cancelReview(sessionId)
     startReview(sessionId)
   }, [startReview])
+
+  /** 자동 리뷰(턴 종료 시 재실행) 토글 */
+  const toggleAutoReview = useCallback((sessionId: string) => {
+    setAutoReviewSessions(prev => {
+      const next = new Set(prev)
+      if (next.has(sessionId)) next.delete(sessionId)
+      else next.add(sessionId)
+      return next
+    })
+  }, [])
 
   // review:chunk — 스트리밍 누적 텍스트
   useEffect(() => {
@@ -158,11 +179,13 @@ export function useReviewManager(): UseReviewManagerReturn {
     reviewSessions,
     reviewData,
     reviewRatios,
+    autoReviewSessions,
     openReview,
     closeReview,
     cleanupReview,
     handleToggleReview,
     rerunReview,
+    toggleAutoReview,
     handleReviewResize
   }
 }

@@ -75,6 +75,17 @@
   cursor: default;
 }
 
+/* 자동 리뷰 토글 활성 상태 (codex 틸 톤) */
+.review-panel-btn--active {
+  color: #10a37f;
+  background: rgba(16, 163, 127, 0.12);
+}
+
+.review-panel-btn--active:hover:not(:disabled) {
+  color: #10a37f;
+  background: rgba(16, 163, 127, 0.2);
+}
+
 /* ─── 콘텐츠 ─── */
 
 .review-panel-content {

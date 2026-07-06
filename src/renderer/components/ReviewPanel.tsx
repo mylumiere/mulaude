@@ -7,7 +7,7 @@
  */
 
 import { useMemo } from 'react'
-import { X, RefreshCw, Loader2, Sparkles } from 'lucide-react'
+import { X, RefreshCw, Loader2, Sparkles, Zap } from 'lucide-react'
 import { marked } from 'marked'
 import type { Locale } from '../i18n'
 import { t } from '../i18n'
@@ -20,16 +20,21 @@ interface ReviewPanelProps {
   sessionId: string
   review: ReviewState | undefined
   locale: Locale
+  /** 자동 리뷰(턴 종료 시 재실행) 활성 여부 */
+  autoEnabled?: boolean
   onClose: () => void
   onRerun: () => void
+  onToggleAuto?: () => void
 }
 
 export default function ReviewPanel({
   sessionId: _sessionId,
   review,
   locale,
+  autoEnabled,
   onClose,
-  onRerun
+  onRerun,
+  onToggleAuto
 }: ReviewPanelProps): JSX.Element {
   const status = review?.status ?? 'idle'
   const text = review?.text ?? ''
@@ -55,6 +60,15 @@ export default function ReviewPanel({
           )}
         </span>
         <div className="review-panel-actions">
+          {onToggleAuto && (
+            <button
+              className={`review-panel-btn${autoEnabled ? ' review-panel-btn--active' : ''}`}
+              onClick={onToggleAuto}
+              title={t(locale, 'review.auto')}
+            >
+              <Zap size={12} />
+            </button>
+          )}
           <button
             className="review-panel-btn"
             onClick={onRerun}

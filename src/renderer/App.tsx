@@ -156,6 +156,25 @@ export default function App(): JSX.Element {
     reviewManager.handleToggleReview(sessionId)
   }, [planManager, previewManager, diffManager, reviewManager, viewerManager])
 
+  // 자동 리뷰: 작업 상태 → idle 전환(턴 종료) 시 리뷰 재실행
+  // Stop 훅 원시 이벤트 대신 상태 머신 결과를 관찰 — 부모/자식/팀 구분 로직 재사용
+  const prevReviewStatesRef = useRef<Record<string, string>>({})
+  useEffect(() => {
+    const WORKING_STATES = new Set(['thinking', 'tool', 'agent'])
+    for (const [sid, status] of Object.entries(sessionStatuses)) {
+      const prev = prevReviewStatesRef.current[sid]
+      prevReviewStatesRef.current[sid] = status.state
+      if (
+        status.state === 'idle' &&
+        prev !== undefined && WORKING_STATES.has(prev) &&
+        reviewManager.autoReviewSessions.has(sid) &&
+        reviewManager.reviewSessions.has(sid)
+      ) {
+        reviewManager.rerunReview(sid)
+      }
+    }
+  }, [sessionStatuses, reviewManager])
+
   // Viewer 토글 (배타적)
   const handleToggleViewer = useCallback((sessionId: string) => {
     if (planManager.planSessionsRef.current.has(sessionId)) planManager.closePlan(sessionId)
@@ -442,6 +461,7 @@ export default function App(): JSX.Element {
           attentionSessions={attentionSessions}
           onCreateProject={sessionManager.createProject}
           onAddSessionToProject={sessionManager.addSession}
+          tutorialActive={tutorial.phase === 'steps'}
           onDestroySession={sessionManager.destroySession}
           onRemoveProject={sessionManager.removeProject}
           onUpdateSessionName={sessionManager.updateSessionName}
@@ -543,7 +563,9 @@ export default function App(): JSX.Element {
               reviewSessions={reviewManager.reviewSessions}
               reviewData={reviewManager.reviewData}
               reviewRatios={reviewManager.reviewRatios}
+              autoReviewSessions={reviewManager.autoReviewSessions}
               onToggleReview={handleToggleReview}
+              onToggleAutoReview={reviewManager.toggleAutoReview}
               onCloseReview={reviewManager.closeReview}
               onReviewResize={reviewManager.handleReviewResize}
               onRerunReview={reviewManager.rerunReview}
