@@ -1,5 +1,32 @@
 # Changelog
 
+## [1.4.0] - 2026-07-06
+
+### Codex CLI 통합 — 멀티 CLI 세션 & 코드 리뷰
+
+Claude Code 외에 OpenAI Codex CLI 세션을 함께 운영합니다.
+"Claude가 코드를 짜면 Codex가 리뷰한다"는 크로스 리뷰 워크플로우를 지원합니다.
+
+#### Codex 세션
+- **멀티 CLI 세션**: 세션별 `cliType`('claude' | 'codex') — 생성/복원/영속화 전 구간 유지
+- **CLI 선택 드롭다운**: 사이드바 "+" / 프로젝트 "+" 클릭 시 Claude/Codex 선택
+  (portal 렌더링으로 사이드바 stacking context 간섭 없음, 튜토리얼 중에는 즉시 Claude 생성)
+- **"codex" 칩**: 사이드바 세션 행 + 패인 헤더에 틸 톤 칩으로 구분 표시
+- **훅 재사용**: Codex hooks가 Claude Code와 동일한 stdin JSON 스키마 →
+  `~/.codex/hooks.json`에 기존 mulaude-hook.sh 자동 등록 (Codex 미설치 시 흔적 없음)
+- 재부팅 복원 시 codex는 `--resume` 미지원이라 새 세션으로 시작
+
+#### Codex 리뷰 패널
+- **⌘⇧C 토글**: git diff HEAD → `codex exec --json` 비대화형 리뷰 → 마크다운 스트리밍 표시
+- **자동 리뷰(⚡)**: 켜두면 턴 종료 시 리뷰 자동 재실행 (작업 상태 → idle 전환 감지)
+- **미설치 안내**: codex 미설치 감지 시 설치 명령 안내, 설치 후 재시도 가능 (경로 캐시 초기화)
+- 패인 햄버거 메뉴에 리뷰 항목 추가, 커맨드 팔레트 "Codex Review"/"New Codex Project" 액션
+
+#### 기타
+- 단축키 모달 보강: ⌘K 커맨드 팔레트 + 사이드 패널 그룹(⌘⇧P/D/C/V/G) 신설
+- 패인 헤더 액션 버튼 미세 조정 (아이콘 굵기·간격·정렬)
+- i18n 4개 언어(en/ko/ja/zh) 전체 적용
+
 ## [1.3.0] - 2026-04-12
 
 ### Team Chat & Agent Orchestration — AI 팀 오케스트레이션
