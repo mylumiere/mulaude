@@ -318,7 +318,7 @@
 .terminal-grid-pane-actions {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
 }
 
 /* 에이전트 카운터 뱃지 */
@@ -437,12 +437,13 @@
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
   padding: 0 4px;
   line-height: 1;
   border-radius: var(--radius-sm);
   transition: color var(--transition-fast), background var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .terminal-grid-pane-close:hover {

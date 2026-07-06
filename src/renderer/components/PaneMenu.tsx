@@ -68,7 +68,7 @@ function PaneMenu({
         onClick={(e) => { e.stopPropagation(); setOpen(prev => !prev) }}
         title={t(locale, 'cmdPalette.title')}
       >
-        <Menu size={10} />
+        <Menu size={10} strokeWidth={1.5} />
       </button>
       {open && (
         <div className="pane-menu-dropdown">
