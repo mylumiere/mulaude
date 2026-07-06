@@ -379,7 +379,8 @@
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
   padding: 3px;
-  z-index: 300;
+  /* portal(body 직속)로 렌더 — 팔레트(200)/튜토리얼(201)보다 위 */
+  z-index: 400;
   display: flex;
   flex-direction: column;
   gap: 1px;
