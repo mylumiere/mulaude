@@ -47,6 +47,8 @@ interface UseKeyboardShortcutsParams {
   toggleDiff?: () => void
   /** Viewer 토글 */
   toggleViewer?: () => void
+  /** Codex Review 토글 */
+  toggleReview?: () => void
   /** 커맨드 팔레트 열기 */
   openCommandPalette?: () => void
   /** 설정 열기 */
@@ -76,6 +78,7 @@ export function useKeyboardShortcuts({
   togglePreview,
   toggleDiff,
   toggleViewer,
+  toggleReview,
   openCommandPalette,
   focusDirection,
   isGridMode,
@@ -156,6 +159,13 @@ export function useKeyboardShortcuts({
       if (e.key === 'v' && e.shiftKey && !e.altKey && !e.ctrlKey) {
         e.preventDefault()
         toggleViewer?.()
+        return
+      }
+
+      // ── Codex Review 토글 (Cmd+Shift+C) ──
+      if (e.key.toLowerCase() === 'c' && e.shiftKey && !e.altKey && !e.ctrlKey) {
+        e.preventDefault()
+        toggleReview?.()
         return
       }
 
@@ -258,5 +268,5 @@ export function useKeyboardShortcuts({
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [projects, activeSessionId, sessions, createProject, selectSession, focusedPane, setFocusedPane, getChildPaneIndices, sessionsWithPanes, closePane, reopenClosedPane, toggleZoom, togglePreview, toggleDiff, toggleViewer, openCommandPalette, focusDirection, isGridMode, getFocusedSessionId, openSettings, openShortcuts, tutorialPhase, tutorialStep])
+  }, [projects, activeSessionId, sessions, createProject, selectSession, focusedPane, setFocusedPane, getChildPaneIndices, sessionsWithPanes, closePane, reopenClosedPane, toggleZoom, togglePreview, toggleDiff, toggleViewer, toggleReview, toggleTeamChat, openCommandPalette, focusDirection, isGridMode, getFocusedSessionId, openSettings, openShortcuts, tutorialPhase, tutorialStep])
 }

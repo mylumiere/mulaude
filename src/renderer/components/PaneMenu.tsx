@@ -6,7 +6,7 @@
  */
 
 import { useState, useRef, useEffect, useCallback, memo } from 'react'
-import { Menu, FileText, Eye, GitCompareArrows, BookOpen, Check } from 'lucide-react'
+import { Menu, FileText, Eye, GitCompareArrows, BookOpen, Sparkles, Check } from 'lucide-react'
 import { t, type Locale } from '../i18n'
 import './PaneMenu.css'
 
@@ -15,10 +15,12 @@ interface PaneMenuProps {
   hasPlan: boolean
   hasPreview: boolean
   hasDiff: boolean
+  hasReview: boolean
   hasViewer: boolean
   onTogglePlan: () => void
   onTogglePreview: () => void
   onToggleDiff: () => void
+  onToggleReview: () => void
   onToggleViewer: () => void
 }
 
@@ -26,6 +28,7 @@ const items = [
   { key: 'plan', labelKey: 'cmdPalette.togglePlan', Icon: FileText, shortcut: null },
   { key: 'preview', labelKey: 'cmdPalette.togglePreview', Icon: Eye, shortcut: '⌘⇧P' },
   { key: 'diff', labelKey: 'cmdPalette.toggleDiff', Icon: GitCompareArrows, shortcut: '⌘⇧D' },
+  { key: 'review', labelKey: 'cmdPalette.codexReview', Icon: Sparkles, shortcut: '⌘⇧C' },
   { key: 'viewer', labelKey: 'cmdPalette.toggleViewer', Icon: BookOpen, shortcut: '⌘⇧V' },
 ] as const
 
@@ -34,17 +37,19 @@ function PaneMenu({
   hasPlan,
   hasPreview,
   hasDiff,
+  hasReview,
   hasViewer,
   onTogglePlan,
   onTogglePreview,
   onToggleDiff,
+  onToggleReview,
   onToggleViewer,
 }: PaneMenuProps): JSX.Element {
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
-  const activeMap: Record<string, boolean> = { plan: hasPlan, preview: hasPreview, diff: hasDiff, viewer: hasViewer }
-  const toggleMap: Record<string, () => void> = { plan: onTogglePlan, preview: onTogglePreview, diff: onToggleDiff, viewer: onToggleViewer }
+  const activeMap: Record<string, boolean> = { plan: hasPlan, preview: hasPreview, diff: hasDiff, review: hasReview, viewer: hasViewer }
+  const toggleMap: Record<string, () => void> = { plan: onTogglePlan, preview: onTogglePreview, diff: onToggleDiff, review: onToggleReview, viewer: onToggleViewer }
 
   // 외부 클릭 시 닫기
   useEffect(() => {

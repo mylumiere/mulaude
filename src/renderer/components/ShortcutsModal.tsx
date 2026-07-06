@@ -27,6 +27,7 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
   {
     titleKey: 'shortcuts.group.general',
     items: [
+      { keys: '⌘ K', labelKey: 'shortcuts.commandPalette' },
       { keys: '⌘ ,', labelKey: 'shortcuts.openSettings' },
       { keys: '⌘ /', labelKey: 'shortcuts.openShortcuts' },
     ]
@@ -49,7 +50,16 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
       { keys: '⌘⇧ ↵', labelKey: 'shortcuts.zoomToggle' },
       { keys: '⌘ ← / →', labelKey: 'shortcuts.gridFocusCol' },
       { keys: '⌘ ↑ / ↓', labelKey: 'shortcuts.gridFocusRow' },
+    ]
+  },
+  {
+    titleKey: 'shortcuts.group.panel',
+    items: [
       { keys: '⌘⇧ P', labelKey: 'shortcuts.preview' },
+      { keys: '⌘⇧ D', labelKey: 'shortcuts.diff' },
+      { keys: '⌘⇧ C', labelKey: 'shortcuts.review' },
+      { keys: '⌘⇧ V', labelKey: 'shortcuts.viewer' },
+      { keys: '⌘⇧ G', labelKey: 'shortcuts.teamChat' },
     ]
   },
   {

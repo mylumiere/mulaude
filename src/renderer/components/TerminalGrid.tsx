@@ -126,6 +126,7 @@ interface TerminalGridProps {
   reviewSessions?: Set<string>
   reviewData?: Record<string, ReviewState>
   reviewRatios?: Record<string, number>
+  onToggleReview?: (sessionId: string) => void
   onCloseReview?: (sessionId: string) => void
   onReviewResize?: (sessionId: string) => (e: React.MouseEvent) => void
   onRerunReview?: (sessionId: string) => void
@@ -201,6 +202,7 @@ export default function TerminalGrid({
   reviewSessions,
   reviewData,
   reviewRatios,
+  onToggleReview,
   onCloseReview,
   onReviewResize,
   onRerunReview,
@@ -386,10 +388,12 @@ export default function TerminalGrid({
               hasPlan={!!(planSessions?.has(leaf.sessionId) && planInfos?.[leaf.sessionId])}
               hasPreview={previewSessions.has(leaf.sessionId)}
               hasDiff={!!diffSessions?.has(leaf.sessionId)}
+              hasReview={!!reviewSessions?.has(leaf.sessionId)}
               hasViewer={!!viewerSessions?.has(leaf.sessionId)}
               onTogglePlan={() => onTogglePlan?.(leaf.sessionId)}
               onTogglePreview={() => onTogglePreview(leaf.sessionId)}
               onToggleDiff={() => onToggleDiff?.(leaf.sessionId)}
+              onToggleReview={() => onToggleReview?.(leaf.sessionId)}
               onToggleViewer={() => onToggleViewer?.(leaf.sessionId)}
             />
             {isGridMode && isZoomed && (

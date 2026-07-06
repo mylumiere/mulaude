@@ -279,6 +279,7 @@ export default function App(): JSX.Element {
         id: 'codex-review',
         labelKey: 'cmdPalette.codexReview',
         icon: <Sparkles size={14} />,
+        shortcut: '⌘⇧C',
         category: 'panel',
         requiresSession: true,
         execute: () => { const sid = getFocusedSid(); if (sid) handleToggleReview(sid) }
@@ -383,6 +384,12 @@ export default function App(): JSX.Element {
         ? terminalLayout.getFocusedSessionId()
         : sessionManager.activeSessionId
       if (sid) handleToggleViewer(sid)
+    },
+    toggleReview: () => {
+      const sid = terminalLayout.isGridMode
+        ? terminalLayout.getFocusedSessionId()
+        : sessionManager.activeSessionId
+      if (sid) handleToggleReview(sid)
     },
     toggleTeamChat: () => setChatPanelOpen(prev => !prev),
     openCommandPalette: () => setCommandPaletteOpen(true),
@@ -536,6 +543,7 @@ export default function App(): JSX.Element {
               reviewSessions={reviewManager.reviewSessions}
               reviewData={reviewManager.reviewData}
               reviewRatios={reviewManager.reviewRatios}
+              onToggleReview={handleToggleReview}
               onCloseReview={reviewManager.closeReview}
               onReviewResize={reviewManager.handleReviewResize}
               onRerunReview={reviewManager.rerunReview}

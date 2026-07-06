@@ -74,7 +74,11 @@ export default function ReviewPanel({
         {status === 'error' ? (
           <div className="review-panel-error">
             <div className="review-panel-error-title">{t(locale, 'review.error')}</div>
-            <pre className="review-panel-error-msg">{review?.error}</pre>
+            <pre className="review-panel-error-msg">
+              {review?.error === 'CODEX_NOT_FOUND'
+                ? t(locale, 'review.notInstalled')
+                : review?.error}
+            </pre>
           </div>
         ) : status === 'done' && !text ? (
           <div className="review-panel-empty">{t(locale, 'review.noChanges')}</div>

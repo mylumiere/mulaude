@@ -84,6 +84,13 @@ export async function runReview(sessionId: string, workingDir: string): Promise<
   // 기존 진행 중인 리뷰 취소
   cancelReview(sessionId)
 
+  // codex 미설치 사전 체크 — findCodexPath는 탐색 실패 시 bare 'codex'를 반환
+  if (getCodexPath() === 'codex') {
+    codexPath = null // 캐시 초기화 (그 사이 설치했을 수 있으니 다음 실행 시 재탐색)
+    send('review:error', sessionId, 'CODEX_NOT_FOUND')
+    return
+  }
+
   const diff = await captureDiff(workingDir)
   if (!diff.trim()) {
     send('review:result', sessionId, '')
@@ -147,7 +154,10 @@ export async function runReview(sessionId: string, workingDir: string): Promise<
   child.on('error', (err) => {
     if (activeProcesses.get(sessionId) === child) {
       activeProcesses.delete(sessionId)
-      send('review:error', sessionId, err.message)
+      // 바이너리가 사라진 경우(ENOENT)도 미설치로 안내 + 경로 캐시 초기화
+      const notFound = (err as NodeJS.ErrnoException).code === 'ENOENT'
+      if (notFound) codexPath = null
+      send('review:error', sessionId, notFound ? 'CODEX_NOT_FOUND' : err.message)
     }
   })
 }
