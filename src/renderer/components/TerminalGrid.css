@@ -298,6 +298,17 @@
   margin-left: 4px;
 }
 
+/* CLI 종류 칩 — Codex 세션 구분 (테마와 무관한 고정 틸 톤) */
+.terminal-grid-cli-chip--codex {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  background: color-mix(in srgb, #10a37f 16%, transparent);
+  color: color-mix(in srgb, #10a37f 65%, var(--text-primary));
+  padding: 1px 4px;
+  border-radius: var(--radius-sm);
+  margin-left: 4px;
+}
+
 /* 줌 모드 헤더 — 미세한 accent 강조 */
 .terminal-grid-pane-header--zoomed {
   background: color-mix(in srgb, var(--accent-primary) 6%, var(--bg-glass));

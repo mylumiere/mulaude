@@ -354,6 +354,9 @@ export default function TerminalGrid({
           <span className="terminal-grid-pane-title">
             {isZoomed && <Maximize2 size={10} className="terminal-grid-zoom-icon" />}
             {session?.name ?? leaf.sessionId}
+            {session?.cliType === 'codex' && (
+              <span className="terminal-grid-cli-chip--codex">codex</span>
+            )}
             {claudeId && !isShellStatus && <span className="terminal-grid-claude-chip">{claudeId.slice(0, 4)}</span>}
           </span>
           <div className="terminal-grid-pane-actions">

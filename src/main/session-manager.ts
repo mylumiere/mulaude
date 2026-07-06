@@ -58,6 +58,8 @@ interface ManagedSession {
   ptyProcess: pty.IPty
   /** tmux 세션명 (tmux 모드에서만 존재) */
   tmuxSessionName?: string
+  /** 세션이 실행하는 CLI (기본: 'claude') */
+  cliType?: CliType
 }
 
 type DataCallback = (id: string, data: string) => void
@@ -256,7 +258,7 @@ export class SessionManager {
       throw err
     }
 
-    const session: ManagedSession = { id, name, workingDir, ptyProcess, tmuxSessionName: tmuxName }
+    const session: ManagedSession = { id, name, workingDir, ptyProcess, tmuxSessionName: tmuxName, cliType }
     this.sessions.set(id, session)
     this.bindPtyEvents(id, ptyProcess)
 
@@ -311,7 +313,7 @@ export class SessionManager {
       throw err
     }
 
-    const session: ManagedSession = { id, name, workingDir, ptyProcess }
+    const session: ManagedSession = { id, name, workingDir, ptyProcess, cliType }
     this.sessions.set(id, session)
     this.bindPtyEvents(id, ptyProcess)
 
@@ -394,7 +396,8 @@ export class SessionManager {
       name: persisted.name,
       workingDir: persisted.workingDir,
       ptyProcess,
-      tmuxSessionName: persisted.tmuxSessionName
+      tmuxSessionName: persisted.tmuxSessionName,
+      cliType: persisted.cliType ?? 'claude'
     }
     this.sessions.set(persisted.id, session)
     this.bindPtyEvents(persisted.id, ptyProcess)
@@ -411,7 +414,8 @@ export class SessionManager {
       workingDir: persisted.workingDir,
       tmuxSessionName: persisted.tmuxSessionName,
       createdAt: persisted.createdAt,
-      restored: true
+      restored: true,
+      cliType: persisted.cliType ?? 'claude'
     }
   }
 
@@ -515,7 +519,8 @@ export class SessionManager {
       name: persisted.name,
       workingDir: persisted.workingDir,
       ptyProcess,
-      tmuxSessionName: tmuxName
+      tmuxSessionName: tmuxName,
+      cliType: persisted.cliType ?? 'claude'
     }
     this.sessions.set(persisted.id, session)
     this.bindPtyEvents(persisted.id, ptyProcess)
@@ -626,11 +631,12 @@ export class SessionManager {
    */
   getSessionList(): SessionInfo[] {
     return Array.from(this.sessions.values()).map(
-      ({ id, name, workingDir, tmuxSessionName }) => ({
+      ({ id, name, workingDir, tmuxSessionName, cliType }) => ({
         id,
         name,
         workingDir,
-        tmuxSessionName
+        tmuxSessionName,
+        cliType
       })
     )
   }
