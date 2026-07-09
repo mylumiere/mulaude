@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 
-import type { SessionInfo, HookEvent, UsageData, TmuxPaneInfo, AppMode, NativeInputRequest, CowrkAgentState, CliType } from '../shared/types'
+import type { SessionInfo, HookEvent, UsageData, TmuxPaneInfo, AppMode, NativeInputRequest, CowrkAgentState, CliType, BridgeDelegationInfo } from '../shared/types'
 
 interface Window {
   api: {
@@ -17,6 +17,7 @@ interface Window {
     captureScreen: (id: string, cols?: number, rows?: number) => Promise<string | null>
     onSessionExit: (callback: (id: string, exitCode: number) => void) => () => void
     onSessionHook: (callback: (id: string, event: HookEvent) => void) => () => void
+    onBridgeDelegation: (callback: (info: BridgeDelegationInfo) => void) => () => void
     onSessionPanes: (callback: (id: string, panes: TmuxPaneInfo[]) => void) => () => void
     writeChildPane: (sessionId: string, paneIndex: number, data: string) => void
     resizeChildPane: (sessionId: string, paneIndex: number, cols: number, rows: number) => void

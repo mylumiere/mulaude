@@ -309,6 +309,25 @@
   margin-left: 4px;
 }
 
+/* 브릿지 위임 중 배지 — "→ 대상 위임 중" (부드러운 펄스) */
+.terminal-grid-bridge-chip {
+  font-family: var(--font-ui);
+  font-size: 0.6rem;
+  font-weight: 500;
+  background: var(--accent-primary-soft);
+  color: var(--accent-primary);
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  margin-left: 4px;
+  white-space: nowrap;
+  animation: bridge-chip-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes bridge-chip-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
 /* 줌 모드 헤더 — 미세한 accent 강조 */
 .terminal-grid-pane-header--zoomed {
   background: color-mix(in srgb, var(--accent-primary) 6%, var(--bg-glass));

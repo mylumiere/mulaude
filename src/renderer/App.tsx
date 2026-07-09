@@ -22,6 +22,7 @@ import { useNotifications } from './hooks/useNotifications'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import { useChildPaneManager } from './hooks/useChildPaneManager'
 import { useTerminalLayout, getAllLeaves } from './hooks/useTerminalLayout'
+import { useBridgeDelegations } from './hooks/useBridgeDelegations'
 import { useTutorial } from './hooks/useTutorial'
 import { usePlanManager } from './hooks/usePlanManager'
 import { usePlanTrigger } from './hooks/usePlanTrigger'
@@ -222,6 +223,16 @@ export default function App(): JSX.Element {
   const terminalLayout = useTerminalLayout({
     activeSessionId: sessionManager.activeSessionId,
     sessions: sessionManager.sessions
+  })
+
+  // 세션 브릿지 위임 상태 (대상 패인 자동 표시 + 요청 패인 배지)
+  const isKnownSession = useCallback(
+    (id: string) => sessionsRef.current.some((s) => s.id === id),
+    []
+  )
+  const bridgeDelegations = useBridgeDelegations({
+    ensureSessionBeside: terminalLayout.ensureSessionBeside,
+    isKnownSession
   })
 
   const handleSelectSession = useCallback((id: string) => {
@@ -516,6 +527,7 @@ export default function App(): JSX.Element {
               sessionAgents={teamAgents}
               hookAgents={hookAgents}
               claudeSessionIds={claudeSessionIds}
+              bridgeDelegations={bridgeDelegations}
               sessionsWithPanes={sessionsWithPanes}
               childPaneMap={childPaneMap}
               focusedPane={focusedPane}

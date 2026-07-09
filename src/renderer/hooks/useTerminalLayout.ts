@@ -64,6 +64,8 @@ export interface UseTerminalLayoutReturn {
   focusDirection: (direction: 'left' | 'right' | 'up' | 'down') => void
   handleResize: (branchId: string, handleIndex: number) => (e: React.MouseEvent) => void
   dropSession: (sessionId: string, targetPaneId: string, position: DropPosition) => void
+  /** 세션이 그리드에 없으면 기준 세션 옆에 분할 표시 (브릿지 위임 시각화용, 포커스 유지) */
+  ensureSessionBeside: (sessionId: string, besideSessionId: string) => void
   getFocusedSessionId: () => string | null
   resetToSingle: (sessionId: string) => void
   /** 특정 방향으로 이동 가능한 인접 패인이 있는지 확인 */
@@ -500,6 +502,23 @@ export function useTerminalLayout({
     })
   }, [showGridAlert])
 
+  /* ──── 브릿지 위임 시각화: 대상 세션을 기준 세션 옆에 표시 ──── */
+  const ensureSessionBeside = useCallback((sessionId: string, besideSessionId: string) => {
+    setTree((prev) => {
+      const leaves = getAllLeaves(prev.root)
+      // 이미 그리드에 표시 중이면 그대로 (포커스도 뺏지 않음)
+      if (leaves.some((l) => l.sessionId === sessionId)) return prev
+      // 패인 초과 시 조용히 스킵 — 위임 자체는 계속 진행되므로 알림 불필요
+      if (countLeaves(prev.root) >= MAX_PANES) return prev
+      const anchor = leaves.find((l) => l.sessionId === besideSessionId) ?? leaves[0]
+      if (!anchor) return prev
+      const newLeaf = makeLeaf(sessionId)
+      const newRoot = splitLeaf(prev.root, anchor.id, 'horizontal', newLeaf)
+      // focusedPaneId 유지 — 지휘 세션의 작업 흐름을 방해하지 않음
+      return { ...prev, root: newRoot }
+    })
+  }, [])
+
   /* ──── 포커스된 세션 ID ──── */
   const getFocusedSessionId = useCallback((): string | null => {
     const leaf = findLeaf(tree.root, tree.focusedPaneId)
@@ -587,6 +606,7 @@ export function useTerminalLayout({
     focusDirection,
     handleResize,
     dropSession,
+    ensureSessionBeside,
     getFocusedSessionId,
     resetToSingle,
     hasAdjacentPane,

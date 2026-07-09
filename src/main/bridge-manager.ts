@@ -36,7 +36,7 @@ import {
 import { join, basename } from 'path'
 import { homedir } from 'os'
 import type { SessionManager } from './session-manager'
-import type { HookEvent, CliType } from '../shared/types'
+import type { HookEvent, CliType, BridgeDelegationInfo } from '../shared/types'
 import { execTmuxAsync, captureTmuxPaneAsync } from './tmux-utils'
 
 /** 위임 기본 타임아웃 (초) — CLI --timeout으로 재정의 가능 */
@@ -48,18 +48,7 @@ const BRIDGE_SETTLE_DELAY = 800
 /** 폴백 캡처 라인 수 */
 const BRIDGE_CAPTURE_LINES = 80
 
-/** 위임 상태 변화 알림 (2단계 시각화용) */
-export interface DelegationInfo {
-  id: string
-  fromSessionId: string
-  toSessionId: string
-  /** 프롬프트 앞부분 (표시용) */
-  promptPreview: string
-  status: 'started' | 'done' | 'error'
-  error?: string
-}
-
-type DelegationListener = (info: DelegationInfo) => void
+type DelegationListener = (info: BridgeDelegationInfo) => void
 
 /** 대상 해석 결과 */
 interface ResolvedTarget {
@@ -705,7 +694,7 @@ export class BridgeManager {
     return `[raw-capture] history unavailable — last ${BRIDGE_CAPTURE_LINES} pane lines:\n${text.trim()}`
   }
 
-  private emit(info: DelegationInfo): void {
+  private emit(info: BridgeDelegationInfo): void {
     for (const cb of this.listeners) {
       try {
         cb(info)

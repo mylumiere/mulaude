@@ -44,6 +44,21 @@ export interface HookEvent {
 }
 
 /**
+ * 세션 브릿지 위임 상태 (main → renderer, bridge:delegation)
+ *
+ * 위임 시작 시 대상 패인 자동 표시 + 요청 패인 배지 표시에 사용됩니다.
+ */
+export interface BridgeDelegationInfo {
+  id: string
+  fromSessionId: string
+  toSessionId: string
+  /** 프롬프트 앞부분 (표시용) */
+  promptPreview: string
+  status: 'started' | 'done' | 'error'
+  error?: string
+}
+
+/**
  * Claude 사용량 데이터
  *
  * 소스: claude-hud 캐시 (.usage-cache.json) 또는 Keychain OAuth API

@@ -122,6 +122,8 @@ interface TerminalGridProps {
   onDiffResize?: (sessionId: string) => (e: React.MouseEvent) => void
   onRefreshDiff?: (sessionId: string) => void
 
+  // 브릿지 위임 (fromSessionId → { toSessionId })
+  bridgeDelegations?: Record<string, { toSessionId: string }>
   // Review 관련 (Codex)
   reviewSessions?: Set<string>
   reviewData?: Record<string, ReviewState>
@@ -201,6 +203,7 @@ export default function TerminalGrid({
   onCloseDiff,
   onDiffResize,
   onRefreshDiff,
+  bridgeDelegations,
   reviewSessions,
   reviewData,
   reviewRatios,
@@ -364,6 +367,13 @@ export default function TerminalGrid({
               <span className="terminal-grid-cli-chip--codex">codex</span>
             )}
             {claudeId && !isShellStatus && <span className="terminal-grid-claude-chip">{claudeId.slice(0, 4)}</span>}
+            {bridgeDelegations?.[leaf.sessionId] && (
+              <span className="terminal-grid-bridge-chip">
+                → {sessionMap.get(bridgeDelegations[leaf.sessionId].toSessionId)?.name ??
+                  bridgeDelegations[leaf.sessionId].toSessionId}{' '}
+                {t(locale, 'bridge.delegating')}
+              </span>
+            )}
           </span>
           <div className="terminal-grid-pane-actions">
             {permissionModes?.[leaf.sessionId] && permissionModes[leaf.sessionId] !== 'default' && (

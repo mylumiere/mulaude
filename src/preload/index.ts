@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
-import type { SessionInfo, HookEvent, UsageData, TmuxPaneInfo, AgentInfo, AppMode, NativeInputRequest, CowrkAgentState, DiffFile, ViewerContent, TeamState, CliType } from '../shared/types'
+import type { SessionInfo, HookEvent, UsageData, TmuxPaneInfo, AgentInfo, AppMode, NativeInputRequest, CowrkAgentState, DiffFile, ViewerContent, TeamState, CliType, BridgeDelegationInfo } from '../shared/types'
 
 /**
  * Preload 스크립트 - contextBridge를 통해 렌더러에 안전한 API를 노출합니다.
@@ -126,6 +126,15 @@ const api = {
     }
     ipcRenderer.on('session:hook', handler)
     return () => ipcRenderer.removeListener('session:hook', handler)
+  },
+
+  /** 세션 브릿지 위임 상태 수신 (started/done/error) */
+  onBridgeDelegation: (callback: (info: BridgeDelegationInfo) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, info: BridgeDelegationInfo): void => {
+      callback(info)
+    }
+    ipcRenderer.on('bridge:delegation', handler)
+    return () => ipcRenderer.removeListener('bridge:delegation', handler)
   },
 
   /** tmux 설치 여부 및 버전 확인 */
