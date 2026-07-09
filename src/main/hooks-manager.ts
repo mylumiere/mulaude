@@ -56,7 +56,27 @@ export class HooksManager {
     this.installHookScript()
     this.installHooksConfig()
     this.installCodexHooksConfig()
+    this.writeIpcPointer()
     this.startWatching()
+  }
+
+  /**
+   * ~/.mulaude/ipc-current에 현재 IPC 디렉토리 경로 기록.
+   *
+   * IPC 디렉토리는 pid 기반이라 앱 재시작 시 바뀌는데, reattach된 세션의
+   * (실행 중인) CLI 프로세스 env는 생성 시점 경로를 물고 있어 훅/브릿지가
+   * 죽은 디렉토리에 쓰게 됩니다. hook 스크립트와 브릿지 CLI는 env 경로가
+   * 사라졌을 때 이 포인터 파일로 현재 경로를 재해석합니다.
+   * (다중 인스턴스 시 마지막에 시작한 앱이 승자 — 예측 가능한 동작)
+   */
+  private writeIpcPointer(): void {
+    try {
+      const dir = join(homedir(), '.mulaude')
+      mkdirSync(dir, { recursive: true })
+      writeFileSync(join(dir, 'ipc-current'), this.ipcDir, 'utf-8')
+    } catch (err) {
+      console.warn('[HooksManager] Failed to write ipc pointer:', err)
+    }
   }
 
   /** hook 이벤트 콜백 등록 */
@@ -73,6 +93,15 @@ export class HooksManager {
     // processedFiles Set 메모리 누수 방지
     this.processedFiles.clear()
     this.callbacks.length = 0
+    // 포인터 파일이 자신을 가리킬 때만 제거 (다른 인스턴스가 덮어쓴 경우 보존)
+    try {
+      const pointer = join(homedir(), '.mulaude', 'ipc-current')
+      if (readFileSync(pointer, 'utf-8') === this.ipcDir) {
+        unlinkSync(pointer)
+      }
+    } catch {
+      // 없으면 무시
+    }
     try {
       rmSync(this.ipcDir, { recursive: true, force: true })
     } catch {
@@ -98,8 +127,12 @@ export class HooksManager {
       + '# Mulaude IPC hook - Claude Code 이벤트를 Mulaude로 전달\n'
       + '# MULAUDE_IPC_DIR 없으면 아무것도 하지 않음 (Mulaude 외부에서 무해)\n'
       + '[ -z "$MULAUDE_IPC_DIR" ] && exit 0\n'
+      + '# 앱 재시작으로 env의 IPC 디렉토리가 사라진 경우: 포인터 파일에서 현재 경로 재해석\n'
+      + 'if [ ! -d "$MULAUDE_IPC_DIR" ]; then\n'
+      + '  MULAUDE_IPC_DIR=$(cat "$HOME/.mulaude/ipc-current" 2>/dev/null)\n'
+      + '  { [ -z "$MULAUDE_IPC_DIR" ] || [ ! -d "$MULAUDE_IPC_DIR" ]; } && exit 0\n'
+      + 'fi\n'
       + 'INPUT=$(cat)\n'
-      + 'mkdir -p "$MULAUDE_IPC_DIR"\n'
       + 'echo "$INPUT" > "$MULAUDE_IPC_DIR/${MULAUDE_SESSION_ID}_$$_${RANDOM}.json"\n'
       + 'exit 0\n'
     writeFileSync(scriptPath, script, 'utf-8')
