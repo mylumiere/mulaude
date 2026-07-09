@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [1.5.0] - 2026-07-09
 
 ### Session Bridge — 세션 간 위임 & 오케스트레이션
 
