@@ -234,7 +234,9 @@ export class SessionManager {
       const envExport = this.ipcDir
         ? `export MULAUDE_SESSION_ID='${id}' MULAUDE_IPC_DIR='${safeIpcDir}'; `
         : ''
-      sendKeysToTmux(tmuxPath, tmuxName, unsetNested + envExport + this.cliPath(cliType))
+      // 브릿지 CLI(~/.mulaude/bin/mulaude)를 세션 안에서 바로 호출 가능하도록
+      const pathExport = 'export PATH="$HOME/.mulaude/bin:$PATH"; '
+      sendKeysToTmux(tmuxPath, tmuxName, unsetNested + envExport + pathExport + this.cliPath(cliType))
     } catch (err) {
       console.error(`[SessionManager] tmux send-keys failed:`, err)
       killTmuxSession(tmuxPath, tmuxName)
@@ -475,12 +477,14 @@ export class SessionManager {
       const envExport = this.ipcDir
         ? `export MULAUDE_SESSION_ID='${persisted.id}' MULAUDE_IPC_DIR='${safeIpcDir}'; `
         : ''
+      // 브릿지 CLI(~/.mulaude/bin/mulaude)를 세션 안에서 바로 호출 가능하도록
+      const pathExport = 'export PATH="$HOME/.mulaude/bin:$PATH"; '
       const cliType: CliType = persisted.cliType ?? 'claude'
       // 저장된 Claude 세션 ID가 있으면 --resume으로 대화 이어받기 (codex는 --resume 미지원)
       const resumeFlag = cliType === 'claude' && persisted.claudeSessionId
         ? ` --resume '${persisted.claudeSessionId}'`
         : ''
-      sendKeysToTmux(tmuxPath, tmuxName, unsetNested + envExport + this.cliPath(cliType) + resumeFlag)
+      sendKeysToTmux(tmuxPath, tmuxName, unsetNested + envExport + pathExport + this.cliPath(cliType) + resumeFlag)
     } catch (err) {
       console.error(`[SessionManager] recreate send-keys failed for ${tmuxName}:`, err)
       killTmuxSession(tmuxPath, tmuxName)

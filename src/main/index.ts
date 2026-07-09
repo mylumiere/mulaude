@@ -30,6 +30,7 @@ import { cleanupAllReviews } from './review-manager'
 import { isViewerActive, viewerOnFileChange, cleanupAllViewers } from './viewer-manager'
 import { DIFF_DEBOUNCE, VIEWER_DEBOUNCE } from '../shared/constants'
 import { CowrkManager } from './cowrk-manager'
+import { BridgeManager } from './bridge-manager'
 import { SCREEN_VISIBILITY_MARGIN, WINDOW_SAVE_DEBOUNCE } from '../shared/constants'
 import type { AppMode } from '../shared/types'
 
@@ -318,6 +319,17 @@ app.whenReady().then(() => {
     setupSessionDataForwarding(mainWindow, sessionManager)
     setupCloseHandler(mainWindow, sessionManager)
 
+    // 세션 브릿지 (세션 간 위임): CLI 설치 + 요청 감시 + 훅 이벤트 구독
+    const bridgeManager = new BridgeManager(sessionManager, hooksManager.getIpcDir())
+    bridgeManager.install()
+    hooksManager.onEvent((sessionId, event) => bridgeManager.onHookEvent(sessionId, event))
+    // 위임 상태 → 렌더러 (패인 자동 표시 + 배지)
+    bridgeManager.onDelegation((info) => {
+      if (!mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('bridge:delegation', info)
+      }
+    })
+
     // Hook 이벤트 → 렌더러 전달 + diff auto-refresh
     hooksManager.onEvent((sessionId, event) => {
       if (!mainWindow.isDestroyed()) {
@@ -378,6 +390,7 @@ app.whenReady().then(() => {
       cowrkManager.destroyAll()
       stopAllPreviews()
       cleanupPanePolling()
+      bridgeManager.cleanup()
       hooksManager.cleanup()
       cleanupStatusline()
       cleanupPasteImages()
