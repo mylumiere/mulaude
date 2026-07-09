@@ -1,5 +1,20 @@
 # Changelog
 
+## [Unreleased]
+
+### Session Bridge — 세션 간 위임 & 오케스트레이션
+
+세션 안의 AI가 다른 세션에 작업을 위임하고 응답을 회수합니다. 상세: `docs/BRIDGE.md`
+
+- **`mulaude` CLI** (세션 내 자동 설치): `sessions`(목록) / `ask`(위임+대기) /
+  `role`(역할 라벨) / `guide`(지휘 AI용 안내)
+- **위임 파이프라인**: 파일 IPC 요청 → tmux 브래킷 페이스트 주입 → Stop 훅 완료 감지 →
+  세션 히스토리(claude jsonl / codex rollout)에서 응답 추출 → 응답 반환
+- **가드**: busy 거부, 동일 대상 중복 거부, 자기 위임 거부, 타임아웃. 병렬 위임 지원
+  (요청별 고유 tmux 버퍼)
+- **시각화**: 위임 시 대상 패인 자동 분할 표시(포커스 유지) + "→ 대상 위임 중" 펄스 배지
+- **역할 라벨**: `mulaude role`로 부여 → 사이드바 칩 + 셀렉터로 사용 (예: `mulaude ask reviewer ...`)
+
 ## [1.4.0] - 2026-07-06
 
 ### Codex CLI 통합 — 멀티 CLI 세션 & 코드 리뷰
