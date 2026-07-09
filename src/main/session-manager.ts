@@ -417,7 +417,8 @@ export class SessionManager {
       tmuxSessionName: persisted.tmuxSessionName,
       createdAt: persisted.createdAt,
       restored: true,
-      cliType: persisted.cliType ?? 'claude'
+      cliType: persisted.cliType ?? 'claude',
+      role: persisted.role
     }
   }
 
@@ -541,7 +542,8 @@ export class SessionManager {
       tmuxSessionName: tmuxName,
       createdAt: persisted.createdAt,
       restored: true,
-      cliType: persisted.cliType ?? 'claude'
+      cliType: persisted.cliType ?? 'claude',
+      role: persisted.role
     }
   }
 

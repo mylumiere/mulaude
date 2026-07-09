@@ -45,6 +45,8 @@ export interface PersistedSession {
   claudeSessionId?: string
   /** 세션이 실행하는 CLI (기본: 'claude') */
   cliType?: 'claude' | 'codex'
+  /** 브릿지 역할 라벨 (예: "검증 담당") — mulaude role CLI로 설정 */
+  role?: string
 }
 
 /**
@@ -220,6 +222,21 @@ export class SessionStore {
     const session = this.sessions.find((s) => s.id === id)
     if (session && session.claudeSessionId !== claudeSessionId) {
       session.claudeSessionId = claudeSessionId
+      this.save()
+    }
+  }
+
+  /**
+   * 세션 브릿지 역할 라벨을 갱신합니다.
+   *
+   * @param id - Mulaude 세션 ID
+   * @param role - 역할 라벨 (빈 문자열이면 해제)
+   */
+  updateRole(id: string, role: string): void {
+    const session = this.sessions.find((s) => s.id === id)
+    if (session) {
+      if (role) session.role = role
+      else delete session.role
       this.save()
     }
   }

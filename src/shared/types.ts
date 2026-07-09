@@ -26,6 +26,8 @@ export interface SessionInfo {
   restored?: boolean
   /** 세션이 실행하는 CLI (기본: 'claude') */
   cliType?: CliType
+  /** 브릿지 역할 라벨 (예: "검증 담당") */
+  role?: string
 }
 
 /**

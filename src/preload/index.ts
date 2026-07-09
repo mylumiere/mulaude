@@ -137,6 +137,15 @@ const api = {
     return () => ipcRenderer.removeListener('bridge:delegation', handler)
   },
 
+  /** 세션 역할 라벨 변경 수신 (mulaude role CLI → 사이드바 반영) */
+  onSessionRoleUpdated: (callback: (id: string, role: string) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, id: string, role: string): void => {
+      callback(id, role)
+    }
+    ipcRenderer.on('session:role-updated', handler)
+    return () => ipcRenderer.removeListener('session:role-updated', handler)
+  },
+
   /** tmux 설치 여부 및 버전 확인 */
   checkTmux: (): Promise<{ available: boolean; version: string | null }> =>
     ipcRenderer.invoke('tmux:check'),

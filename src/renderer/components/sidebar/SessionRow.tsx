@@ -130,6 +130,9 @@ export default memo(function SessionRow({
             {session.cliType === 'codex' && (
               <span className="session-row-cli-chip--codex">codex</span>
             )}
+            {session.role && (
+              <span className="session-row-role-chip" title={session.role}>{session.role}</span>
+            )}
             {claudeSessionId && !isShell && (
               <span className="session-row-claude-chip">{claudeSessionId.slice(0, 4)}</span>
             )}

@@ -364,6 +364,22 @@
   margin-left: 4px;
 }
 
+/* 브릿지 역할 라벨 칩 (mulaude role CLI로 설정) */
+.session-row-role-chip {
+  font-family: var(--font-ui);
+  font-size: 0.6rem;
+  background: var(--accent-primary-soft);
+  color: var(--accent-primary);
+  padding: 1px 5px;
+  border-radius: var(--radius-sm);
+  margin-left: 4px;
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
 /* ─── CLI 선택 드롭다운 (세션 생성 시 Claude/Codex) ─── */
 .cli-picker {
   display: flex;

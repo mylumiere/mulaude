@@ -124,6 +124,16 @@ export function useSessionManager({
     window.api.updateSessionSubtitle(id, subtitle)
   }, [])
 
+  // 브릿지 역할 라벨 변경 (mulaude role CLI) → 세션 상태 반영
+  useEffect(() => {
+    const cleanup = window.api.onSessionRoleUpdated((id, role) => {
+      setSessions((prev) =>
+        prev.map((s) => (s.id === id ? { ...s, role: role || undefined } : s))
+      )
+    })
+    return cleanup
+  }, [])
+
   const selectSession = useCallback((id: string) => {
     setActiveSessionId(id)
   }, [])

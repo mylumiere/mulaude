@@ -329,6 +329,12 @@ app.whenReady().then(() => {
         mainWindow.webContents.send('bridge:delegation', info)
       }
     })
+    // 역할 라벨 변경 → 렌더러 (사이드바 실시간 반영)
+    bridgeManager.onRoleUpdated((sessionId, role) => {
+      if (!mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('session:role-updated', sessionId, role)
+      }
+    })
 
     // Hook 이벤트 → 렌더러 전달 + diff auto-refresh
     hooksManager.onEvent((sessionId, event) => {

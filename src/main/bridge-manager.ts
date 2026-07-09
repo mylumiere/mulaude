@@ -49,6 +49,7 @@ const BRIDGE_SETTLE_DELAY = 800
 const BRIDGE_CAPTURE_LINES = 80
 
 type DelegationListener = (info: BridgeDelegationInfo) => void
+type RoleListener = (sessionId: string, role: string) => void
 
 /** 대상 해석 결과 */
 interface ResolvedTarget {
@@ -58,6 +59,7 @@ interface ResolvedTarget {
   tmuxSessionName?: string
   cliType: CliType
   claudeSessionId?: string
+  role?: string
 }
 
 export class BridgeManager {
@@ -71,6 +73,7 @@ export class BridgeManager {
   /** 대상별 진행 중 위임 (동일 대상 중복 방지) */
   private activeByTarget = new Set<string>()
   private listeners: DelegationListener[] = []
+  private roleListeners: RoleListener[] = []
 
   constructor(
     private sessionManager: SessionManager,
@@ -91,6 +94,11 @@ export class BridgeManager {
   /** 위임 상태 변화 리스너 등록 (2단계 시각화) */
   onDelegation(cb: DelegationListener): void {
     this.listeners.push(cb)
+  }
+
+  /** 역할 라벨 변경 리스너 등록 (사이드바 실시간 반영) */
+  onRoleUpdated(cb: RoleListener): void {
+    this.roleListeners.push(cb)
   }
 
   /**
@@ -164,14 +172,50 @@ export class BridgeManager {
       'mkdir -p "$BRIDGE"',
       '',
       'usage() {',
-      '  cat <<EOF',
+      // heredoc 구분자를 인용해 내용 내 백틱/변수 확장 방지
+      "  cat <<'EOF'",
       'Usage:',
-      '  mulaude sessions                              List sessions (id, name, cli, state)',
+      '  mulaude sessions                              List sessions (id, name, cli, role, state)',
       '  mulaude ask [--timeout SEC] <target> <prompt> Delegate a prompt to another session and wait',
+      '  mulaude role <target> [label]                 Set a role label on a session (empty = clear)',
+      '  mulaude guide                                 How to orchestrate sessions (for AI conductors)',
       '',
       'Target: session id (session-3), session name, or project dir name.',
       '        Append @claude / @codex to disambiguate (e.g. kdp@codex).',
       'Prompt: remaining args, or stdin when piped.',
+      'EOF',
+      '}',
+      '',
+      'guide() {',
+      // heredoc 구분자를 인용해 내용 내 백틱(`mulaude sessions` 등)의 명령 치환 방지
+      "  cat <<'EOF'",
+      '# Mulaude Session Bridge — orchestration guide',
+      '',
+      'You are inside a Mulaude session. Other AI sessions (Claude Code / Codex) run',
+      'side by side, and you can delegate work to them and read their answers.',
+      '',
+      '## Discover sessions',
+      '  mulaude sessions',
+      '  # → ID / NAME / CLI / ROLE / STATE(idle|busy|delegating) / PROJECT',
+      '',
+      '## Delegate and wait for the answer (blocking, default timeout 600s)',
+      '  mulaude ask <target> "Review this diff for correctness issues: ..."',
+      '  mulaude ask --timeout 120 kdp@codex "Verify the fix in src/foo.ts"',
+      '  cat notes.md | mulaude ask session-3   # prompt from stdin',
+      '',
+      '## Parallel delegation (different targets only — same target rejects)',
+      '  mulaude ask reviewer "task A" > /tmp/a.out 2>&1 &',
+      '  mulaude ask tester   "task B" > /tmp/b.out 2>&1 &',
+      '  wait; cat /tmp/a.out /tmp/b.out',
+      '',
+      '## Roles (label sessions so targets are self-describing)',
+      '  mulaude role kdp@codex "verification"',
+      '',
+      '## Rules of thumb',
+      '- Busy targets are rejected — check STATE via `mulaude sessions` first.',
+      '- The delegated session keeps its own context; repeated asks accumulate knowledge.',
+      '- Prompts are injected as if typed by the user; responses come from session history.',
+      '- Give self-contained prompts: the target cannot see your conversation.',
       'EOF',
       '}',
       '',
@@ -226,6 +270,14 @@ export class BridgeManager {
       '      exit 2',
       '    fi',
       '    request ask "$TARGET" "$PROMPT" "$TIMEOUT"',
+      '    ;;',
+      '  role)',
+      '    TARGET="${1:?usage: mulaude role <target> [label]}"',
+      '    shift',
+      '    request role "$TARGET" "${*:-}" 30',
+      '    ;;',
+      '  guide)',
+      '    guide',
       '    ;;',
       '  help|--help|-h)',
       '    usage',
@@ -311,6 +363,10 @@ export class BridgeManager {
       await this.handleAsk(id, target, prompt, from, timeoutSec * 1000)
       return
     }
+    if (type === 'role') {
+      this.handleRole(id, target, prompt.trim())
+      return
+    }
     this.respond(id, 'error', `unknown request type: ${type}`)
   }
 
@@ -341,6 +397,7 @@ export class BridgeManager {
       id: t.id,
       name: t.name,
       cli: t.cliType,
+      role: t.role ?? '-',
       state: this.activeByTarget.has(t.id)
         ? 'delegating'
         : this.working.get(t.id)
@@ -348,7 +405,7 @@ export class BridgeManager {
           : 'idle',
       project: t.workingDir + (t.id === fromId ? '  (self)' : '')
     }))
-    const w = (k: 'id' | 'name' | 'cli' | 'state'): number =>
+    const w = (k: 'id' | 'name' | 'cli' | 'role' | 'state'): number =>
       Math.max(k.length, ...rows.map((r) => r[k].length))
     const header =
       'ID'.padEnd(w('id')) +
@@ -356,6 +413,8 @@ export class BridgeManager {
       'NAME'.padEnd(w('name')) +
       '  ' +
       'CLI'.padEnd(w('cli')) +
+      '  ' +
+      'ROLE'.padEnd(w('role')) +
       '  ' +
       'STATE'.padEnd(w('state')) +
       '  PROJECT'
@@ -367,11 +426,37 @@ export class BridgeManager {
         '  ' +
         r.cli.padEnd(w('cli')) +
         '  ' +
+        r.role.padEnd(w('role')) +
+        '  ' +
         r.state.padEnd(w('state')) +
         '  ' +
         r.project
     )
     return [header, ...lines].join('\n')
+  }
+
+  /* ─────────── 역할 라벨 (role) ─────────── */
+
+  private handleRole(id: string, selector: string, role: string): void {
+    const resolved = this.resolveTarget(selector)
+    if ('error' in resolved) {
+      this.respond(id, 'error', resolved.error)
+      return
+    }
+    const target = resolved.target
+    this.sessionManager.getSessionStore().updateRole(target.id, role)
+    for (const cb of this.roleListeners) {
+      try {
+        cb(target.id, role)
+      } catch {
+        /* ignore */
+      }
+    }
+    this.respond(
+      id,
+      'ok',
+      role ? `role set: ${target.name} (${target.id}) → "${role}"` : `role cleared: ${target.name} (${target.id})`
+    )
   }
 
   /* ─────────── 위임 (ask) ─────────── */
@@ -489,6 +574,10 @@ export class BridgeManager {
         (t) => basename(t.workingDir).toLowerCase() === lower
       )
     }
+    if (matches.length === 0) {
+      // 역할 라벨로도 매칭 — 지휘 세션이 "verification"처럼 역할명으로 위임 가능
+      matches = targets.filter((t) => t.role?.toLowerCase() === lower)
+    }
 
     if (matches.length === 0) {
       const available = targets.map((t) => `  ${t.id}  ${t.name} (${t.cliType})`).join('\n')
@@ -517,7 +606,8 @@ export class BridgeManager {
         workingDir: s.workingDir,
         tmuxSessionName: s.tmuxSessionName,
         cliType: (meta?.cliType ?? s.cliType ?? 'claude') as CliType,
-        claudeSessionId: meta?.claudeSessionId
+        claudeSessionId: meta?.claudeSessionId,
+        role: meta?.role
       }
     })
   }
@@ -558,16 +648,20 @@ export class BridgeManager {
     const paneTarget = `${target.tmuxSessionName}:0.0`
     const full = `[mulaude-bridge from ${fromName}] ${prompt}`
 
-    const tmpFile = join(this.bridgeDir, `.paste-${Date.now()}-${Math.floor(Math.random() * 1e6)}`)
+    // 버퍼 이름은 요청마다 고유해야 함 — 고정 이름을 쓰면 병렬 위임 시
+    // load-buffer가 서로 덮어쓰고 -d 삭제로 늦은 paste가 빈손이 되는 레이스 발생
+    const suffix = `${Date.now()}-${Math.floor(Math.random() * 1e6)}`
+    const bufName = `mulaude-bridge-${suffix}`
+    const tmpFile = join(this.bridgeDir, `.paste-${suffix}`)
     writeFileSync(tmpFile, full, 'utf-8')
     try {
-      await execTmuxAsync(tmuxPath, ['load-buffer', '-b', 'mulaude-bridge', tmpFile])
+      await execTmuxAsync(tmuxPath, ['load-buffer', '-b', bufName, tmpFile])
       await execTmuxAsync(tmuxPath, [
         'paste-buffer',
         '-p',
         '-d',
         '-b',
-        'mulaude-bridge',
+        bufName,
         '-t',
         paneTarget
       ])

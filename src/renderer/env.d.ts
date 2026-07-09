@@ -18,6 +18,7 @@ interface Window {
     onSessionExit: (callback: (id: string, exitCode: number) => void) => () => void
     onSessionHook: (callback: (id: string, event: HookEvent) => void) => () => void
     onBridgeDelegation: (callback: (info: BridgeDelegationInfo) => void) => () => void
+    onSessionRoleUpdated: (callback: (id: string, role: string) => void) => () => void
     onSessionPanes: (callback: (id: string, panes: TmuxPaneInfo[]) => void) => () => void
     writeChildPane: (sessionId: string, paneIndex: number, data: string) => void
     resizeChildPane: (sessionId: string, paneIndex: number, cols: number, rows: number) => void
